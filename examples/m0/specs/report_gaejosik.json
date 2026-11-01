@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "title": "2027년 사내 문서 전자화 추진 계획(안)",
+  "font": "함초롬바탕",
+  "blocks": [
+    {"type": "heading", "level": 1, "text": "1. 추진 배경"},
+    {"type": "paragraph", "text": "□ 종이 문서 중심의 결재·보관 체계로 검색과 재활용이 어려움"},
+    {"type": "paragraph", "text": "  ○ 연간 출력량 약 120만 쪽, 보관 공간 3개 층 사용"},
+    {"type": "paragraph", "text": "  ○ 부서 간 문서 양식이 달라 취합에 평균 2일 소요"},
+    {"type": "paragraph", "text": "□ 공공기관 제출 문서의 HWPX 표준 전환 요구 확대"},
+    {"type": "heading", "level": 1, "text": "2. 현황"},
+    {"type": "table", "cell_align": ["center", "right", "right", "left"], "rows": [
+      ["구분", "2025년", "2026년", "비고"],
+      ["출력량(만 쪽)", "131", "120", "8% 감소"],
+      ["전자결재 비율(%)", "42", "57", "목표 80%"],
+      ["양식 종류(개)", "214", "198", "중복 양식 다수"]
+    ]},
+    {"type": "heading", "level": 1, "text": "3. 추진 계획"},
+    {"type": "heading", "level": 2, "text": "가. 표준 양식 정비"},
+    {"type": "paragraph", "text": "□ 중복 양식 통폐합으로 198종을 60종 이내로 축소"},
+    {"type": "paragraph", "text": "  ○ 1분기: 부서별 양식 수집 및 분류"},
+    {"type": "paragraph", "text": "  ○ 2분기: 표준 양식 확정 및 배포"},
+    {"type": "heading", "level": 2, "text": "나. 전자결재 확대"},
+    {"type": "paragraph", "text": "□ 내부 보고 문서의 전자결재 의무화(2027년 7월부터)"},
+    {"type": "heading", "level": 1, "text": "4. 기대 효과"},
+    {"type": "paragraph", "text": "□ 출력량 30% 절감, 문서 취합 기간 2일에서 반나절로 단축"},
+    {"type": "paragraph", "text": "□ 표준 양식 기반의 자동 작성·검증 체계 마련"}
+  ]
+}
