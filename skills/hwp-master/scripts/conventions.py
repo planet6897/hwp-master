@@ -61,6 +61,15 @@ def gongmun_marker(text: str) -> Optional[Tuple[int, int, str]]:
     return None
 
 
+def gongmun_marker_span(text: str) -> int:
+    """앞머리 항목 기호와 뒤 공백의 글자 수 (기호가 없으면 0). gongmun_marker 와 같은 규칙."""
+    for _level, pattern, _ordinal in _GONGMUN:
+        m = pattern.match(text)
+        if m:
+            return m.end()
+    return 0
+
+
 def gaejosik_marker(text: str) -> Optional[Tuple[int, str]]:
     """(단계, 기호 뒤 공백) 또는 None."""
     if text and text[0] in _GAEJOSIK:
