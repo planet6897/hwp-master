@@ -3,7 +3,8 @@
 
     python3 build.py <프로젝트>                       # Default: units 조립 → 빌드
     python3 build.py --quick <doc.hds.json> -o <out.hwpx>  # Quick: 단일 HDS
-    공통 옵션: [--rhwp PATH] [--no-preview] [--png] [--font-path DIR ...] [--max-pages N]
+    공통 옵션: [--rhwp PATH] [--no-preview] [--png] [--font-path DIR ...]
+    Quick 전용: [--max-pages N] [--convention gongmun|gaejosik]
 
 단계: (조립) → HDS 검사(오류면 중단) → rhwp scaffold → 빌드 영수증 → rhwp verify(표 수·제목 포함)
       → export-structure 개요 대조 → layout-anomaly·쪽수 한도 → 미리보기 PDF/PNG → report.json
@@ -21,6 +22,7 @@ from pathlib import Path
 from typing import List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import conventions  # noqa: E402
 import hds  # noqa: E402
 import receipt  # noqa: E402
 import rhwp_locate  # noqa: E402
@@ -48,13 +50,15 @@ def outline_headings(node_list) -> List[tuple]:
 
 def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, png: bool,
           font_paths: List[str], prelinted: Optional[dict] = None,
-          max_pages: Optional[int] = None, receipt_dir: Optional[Path] = None) -> dict:
+          max_pages: Optional[int] = None, receipt_dir: Optional[Path] = None,
+          convention: Optional[str] = None) -> dict:
     report = {"started": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
               "rhwp": rhwp, "output": str(out_hwpx), "steps": {}, "findings": []}
     steps = report["steps"]
     workdir.mkdir(parents=True, exist_ok=True)
 
-    lint = prelinted if prelinted is not None else hds.summarize(hds.validate_document(doc))
+    lint = prelinted if prelinted is not None else hds.summarize(
+        hds.validate_document(doc) + conventions.lint_convention(doc.get("blocks"), convention))
     steps["hds_lint"] = {k: lint[k] for k in ("ok", "errorCount", "warningCount")}
     report["findings"].extend(lint["findings"])
     if not lint["ok"]:
@@ -153,6 +157,8 @@ def main() -> int:
     ap.add_argument("--png", action="store_true")
     ap.add_argument("--font-path", action="append", default=[])
     ap.add_argument("--max-pages", type=int, help="Quick 쪽수 한도 (Default 는 spec_lock.json 의 max_pages)")
+    ap.add_argument("--convention", choices=conventions.CONVENTIONS,
+                    help="Quick 문서 규약 (Default 는 spec_lock.json 의 convention)")
     args = ap.parse_args()
 
     rhwp = rhwp_locate.locate(args.rhwp)["path"]
@@ -162,7 +168,7 @@ def main() -> int:
         doc = hds.load_json(args.quick)
         workdir = args.output.parent / (args.output.stem + ".build")
         report = build(doc, args.output, workdir, rhwp, not args.no_preview, args.png, args.font_path,
-                       max_pages=args.max_pages, receipt_dir=workdir)
+                       max_pages=args.max_pages, receipt_dir=workdir, convention=args.convention)
         report_path = workdir / "report.json"
     elif args.project:
         project = args.project

@@ -40,6 +40,8 @@ python3 scripts/project_manager.py import-sources <프로젝트> <자료...>  # 
 | R102 | export-structure | 명세의 제목과 산출물 개요가 다름 | 예 |
 | R103 | layout-anomaly | 넘침·겹침·화면 밖·빈 쪽 신호 | 예 |
 | R104 | 쪽수 | `spec_lock.max_pages`(Quick 은 `--max-pages`) 초과 | 예 |
+| C001·C002·C011 | 규약 검사 | `convention` 항목 단계 건너뜀·순서 어긋남 | 예 |
+| C101·C111 | 규약 검사 | 항목 기호 뒤 띄어쓰기, 개조식 서술형 종결 | 아니오 |
 | W2xx·W3xx | HDS 검사 | 셀 넘침 추정, 열 수 불일치, 빈 문단, 분량 계획 대비 ±30% | 아니오 |
 
 ### 빌드 영수증
@@ -71,7 +73,7 @@ rhwp `replay --capsule`은 기존 문서에 편집 계획을 다시 적용하는
 짧은 문서(2쪽 이하)이고 사용자가 빨리 원할 때. 기획 확인과 단위 분할을 생략한다. 재개할 수 없다.
 
 ```bash
-python3 scripts/build.py --quick <문서.hds.json> -o <출력.hwpx> [--max-pages N]
+python3 scripts/build.py --quick <문서.hds.json> -o <출력.hwpx> [--max-pages N] [--convention gongmun|gaejosik]
 ```
 
 영수증과 보고서는 `<출력>.build/`에 생긴다.

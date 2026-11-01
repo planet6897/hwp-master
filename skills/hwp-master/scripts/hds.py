@@ -22,6 +22,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional
 
+import conventions
+
 HDS_VERSION = "1"
 TOP_KEYS = {"version", "title", "font", "page_size", "blocks"}
 BLOCK_KEYS = {
@@ -247,6 +249,10 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
             isinstance(lock["max_pages"], int) and not isinstance(lock["max_pages"], bool)
             and lock["max_pages"] > 0):
         out.append(_err("E008", "spec_lock.max_pages 는 양의 정수여야 합니다", "spec_lock.json"))
+    convention = lock.get("convention")
+    if convention is not None and convention not in conventions.CONVENTIONS:
+        out.append(_err("E009", f"spec_lock.convention 은 {list(conventions.CONVENTIONS)} 중 하나여야 합니다",
+                        "spec_lock.json"))
     width = float((lock.get("page_size") or {}).get("width_mm", A4_WIDTH_MM))
     for u in units:
         uid = u.get("id")
@@ -269,6 +275,7 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
         out.extend(validate_blocks(blocks, prefix))
         out.extend(lint_table_widths(blocks, width, prefix))
         out.extend(_lint_unit_budget(u, blocks, prefix))
+        out.extend(conventions.lint_convention(blocks, convention, prefix))
     return out
 
 
