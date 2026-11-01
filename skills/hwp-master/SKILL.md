@@ -9,7 +9,7 @@ metadata:
 
 # hwp-master (초안)
 
-> 상태: Default·Quick·Edit Native 라우트, HDS v1 = 제목·문단·표, 규약 검사(gongmun·gaejosik).
+> 상태: Default·Quick·Edit Native·Convert-in 라우트, HDS v1 = 제목·문단·표, 규약 검사(gongmun·gaejosik).
 > 전체 계획: 저장소의 `docs/plan.md`.
 
 ## 스크립트
@@ -21,6 +21,7 @@ metadata:
 | `scripts/hds_lint.py` | HDS 문서 또는 프로젝트 검사 (오류 차단, 경고 비차단) |
 | `scripts/build.py` | 조립 → 검사 → `rhwp scaffold` → 영수증 → verify·개요 대조·조판 이상·쪽수 한도 → 미리보기 → `validation/report.json` |
 | `scripts/receipt.py` | 생성 빌드 영수증 재현 검증 (`verify`) |
+| `scripts/convert.py` | Convert-in: MD·DOCX·PDF → `outline.json`·`units/` (정규화·손실 보고) |
 | `scripts/edit.py` | Edit Native: `inspect`(편집 대상 조사) · `apply`(dry-run → 실행 → 작업 캡슐 → 전후 렌더 비교) |
 
 ## 원칙
@@ -37,6 +38,7 @@ metadata:
 |---|---|---|
 | 주제/자료로 새 문서 | Default | `workflows/generate.md` |
 | 짧은 문서를 빠르게 | Quick | `workflows/generate.md` (Quick 절) |
+| MD·DOCX·PDF 자료를 한글 문서로 | Convert-in | `workflows/convert.md` |
 | 기관 서식에 내용 채우기 | Template Fill | 미구현 (M3) |
 | 기존 HWP/HWPX 수정 (누름틀·문구·표 셀·체크박스) | Edit Native | `workflows/edit.md` |
 | 기존 문서 서식 정리 | Beautify | 미구현 (M5) |
