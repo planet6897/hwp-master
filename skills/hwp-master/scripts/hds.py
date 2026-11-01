@@ -243,6 +243,10 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
     for extra in sorted(present - set(ids)):
         out.append(_err("P003", f"개요에 없는 단위 파일 units/{extra}.json"))
     lock = load_json(project / "spec_lock.json")
+    if "max_pages" in lock and not (
+            isinstance(lock["max_pages"], int) and not isinstance(lock["max_pages"], bool)
+            and lock["max_pages"] > 0):
+        out.append(_err("E008", "spec_lock.max_pages 는 양의 정수여야 합니다", "spec_lock.json"))
     width = float((lock.get("page_size") or {}).get("width_mm", A4_WIDTH_MM))
     for u in units:
         uid = u.get("id")

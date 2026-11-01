@@ -31,11 +31,13 @@
   "font": "함초롬바탕",
   "page_size": {"width_mm": 210, "height_mm": 297},
   "doctype": "report",
-  "convention": "gaejosik"
+  "convention": "gaejosik",
+  "max_pages": 10
 }
 ```
 
 `title`·`font`·`page_size`만 HDS로 넘어간다. 나머지는 검사 규칙 선택에 쓴다.
+`max_pages`는 제출 요건의 쪽수 한도다(없으면 검사하지 않음). 빌드 쪽수가 넘으면 R104 오류다.
 
 ### `outline.json` (단위 계획)
 

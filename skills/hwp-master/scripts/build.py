@@ -3,11 +3,12 @@
 
     python3 build.py <프로젝트>                       # Default: units 조립 → 빌드
     python3 build.py --quick <doc.hds.json> -o <out.hwpx>  # Quick: 단일 HDS
-    공통 옵션: [--rhwp PATH] [--no-preview] [--png] [--font-path DIR ...]
+    공통 옵션: [--rhwp PATH] [--no-preview] [--png] [--font-path DIR ...] [--max-pages N]
 
-단계: (조립) → HDS 검사(오류면 중단) → rhwp scaffold → rhwp verify(표 수·제목 포함)
-      → export-structure 개요 대조 → layout-anomaly → 미리보기 PDF/PNG → report.json
+단계: (조립) → HDS 검사(오류면 중단) → rhwp scaffold → 빌드 영수증 → rhwp verify(표 수·제목 포함)
+      → export-structure 개요 대조 → layout-anomaly·쪽수 한도 → 미리보기 PDF/PNG → report.json
 검사는 판정만 하고 산출물을 고치지 않는다. 오류가 있으면 exit 1.
+쪽수 한도는 Default 에서 spec_lock.json 의 max_pages, Quick 에서 --max-pages 로 준다.
 """
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from typing import List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hds  # noqa: E402
+import receipt  # noqa: E402
 import rhwp_locate  # noqa: E402
 
 
@@ -45,7 +47,8 @@ def outline_headings(node_list) -> List[tuple]:
 
 
 def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, png: bool,
-          font_paths: List[str], prelinted: Optional[dict] = None) -> dict:
+          font_paths: List[str], prelinted: Optional[dict] = None,
+          max_pages: Optional[int] = None, receipt_dir: Optional[Path] = None) -> dict:
     report = {"started": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
               "rhwp": rhwp, "output": str(out_hwpx), "steps": {}, "findings": []}
     steps = report["steps"]
@@ -67,6 +70,14 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
         report["ok"] = False
         report["stoppedAt"] = "scaffold"
         return report
+    rec = receipt.make(spec_path, out_hwpx, rhwp)
+    if receipt_dir is not None:
+        receipt_dir.mkdir(parents=True, exist_ok=True)
+        rec_path = receipt_dir / f"{out_hwpx.stem}.receipt.json"
+        receipt.save(rec, rec_path)
+        steps["receipt"] = {"file": str(rec_path), "outputSha256": rec["outputSha256"]}
+    else:
+        steps["receipt"] = {"outputSha256": rec["outputSha256"]}
 
     blocks = doc.get("blocks", [])
     headings = [(b["level"], b["text"]) for b in blocks if b.get("type") == "heading"]
@@ -102,6 +113,14 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
                 if la.get(k)),
         ).to_dict())
     steps["layout_anomaly"]["envelope"] = {k: v for k, v in la.items() if k != "pages"}
+    if max_pages is not None:
+        report["maxPages"] = max_pages
+        if not isinstance(pages, int):
+            report["findings"].append(hds.Finding(
+                "error", "R104", f"쪽수를 확인하지 못해 한도 {max_pages}쪽을 판정할 수 없습니다").to_dict())
+        elif pages > max_pages:
+            report["findings"].append(hds.Finding(
+                "error", "R104", f"쪽수 초과: {pages}쪽 > 한도 {max_pages}쪽").to_dict())
 
     font_args = []
     for fp in font_paths:
@@ -119,7 +138,7 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
     report["errorCount"] = len(errors)
     report["warningCount"] = len(report["findings"]) - len(errors)
     report["notes"] = [
-        "미리보기 PDF/PNG 는 rhwp 렌더다. 표 셀 줄바꿈(M0 F2)이 고쳐지기 전까지 쪽수·표 모양은 한컴과 다를 수 있다.",
+        "미리보기 PDF/PNG 와 쪽수는 rhwp 조판이다. 표 셀 줄바꿈(M0 F2)이 고쳐지기 전까지 쪽수·표 모양은 한컴과 다를 수 있다.",
     ]
     return report
 
@@ -133,6 +152,7 @@ def main() -> int:
     ap.add_argument("--no-preview", action="store_true")
     ap.add_argument("--png", action="store_true")
     ap.add_argument("--font-path", action="append", default=[])
+    ap.add_argument("--max-pages", type=int, help="Quick 쪽수 한도 (Default 는 spec_lock.json 의 max_pages)")
     args = ap.parse_args()
 
     rhwp = rhwp_locate.locate(args.rhwp)["path"]
@@ -141,7 +161,8 @@ def main() -> int:
             ap.error("--quick 에는 -o <out.hwpx> 가 필요합니다")
         doc = hds.load_json(args.quick)
         workdir = args.output.parent / (args.output.stem + ".build")
-        report = build(doc, args.output, workdir, rhwp, not args.no_preview, args.png, args.font_path)
+        report = build(doc, args.output, workdir, rhwp, not args.no_preview, args.png, args.font_path,
+                       max_pages=args.max_pages, receipt_dir=workdir)
         report_path = workdir / "report.json"
     elif args.project:
         project = args.project
@@ -153,8 +174,10 @@ def main() -> int:
         name = hds.load_json(project / "project.json")["name"]
         stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
         out = project / "exports" / f"{name}_{stamp}.hwpx"
+        lock = hds.load_json(project / "spec_lock.json")
         report = build(doc, out, project / "build", rhwp, not args.no_preview, args.png, args.font_path,
-                       prelinted=lint)
+                       prelinted=lint, max_pages=lock.get("max_pages"),
+                       receipt_dir=project / "capsules")
         report_path = project / "validation" / "report.json"
     else:
         ap.error("프로젝트 경로 또는 --quick 이 필요합니다")
