@@ -1,0 +1,8 @@
+# 생성 프로젝트 산출물 (예제는 별도 경로에 커밋)
+projects/*
+!projects/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store
