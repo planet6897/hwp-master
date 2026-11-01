@@ -9,7 +9,7 @@ metadata:
 
 # hwp-master (초안)
 
-> 상태: Default·Quick·Edit Native·Convert-in 라우트, HDS v1 = 제목·문단·표, 규약 검사(gongmun·gaejosik).
+> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge 라우트, Exam 위임, HDS v1 = 제목·문단·표, 규약 검사(gongmun·gaejosik).
 > 전체 계획: 저장소의 `docs/plan.md`.
 
 ## 스크립트
@@ -22,6 +22,7 @@ metadata:
 | `scripts/build.py` | 조립 → 검사 → `rhwp scaffold` → 영수증 → verify·개요 대조·조판 이상·쪽수 한도 → 미리보기 → `validation/report.json` |
 | `scripts/receipt.py` | 생성 빌드 영수증 재현 검증 (`verify`) |
 | `scripts/convert.py` | Convert-in: MD·DOCX·PDF → `outline.json`·`units/` (정규화·손실 보고) |
+| `scripts/merge.py` | Mail-merge: 서식·명단 대조 → `batch fill --dry-run` → `batch fill --verify` → 행 수 보존 판정 |
 | `scripts/edit.py` | Edit Native: `inspect`(편집 대상 조사) · `apply`(dry-run → 실행 → 작업 캡슐 → 전후 렌더 비교) |
 
 ## 원칙
@@ -41,6 +42,8 @@ metadata:
 | MD·DOCX·PDF 자료를 한글 문서로 | Convert-in | `workflows/convert.md` |
 | 기관 서식에 내용 채우기 | Template Fill | 미구현 (M3) |
 | 기존 HWP/HWPX 수정 (누름틀·문구·표 셀·체크박스) | Edit Native | `workflows/edit.md` |
+| 서식 하나에 명단 N행 → 문서 N개 | Mail-merge | `workflows/merge.md` |
+| 시험지 자료 → 한글 시험지 | Exam (위임) | `workflows/exam.md` → rhwp `rhwp-exam-ingest` |
 | 기존 문서 서식 정리 | Beautify | 미구현 (M5) |
 
 ## 역할 전환
