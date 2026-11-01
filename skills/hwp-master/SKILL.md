@@ -9,8 +9,16 @@ metadata:
 
 # hwp-master (초안)
 
-> 상태: M0 계획 단계. 아래는 인덱스 골격이며 각 참조 문서는 단계별로 채운다.
-> 전체 계획: 저장소의 `docs/plan.md`.
+> 상태: M1 (Default·Quick 라우트, HDS v1 = 제목·문단·표). 전체 계획: 저장소의 `docs/plan.md`.
+
+## 스크립트
+
+| 스크립트 | 용도 |
+|---|---|
+| `scripts/rhwp_locate.py` | rhwp 위치·버전 확인 (최소 0.9.0) |
+| `scripts/project_manager.py` | `init` · `import-sources` · `validate --stage early/final` · `status` |
+| `scripts/hds_lint.py` | HDS 문서 또는 프로젝트 검사 (오류 차단, 경고 비차단) |
+| `scripts/build.py` | 조립 → 검사 → `rhwp scaffold` → verify·개요 대조·조판 이상 → 미리보기 → `validation/report.json` |
 
 ## 원칙
 
@@ -26,9 +34,9 @@ metadata:
 |---|---|---|
 | 주제/자료로 새 문서 | Default | `workflows/generate.md` |
 | 짧은 문서를 빠르게 | Quick | `workflows/generate.md` (Quick 절) |
-| 기관 서식에 내용 채우기 | Template Fill | `workflows/template-fill.md` |
-| 기존 HWP/HWPX 수정 | Edit Native | `workflows/edit-native.md` |
-| 기존 문서 서식 정리 | Beautify | `workflows/beautify.md` |
+| 기관 서식에 내용 채우기 | Template Fill | 미구현 (M3) |
+| 기존 HWP/HWPX 수정 | Edit Native | 미구현 (M5) — 당분간 rhwp `rhwp-safe-edit` 스킬 경로 |
+| 기존 문서 서식 정리 | Beautify | 미구현 (M5) |
 
 ## 역할 전환
 

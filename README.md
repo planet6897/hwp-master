@@ -6,7 +6,7 @@
 - 문서 생성 엔진: [rhwp](https://github.com/edwardkim/rhwp) (`rhwp scaffold` 등 CLI 바이너리를 호출)
 - 스킬 런타임: Claude Code 등 에이전트 호스트
 
-> 상태: 계획 단계 (M0). 전체 계획은 [docs/plan.md](docs/plan.md)를 참고하세요.
+> 상태: M1 — 주제/자료 → 개조식 보고서 HWPX 생성 경로 동작. 전체 계획은 [docs/plan.md](docs/plan.md), M0 대조 결과는 [docs/m0_findings.md](docs/m0_findings.md).
 
 ## 작업 흐름 (요약)
 
@@ -25,8 +25,8 @@ projects/            생성 작업 폴더 (Git 제외)
 
 ## 요구 사항
 
-- `rhwp` 바이너리 (최소 버전은 추후 `scripts/rhwp_locate.py`에서 확인)
-- Python 3.10+
+- `rhwp` 바이너리 0.9.0 이상 (`RHWP_BIN` 환경변수 또는 PATH, `scripts/rhwp_locate.py`로 확인)
+- Python 3.9+ (표준 라이브러리만 사용)
 
 ## 참고한 프로젝트
 
