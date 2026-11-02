@@ -36,7 +36,7 @@ python3 scripts/project_manager.py import-sources <프로젝트> <자료...>  # 
 |---|---|---|---|
 | E0xx·E1xx | HDS 검사 | 명세 구조 오류, 제목의 수동 번호(E101), `max_pages` 형식(E008) | 예 |
 | P001~P005 | HDS 검사 | 기획 산출물·단위 파일 누락/불일치 (final 에서 단위 누락은 P004) | 예 |
-| R106 | rhwp edit | 쪽 나눔·각주·머리말/꼬리말을 붙이지 못했거나 산출물에서 개수가 계획과 다름 | 예 |
+| R106 | rhwp edit | 쪽 나눔·글자 강조·각주·머리말/꼬리말을 붙이지 못했거나 산출물에서 계획과 다름 | 예 |
 | R101 | rhwp verify | 제목 글이나 표 수가 산출물에 없음 | 예 |
 | R102 | export-structure | 명세의 제목과 산출물 개요가 다름 | 예 |
 | R103 | layout-anomaly | 넘침·겹침·화면 밖·빈 쪽 신호 | 예 |

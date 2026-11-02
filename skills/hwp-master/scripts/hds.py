@@ -9,12 +9,14 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
 
     heading    {"type": "heading", "level": 1..7, "text": str}
     paragraph  {"type": "paragraph", "text": str,
-                "footnotes"?: [{"text": str, "after"?: str}]}
+                "footnotes"?: [{"text": str, "after"?: str}],
+                "emphasis"?: [{"text": str, "bold"?, "italic"?, "underline"?: bool, "color"?: "#RRGGBB"}]}
     table      {"type": "table", "rows": [[str]], "cell_align"?: str | [str]}
     page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
 
 header/footer 의 text 안 "{page}" 는 쪽 번호가 된다. footnotes 는 after 문자열(문단에서
-처음 나오는 곳) 바로 뒤, after 가 없으면 문단 끝에 각주 번호를 단다.
+처음 나오는 곳) 바로 뒤, after 가 없으면 문단 끝에 각주 번호를 단다. emphasis 는 문단에서 text 가
+처음 나오는 곳에 글자 서식을 준다.
 제목·문단·표는 rhwp scaffold 명세 v1 그대로이고, 나머지는 native.py 가 rhwp edit 으로 붙인다.
 
 검사 결과는 Finding 목록이다. severity 가 "error" 이면 차단, "warning" 이면 비차단.
@@ -35,7 +37,7 @@ HDS_VERSION = "1"
 TOP_KEYS = {"version", "title", "font", "page_size", "header", "footer", "blocks"}
 BLOCK_KEYS = {
     "heading": {"type", "level", "text"},
-    "paragraph": {"type", "text", "footnotes"},
+    "paragraph": {"type", "text", "footnotes", "emphasis"},
     "table": {"type", "rows", "cell_align"},
     "page_break": {"type"},
 }
@@ -128,6 +130,8 @@ def validate_blocks(blocks, where_prefix: str = "") -> List[Finding]:
             out.append(_warn("W203", "빈 문단 — 간격 조정용이면 문단 간격 규약을 쓰세요", where))
         if btype == "paragraph" and "footnotes" in b:
             out.extend(_validate_footnotes(b, where))
+        if btype == "paragraph" and "emphasis" in b:
+            out.extend(_validate_emphasis(b, where))
         if btype == "table":
             out.extend(_validate_table(b, where))
     return out
@@ -148,6 +152,33 @@ def _validate_footnotes(b: dict, where: str) -> List[Finding]:
         after = n.get("after")
         if after is not None and (not isinstance(after, str) or not after or after not in b["text"]):
             out.append(_err("E107", f"각주 after {after!r} 가 문단 글자에 없습니다", w))
+    return out
+
+
+EMPHASIS_STYLES = ("bold", "italic", "underline", "color")
+HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def _validate_emphasis(b: dict, where: str) -> List[Finding]:
+    marks = b["emphasis"]
+    if not isinstance(marks, list) or not marks:
+        return [_err("E109", "emphasis 는 비어 있지 않은 배열이어야 합니다", where)]
+    out: List[Finding] = []
+    for k, m in enumerate(marks):
+        w = f"{where}.emphasis[{k}]"
+        if not isinstance(m, dict) or set(m) - {"text", *EMPHASIS_STYLES}:
+            out.append(_err("E109", "강조는 {text, bold?, italic?, underline?, color?} 객체여야 합니다", w))
+            continue
+        text = m.get("text")
+        if not isinstance(text, str) or not text or text not in b["text"]:
+            out.append(_err("E110", f"강조 text {text!r} 가 문단 글자에 없습니다", w))
+        for key in ("bold", "italic", "underline"):
+            if key in m and not isinstance(m[key], bool):
+                out.append(_err("E109", f"{key} 는 true/false 여야 합니다", w))
+        if "color" in m and not (isinstance(m["color"], str) and HEX_COLOR.match(m["color"])):
+            out.append(_err("E109", "color 는 #RRGGBB 형식이어야 합니다", w))
+        if not any(m.get(k) for k in EMPHASIS_STYLES):
+            out.append(_err("E109", "bold·italic·underline·color 중 하나는 있어야 합니다", w))
     return out
 
 

@@ -23,7 +23,8 @@ DOC = {"version": "1", "title": "블록 확장 시험",
        "blocks": [
            {"type": "heading", "level": 1, "text": "첫째 장"},
            {"type": "paragraph", "text": "□ 각주 두 개: 앞쪽 근거와 뒤쪽 근거", "footnotes": [
-               {"text": "앞쪽 근거의 출처 & 날짜", "after": "앞쪽 근거"}, {"text": "문단 끝 각주"}]},
+               {"text": "앞쪽 근거의 출처 & 날짜", "after": "앞쪽 근거"}, {"text": "문단 끝 각주"}],
+            "emphasis": [{"text": "앞쪽 근거", "bold": True}, {"text": "뒤쪽 근거", "color": "#c00000", "underline": True}]},
            {"type": "table", "rows": [["항목", "값"], ["가", "1"]]},
            {"type": "page_break"},
            {"type": "heading", "level": 1, "text": "둘째 장"},
@@ -41,7 +42,10 @@ class SplitTest(unittest.TestCase):
         self.assertNotIn("header", spec)
         self.assertEqual([b["type"] for b in spec["blocks"]],
                          ["heading", "paragraph", "table", "heading", "paragraph"])
-        self.assertFalse(any("footnotes" in b for b in spec["blocks"]))
+        self.assertFalse(any("footnotes" in b or "emphasis" in b for b in spec["blocks"]))
+        self.assertEqual([(e["offset"], e["count"], e["props"]) for e in plan["emphasis"]],
+                         [(len("□ 각주 두 개: "), 5, '{"bold":true}'),
+                          (len("□ 각주 두 개: 앞쪽 근거와 "), 5, '{"underline":true,"textColor":"#C00000"}')])
         self.assertEqual(plan["page_breaks"], [3])  # 쪽 나눔 다음 블록(둘째 장)
         self.assertEqual([(f["block"], f["offset"]) for f in plan["footnotes"]],
                          [(1, len("□ 각주 두 개: 앞쪽 근거")), (1, len(DOC["blocks"][1]["text"]))])
@@ -75,6 +79,15 @@ class ValidateTest(unittest.TestCase):
         for notes in bad:
             doc = {"version": "1", "blocks": [{"type": "paragraph", "text": "본문", "footnotes": notes}]}
             self.assertTrue({"E106", "E107"} & set(codes(hds.validate_document(doc))), notes)
+
+    def test_emphasis_errors(self):
+        cases = {"E109": [[], [{"text": "본문"}], [{"text": "본문", "color": "red"}], [{"text": "본문", "bold": 1}],
+                          [{"text": "본문", "size": 12}]],
+                 "E110": [[{"text": "없는 말", "bold": True}]]}
+        for code, items in cases.items():
+            for marks in items:
+                doc = {"version": "1", "blocks": [{"type": "paragraph", "text": "본문", "emphasis": marks}]}
+                self.assertIn(code, codes(hds.validate_document(doc)), marks)
 
     def test_footnote_on_heading_rejected(self):
         doc = {"version": "1", "blocks": [{"type": "heading", "level": 1, "text": "가", "footnotes": []}]}
@@ -136,8 +149,18 @@ class ProduceTest(unittest.TestCase):
         # 각주 번호는 앞쪽 근거 뒤 → 문단 끝 순서, 본문은 번호 뒤에 온다
         self.assertLess(xml.index("앞쪽 근거의 출처"), xml.index("문단 끝 각주"))
         self.assertRegex(xml, r'numType="FOOTNOTE".*?</hp:ctrl><hp:t> 앞쪽 근거의 출처')
+        # 강조 글자는 뜻한 서식의 런으로 갈라진다
+        self.assertRegex(xml, r'charPrIDRef="(\d+)"><hp:t>앞쪽 근거</hp:t>')
+        self.assertIn("<hp:t>뒤쪽 근거</hp:t>", xml)
         # 쪽 나눔은 둘째 장 제목 문단에 걸린다
         self.assertRegex(xml, r'pageBreak="1"[^>]*><hp:run[^>]*><hp:t>둘째 장')
+
+    def test_check_catches_missing_edits(self):
+        out = self.produce("a")
+        problems = native.check(self.dir / "a" / "work" / "scaffold.hwpx", DOC)
+        self.assertTrue(any("강조 미반영" in p for p in problems), problems)
+        self.assertTrue(any("각주" in p for p in problems), problems)
+        self.assertEqual(native.check(out, DOC), [])
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")

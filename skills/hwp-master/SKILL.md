@@ -2,14 +2,14 @@
 name: hwp-master
 description: 자료(PDF·DOCX·MD·웹·기존 HWP) 또는 주제를 받아 한컴에서 편집 가능한 네이티브 HWPX 문서(개조식 보고서·사업계획서·제안서·기안문·회의록)를 rhwp로 생성합니다. 트리거 — "한글 문서로 만들어줘", "hwp 보고서 작성", "사업계획서 hwpx로", "이 자료로 기안문", "/hwp-master".
 metadata:
-  version: 0.1.4
+  version: 0.1.5
   license: MIT
   repository: https://github.com/planet6897/hwp-master
 ---
 
 # hwp-master (초안)
 
-> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표·쪽 나눔 + 각주·머리말·꼬리말, 규약 검사(gongmun·gaejosik).
+> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표·쪽 나눔 + 글자 강조·각주·머리말·꼬리말, 규약 검사(gongmun·gaejosik).
 > 전체 계획: 저장소의 `docs/plan.md`.
 
 ## 스크립트
@@ -20,7 +20,7 @@ metadata:
 | `scripts/project_manager.py` | `init` · `import-sources` · `validate --stage early/final` · `status` |
 | `scripts/hds_lint.py` | HDS 문서 또는 프로젝트 검사 (오류 차단, 경고 비차단) |
 | `scripts/build.py` | 조립 → 검사 → `rhwp scaffold` + 편집 후처리(`native.py`) → 영수증 → verify·개요 대조·조판 이상·쪽수 한도 → 미리보기 → `validation/report.json` |
-| `scripts/native.py` | HDS → scaffold 명세 + 편집 계획 분리, 쪽 나눔·각주·머리말/꼬리말을 `rhwp edit` 으로 붙이고 반영 개수 확인 |
+| `scripts/native.py` | HDS → scaffold 명세 + 편집 계획 분리, 쪽 나눔·글자 강조·각주·머리말/꼬리말을 `rhwp edit` 으로 붙이고 반영 개수 확인 |
 | `scripts/receipt.py` | 생성 빌드 영수증 재현 검증 (`verify`) |
 | `scripts/convert.py` | Convert-in: MD·DOCX·PDF → `outline.json`·`units/` (정규화·손실 보고) |
 | `scripts/merge.py` | Mail-merge: 서식·명단 대조 → `batch fill --dry-run` → `batch fill --verify` → 행 수 보존 판정 |

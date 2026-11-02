@@ -4,6 +4,7 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
 `rhwp edit` 을 순서대로 적용해 붙인다.
 
     page_break 블록          → edit insert-page-break (다음 블록 문단 앞에서 쪽 나눔)
+    paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·글자색)
     paragraph.footnotes      → edit insert-footnote + insert-footnote-text
     header / footer          → edit insert-header-footer + insert-header-footer-text
                                (+ "{page}" 자리에 insert-field-in-hf 쪽 번호)
@@ -25,6 +26,7 @@ from typing import Dict, List, Optional
 from xml.etree import ElementTree as ET
 
 HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
+HH = "http://www.hancom.co.kr/hwpml/2011/head"
 PAGE_TOKEN = "{page}"
 
 
@@ -32,7 +34,7 @@ def split(doc: dict) -> tuple:
     """HDS → (scaffold 명세, 편집 계획). 편집 계획이 비면 scaffold 만으로 끝난다."""
     spec = {k: copy.deepcopy(v) for k, v in doc.items() if k not in ("header", "footer", "blocks")}
     blocks: List[dict] = []
-    plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "header": doc.get("header"),
+    plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "header": doc.get("header"),
                                "footer": doc.get("footer")}
     pending_break = False
     for b in doc.get("blocks", []):
@@ -41,6 +43,7 @@ def split(doc: dict) -> tuple:
             continue
         b = copy.deepcopy(b)
         notes = b.pop("footnotes", None) or []
+        marks = b.pop("emphasis", None) or []
         if pending_break:
             plan["page_breaks"].append(len(blocks))
             pending_break = False
@@ -49,13 +52,25 @@ def split(doc: dict) -> tuple:
             after = n.get("after")
             offset = len(text) if after is None else text.index(after) + len(after)
             plan["footnotes"].append({"block": len(blocks), "offset": offset, "text": n["text"]})
+        for m in marks:
+            plan["emphasis"].append({"block": len(blocks), "offset": b["text"].index(m["text"]),
+                                     "count": len(m["text"]), "props": char_props(m)})
         blocks.append(b)
     spec["blocks"] = blocks
     return spec, plan
 
 
+def char_props(mark: dict) -> str:
+    """강조 → apply-char-format --props. 공백 없는 JSON 으로 넘긴다(rhwp #8439: "key": 공백이면 무시됨)."""
+    props = {k: True for k in ("bold", "italic", "underline") if mark.get(k)}
+    if mark.get("color"):
+        props["textColor"] = mark["color"].upper()
+    return json.dumps(props, separators=(",", ":"))
+
+
 def plan_empty(plan: dict) -> bool:
-    return not (plan["page_breaks"] or plan["footnotes"] or plan["header"] or plan["footer"])
+    return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"]
+                or plan["header"] or plan["footer"])
 
 
 def top_paragraphs(hwpx: Path) -> List[dict]:
@@ -66,6 +81,34 @@ def top_paragraphs(hwpx: Path) -> List[dict]:
     for p in root.findall(f"{{{HP}}}p"):
         text = "".join(t.text or "" for run in p.findall(f"{{{HP}}}run") for t in run.findall(f"{{{HP}}}t"))
         out.append({"text": text, "table": p.find(f".//{{{HP}}}tbl") is not None})
+    return out
+
+
+def char_styles(hwpx: Path) -> List[List[str]]:
+    """최상위 문단마다 본문 글자별 charPrIDRef 목록 (top_paragraphs 의 text 와 같은 길이)."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    out = []
+    for p in root.findall(f"{{{HP}}}p"):
+        ids: List[str] = []
+        for run in p.findall(f"{{{HP}}}run"):
+            for t in run.findall(f"{{{HP}}}t"):
+                ids.extend([run.get("charPrIDRef")] * len(t.text or ""))
+        out.append(ids)
+    return out
+
+
+def char_shapes(hwpx: Path) -> Dict[str, dict]:
+    """header.xml charPr id → {bold, italic, underline, color}."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/header.xml"))
+    out = {}
+    for cp in root.iter(f"{{{HH}}}charPr"):
+        ul = cp.find(f"{{{HH}}}underline")
+        out[cp.get("id")] = {"bold": cp.find(f"{{{HH}}}bold") is not None,
+                             "italic": cp.find(f"{{{HH}}}italic") is not None,
+                             "underline": ul is not None and ul.get("type", "NONE") != "NONE",
+                             "color": (cp.get("textColor") or "").upper()}
     return out
 
 
@@ -140,7 +183,7 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
         return result
 
     paras = map_blocks(top_paragraphs(first), spec["blocks"], bool(spec.get("title")))
-    need = set(plan["page_breaks"]) | {f["block"] for f in plan["footnotes"]}
+    need = set(plan["page_breaks"]) | {f["block"] for f in plan["footnotes"] + plan["emphasis"]}
     missing = sorted(i for i in need if paras[i] is None)
     if missing:
         result["error"] = f"scaffold 산출물에서 블록 문단을 찾지 못함: blocks {missing}"
@@ -161,6 +204,12 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
     for bi in plan["page_breaks"]:
         if not step(["insert-page-break", "--para", str(paras[bi]), "--offset", "0"]):
             result["error"] = "쪽 나눔 삽입 실패"
+            return result
+    # 강조는 각주보다 먼저: 각주 컨트롤이 들어가기 전이라 오프셋이 HDS 글자 위치 그대로다.
+    for em in plan["emphasis"]:
+        if not step(["apply-char-format", "--para", str(paras[em["block"]]), "--offset", str(em["offset"]),
+                     "--count", str(em["count"]), "--props", em["props"]]):
+            result["error"] = "글자 강조 적용 실패"
             return result
     # 같은 문단의 각주는 뒤에서부터 넣는다: 앞 오프셋이 그대로이고 새 각주는 늘 그 문단의 첫 컨트롤이다.
     for fn in sorted(plan["footnotes"], key=lambda f: (f["block"], -f["offset"])):
@@ -199,6 +248,19 @@ def check(out: Path, doc: dict) -> List[str]:
     for f in plan["footnotes"]:
         if escape(f["text"]) not in xml:
             problems.append(f"각주 본문 누락: {f['text'][:30]!r}")
+    if plan["emphasis"]:
+        spec, _ = split(doc)
+        paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
+        styles, shapes = char_styles(out), char_shapes(out)
+        for em in plan["emphasis"]:
+            want = json.loads(em["props"])
+            pi = paras[em["block"]]
+            ids = styles[pi][em["offset"]:em["offset"] + em["count"]] if pi is not None else []
+            bad = len(ids) != em["count"] or any(
+                not shapes.get(i, {}).get(k) if k != "textColor" else shapes.get(i, {}).get("color") != v
+                for i in ids for k, v in want.items())
+            if bad:
+                problems.append(f"강조 미반영: blocks[{em['block']}] {em['offset']}+{em['count']} {em['props']}")
     for kind in ("header", "footer"):
         hf = plan[kind]
         has = f"<hp:{kind} " in xml
