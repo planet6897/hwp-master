@@ -35,7 +35,9 @@ python3 scripts/template_fill.py fill <프로젝트> sources/<서식> --data sou
 ```
 
 자주 쓰는 기관 서식은 등록해 두고 이름으로 부른다. 등록하면 서식 사본·SHA-256 잠금·자료 틀이
-`templates/house/<이름>/`에 생긴다. 들여온 서식이 등록 때와 다르면 채우지 않는다(T003).
+`~/.hwp-master/templates/house/<이름>/`(`HWP_MASTER_HOME`으로 바꿀 수 있다)에 생긴다. 플러그인 설치 폴더는
+갱신 때 바뀌므로 거기에 두지 않는다. `--house`는 이 폴더를 먼저, 스킬에 동봉한 `templates/house/`를 다음에 찾는다.
+들여온 서식이 등록 때와 다르면 채우지 않는다(T003).
 
 ```bash
 python3 scripts/template_fill.py register <서식.hwpx> --name <이름>

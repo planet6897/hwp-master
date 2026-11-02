@@ -48,6 +48,20 @@ ANOMALY_KEYS = ("overflowCount", "overlapCount", "textOverlapCount", "offCanvasC
 SKILL_DIR = Path(__file__).resolve().parents[1]
 
 
+def house_dirs(explicit: Optional[str] = None) -> List[Path]:
+    """기관 서식 저장소. 등록은 첫 경로에, 찾기는 순서대로.
+
+    플러그인으로 설치하면 스킬 폴더는 갱신 때 바뀌는 캐시이므로 사용자 서식은 그 밖
+    (`$HWP_MASTER_HOME/templates/house`, 기본 `~/.hwp-master/templates/house`)에 둔다.
+    스킬에 동봉한 `templates/house` 는 읽기 전용 예비 경로다.
+    """
+    if explicit:
+        return [Path(explicit)]
+    import os
+    home = Path(os.environ.get("HWP_MASTER_HOME") or Path.home() / ".hwp-master")
+    return [home / "templates" / "house", SKILL_DIR / "templates" / "house"]
+
+
 # ---------------------------------------------------------------- 칸 조사
 
 def scan(rhwp: str, cwd: Path, doc: str) -> dict:
@@ -315,8 +329,8 @@ def cmd_fill(args) -> int:
         return 0 if report["ok"] else 1
 
     if args.house:  # 등록한 기관 서식을 프로젝트 sources/ 로 들여온다 (지문 잠금 파일과 함께)
-        house = Path(args.templates_dir or SKILL_DIR / "templates" / "house") / args.house
-        tpl = next((p for p in sorted(house.glob("template.*")) if p.suffix.lower() in EDITABLE), None)
+        tpl = next((p for d in house_dirs(args.templates_dir) for p in sorted((d / args.house).glob("template.*"))
+                    if p.suffix.lower() in EDITABLE), None)
         if tpl is None:
             findings.append(finding("error", "T000", f"등록된 기관 서식이 없습니다: {args.house}"))
             return finish()
@@ -523,7 +537,7 @@ def cmd_register(args) -> int:
     if not re.fullmatch(r"[\w가-힣-]+", args.name):
         print(f"이름은 글자·숫자·_·- 만 씁니다: {args.name}", file=sys.stderr)
         return 2
-    dest = Path(args.templates_dir or SKILL_DIR / "templates" / "house") / args.name
+    dest = house_dirs(args.templates_dir)[0] / args.name
     if dest.exists() and not args.force:
         print(f"이미 등록된 이름입니다(덮어쓰려면 --force): {dest}", file=sys.stderr)
         return 2

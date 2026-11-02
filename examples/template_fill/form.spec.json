@@ -1,0 +1,8 @@
+{"version":"1","title":"{{title}}","blocks":[
+{"type":"paragraph","text":"작성일: {{date}}  작성자: {{author}}"},
+{"type":"heading","level":1,"text":"추진 과제"},
+{"type":"paragraph","text":"□ {{tasks.name}}"},
+{"type":"paragraph","text":"  ○ 내용: {{tasks.detail}}"},
+{"type":"heading","level":1,"text":"예산"},
+{"type":"table","rows":[["항목","금액"],["{{budget.item}}","{{budget.amount}}"],["합계","{{total}}"]]},
+{"type":"paragraph","text":"문의: {{author}}"}]}

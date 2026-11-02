@@ -2,7 +2,7 @@
 name: hwp-master
 description: 자료(PDF·DOCX·MD·웹·기존 HWP) 또는 주제를 받아 한컴에서 편집 가능한 네이티브 HWPX 문서(개조식 보고서·사업계획서·제안서·기안문·회의록)를 rhwp로 생성합니다. 트리거 — "한글 문서로 만들어줘", "hwp 보고서 작성", "사업계획서 hwpx로", "이 자료로 기안문", "/hwp-master".
 metadata:
-  version: 0.0.1
+  version: 0.1.0
   license: MIT
   repository: https://github.com/planet6897/hwp-master
 ---

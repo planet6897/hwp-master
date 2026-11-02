@@ -260,6 +260,10 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
 
 - `.claude-plugin`, `npx skills add planet6897/hwp-master` 설치 경로, rhwp 바이너리 설치 안내(`npm`/crates/릴리스).
 - 예제 결과물(HWPX·PDF) 공개 저장소.
+- 진행(2026-11-02): `.claude-plugin/plugin.json`·`marketplace.json`(`claude plugin validate` 통과, 격리 설정에서
+  marketplace add → install → 스킬 인식 확인), README 설치 안내, `examples/template_fill/`. rhwp CLI 는 crates.io·npm 에
+  없고 릴리스 v0.8.7 은 테스트 8건 실패라 0.9.0 릴리스 전에는 `cargo install --git … --branch devel --features native-skia`.
+  `npx skills add` 경로는 미검증. 저장소 공개 여부는 사용자 결정.
 
 ## 7. rhwp 코어 PR 시 지켜야 할 정본 게이트
 
