@@ -174,6 +174,14 @@ class ProjectLintTest(unittest.TestCase):
         self.assertIn("E105", self.lint([[p, pb], [pb, p]])[0])
 
 
+class BudgetTest(unittest.TestCase):
+    def test_footnote_and_caption_count(self):
+        blocks = [{"type": "paragraph", "text": "가" * 50, "footnotes": [{"text": "나" * 30}]},
+                  {"type": "image", "path": "a.png", "caption": "다" * 20}]
+        self.assertEqual(hds._lint_unit_budget({"target_chars": 100}, blocks, ""), [])
+        self.assertEqual(hds._lint_unit_budget({"target_chars": 200}, blocks, "")[0].code, "W301")
+
+
 class ProduceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

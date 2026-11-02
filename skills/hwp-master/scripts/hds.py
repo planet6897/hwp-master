@@ -446,6 +446,11 @@ def _lint_unit_budget(u: dict, blocks, where: str) -> List[Finding]:
             continue
         if isinstance(b.get("text"), str):
             chars += len(b["text"])
+        if isinstance(b.get("caption"), str):
+            chars += len(b["caption"])
+        for n in b.get("footnotes", []) if isinstance(b.get("footnotes"), list) else []:
+            if isinstance(n, dict) and isinstance(n.get("text"), str):
+                chars += len(n["text"])
         for row in b.get("rows", []) if isinstance(b.get("rows"), list) else []:
             chars += sum(len(c) for c in row if isinstance(c, str))
     ratio = chars / target
