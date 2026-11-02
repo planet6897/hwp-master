@@ -1,0 +1,19 @@
+{
+  "units": [
+    {"id": "U01", "title": "검토 개요", "target_chars": 300,
+     "purpose": "검토 목적·대상·방법을 밝힘",
+     "sources": ["sources/rhwp_README.md", "sources/hwp-master_README.md"]},
+    {"id": "U02", "title": "도구 현황", "target_chars": 500,
+     "purpose": "rhwp 와 hwp-master 의 성격·기능·배포 채널을 정리",
+     "sources": ["sources/rhwp_README.md", "sources/rhwp_v0.8.7_release.md", "sources/hwp-master_README.md"]},
+    {"id": "U03", "title": "업무별 적용 가능성", "target_chars": 600,
+     "purpose": "업무 유형별로 쓸 수 있는 기능을 표로 대응시키고 실측 결과를 제시",
+     "sources": ["sources/hwp-master_usage.md", "sources/template_fill_example.md"]},
+    {"id": "U04", "title": "제약 사항", "target_chars": 400,
+     "purpose": "도입 전에 알아야 할 버전·기능 한계",
+     "sources": ["sources/hwp-master_README.md", "sources/hwp-master_usage.md"]},
+    {"id": "U05", "title": "검토 의견", "target_chars": 350,
+     "purpose": "시범 적용 범위와 단계를 제안",
+     "sources": ["sources/hwp-master_usage.md"]}
+  ]
+}

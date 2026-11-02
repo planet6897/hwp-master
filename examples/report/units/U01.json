@@ -1,0 +1,8 @@
+{"unit": "U01", "blocks": [
+ {"type": "heading", "level": 1, "text": "검토 개요"},
+ {"type": "paragraph", "text": "□ 검토 목적: 반복되는 한글 문서 작성·수정 작업에 자동화 도구를 시범 적용할 수 있는지 판단"},
+ {"type": "paragraph", "text": "□ 검토 대상"},
+ {"type": "paragraph", "text": "  ○ rhwp: HWP·HWPX 문서를 읽고 쓰는 오픈소스 문서 엔진"},
+ {"type": "paragraph", "text": "  ○ hwp-master: rhwp 로 한글 문서를 만들고 고치는 Claude 스킬"},
+ {"type": "paragraph", "text": "□ 검토 방법: 공개 자료(저장소 설명서·릴리스 노트) 검토와 예제 실측(한컴오피스 2024 출력과 대조)"}
+]}

@@ -3,6 +3,7 @@
 
 탐색 순서: --rhwp 인자 → 환경변수 RHWP_BIN → PATH 의 `rhwp`.
 최소 버전 미만이거나 찾지 못하면 exit 2 와 설치 안내를 낸다.
+Linux 에서 한글 글꼴 파일이 보이지 않으면 경고한다(미리보기 PNG·PDF 의 한글이 빠짐). 경고는 exit 0.
 
     python3 rhwp_locate.py [--rhwp PATH] [--json]
 """
@@ -15,13 +16,48 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Optional
+from pathlib import Path
+from typing import Iterable, List, Optional
 
 MIN_VERSION = (0, 9, 0)
 INSTALL_HINT = (
     "rhwp 바이너리를 찾지 못했습니다. https://github.com/edwardkim/rhwp 에서 빌드하거나 "
     "설치한 뒤 PATH 에 두거나 RHWP_BIN 환경변수로 경로를 지정하세요."
 )
+
+
+FONT_HINT = (
+    "한글 글꼴을 찾지 못했습니다. HWPX 는 정상으로 만들어지지만 rhwp 미리보기(PNG·PDF)에서 한글이 빠집니다. "
+    "Ubuntu/Debian 은 `sudo apt install fonts-noto-cjk`, 그 밖에는 한글 TTF/OTF 를 ~/.local/share/fonts 에 두거나 "
+    "build.py --font-path <폴더> 로 지정하세요."
+)
+# 파일 이름으로 한글 글꼴을 가린다. fc-list 가 없는 최소 설치 환경에서도 동작하게 하려는 것이다.
+_KOREAN_FONT_NAME = re.compile(
+    r"(cjk|[-_ ]kr[-_. ]|kr\.|korean|nanum|hamchorom|hcr|hancom|batang|gulim|dotum|gungsuh|malgun|"
+    r"baekmuk|unbatang|undotum|myeongjo|pretendard|spoqa|kopub|ibmplexsanskr|gowun|seoul)",
+    re.IGNORECASE,
+)
+_FONT_EXT = {".ttf", ".otf", ".ttc", ".otc"}
+_SYSTEM_FONT_DIRS = ("/usr/share/fonts", "/usr/local/share/fonts")
+
+
+def korean_font_status(extra_dirs: Iterable[str] = ()) -> dict:
+    """미리보기에 쓸 한글 글꼴이 있는지 본다. macOS·Windows 는 시스템 한글 글꼴이 있어 확인을 생략한다."""
+    dirs: List[str] = list(extra_dirs)
+    env = os.environ.get("RHWP_FONT_PATH")
+    if env:
+        dirs += [d for d in env.split(os.pathsep) if d]
+    if not sys.platform.startswith("linux"):
+        return {"ok": True, "checked": False, "platform": sys.platform}
+    dirs += list(_SYSTEM_FONT_DIRS) + [str(Path.home() / ".local/share/fonts"), str(Path.home() / ".fonts")]
+    for d in dirs:
+        root = Path(d)
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if path.suffix.lower() in _FONT_EXT and _KOREAN_FONT_NAME.search(path.name):
+                return {"ok": True, "checked": True, "platform": sys.platform, "example": str(path)}
+    return {"ok": False, "checked": True, "platform": sys.platform, "searched": dirs, "hint": FONT_HINT}
 
 
 class RhwpNotFound(RuntimeError):
@@ -62,10 +98,13 @@ def main() -> int:
         else:
             print(str(exc), file=sys.stderr)
         return 2
+    font = korean_font_status()
     if args.json:
-        print(json.dumps({"ok": True, **info}, ensure_ascii=False))
+        print(json.dumps({"ok": True, **info, "koreanFont": font}, ensure_ascii=False))
     else:
         print(f"rhwp {info['version']} — {info['path']}")
+        if not font["ok"]:
+            print(f"경고: {FONT_HINT}", file=sys.stderr)
     return 0
 
 

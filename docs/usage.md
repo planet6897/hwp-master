@@ -231,6 +231,7 @@ hwp-master 가 아니라 rhwp 의 `rhwp-exam-ingest` 스킬이 만듭니다. Cla
 | 제목이 "1. 1. 추진 배경" 처럼 이중 번호 | 제목에 번호를 직접 썼습니다(E101). 번호를 지웁니다. |
 | 표 셀 글이 미리보기에서 잘림 (W201) | 한컴에서는 줄바꿈됩니다. 셀 문장을 줄이거나 열 수를 줄입니다. |
 | 쪽수 초과 (R104) | 분량을 줄이거나 쪽 한도를 늘립니다. |
+| 미리보기에 한글이 안 보임 (R105, Linux) | 한글 글꼴이 없습니다. `sudo apt install fonts-noto-cjk` 하거나 `build.py --font-path <글꼴 폴더>` 를 줍니다. HWPX 자체는 정상입니다. |
 | Template Fill T101 | 자료에 빠진 칸이 있습니다. 메시지의 키를 `data.json` 에 넣습니다. |
 | Template Fill T105 | 반복 칸 자료가 비었습니다. "해당 없음" 1건을 넣습니다. |
 | Template Fill T003 | 등록 이후 서식이 바뀌었습니다. `register --force` 로 다시 등록합니다. |

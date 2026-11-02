@@ -11,7 +11,7 @@
 - 문서 엔진: [rhwp](https://github.com/edwardkim/rhwp) — HWP/HWPX 를 읽고 쓰는 오픈소스 엔진의 CLI 를 호출합니다.
 - hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다. 검사에서 오류가 하나라도 나오면 완료로 보고하지 않습니다.
 
-> 상태: 0.1.1 — 새 문서(Default·Quick)·형식 변환·서식 채우기·명단 문서·부분 수정·번호 정리, 시험지 위임.
+> 상태: 0.1.2 — 새 문서(Default·Quick)·형식 변환·서식 채우기·명단 문서·부분 수정·번호 정리, 시험지 위임.
 > 새 문서의 블록은 제목·문단·표입니다. 예제 결과물은 [examples/](examples/) 에 있습니다.
 
 ## 빠른 시작
@@ -43,21 +43,34 @@ rhwp --version    # rhwp v0.9.0
 </details>
 
 <details>
-<summary><strong>Linux / Windows</strong> — 아직 hwp-master 로 확인하지 않은 경로</summary>
-
-같은 `cargo install` 명령을 씁니다. rhwp 릴리스도 Linux·Windows 바이너리를 같은 `native-skia` 기능으로 빌드하지만,
-이 OS 들에서 hwp-master 전체를 돌려 보지는 않았습니다. 문제가 생기면 이슈로 알려 주세요.
+<summary><strong>Linux (Ubuntu / Debian)</strong> — 확인한 경로 (2026-11-03, 새 <code>ubuntu:24.04</code> 컨테이너, rhwp <code>devel</code> <code>ea86816b</code>, 24코어에서 빌드 11~20분)</summary>
 
 ```bash
-# Ubuntu / Debian
-sudo apt install python3 build-essential
+# Python·빌드 도구, rhwp 가 링크하는 fontconfig·freetype, 미리보기용 한글 글꼴
+sudo apt install python3 build-essential curl git \
+  libfontconfig1-dev libfreetype6-dev fonts-noto-cjk
+
+# Rust 툴체인 (이미 있으면 생략)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+. "$HOME/.cargo/env"
+
 cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel \
   --features native-skia --bin rhwp rhwp
+
+rhwp --version    # rhwp v0.9.0
 ```
 
-Windows 는 [python.org](https://www.python.org/downloads/) 설치 때 **"Add to PATH"** 를 켜고,
-[rustup](https://rustup.rs/) 으로 Rust 를 설치한 뒤 같은 `cargo install` 을 실행합니다.
+- `libfontconfig1-dev`·`libfreetype6-dev` 가 없으면 빌드 마지막에 `unable to find library -lfreetype` 로 실패합니다.
+- 한글 글꼴이 없으면 HWPX 는 정상으로 만들어지지만 미리보기 PNG·PDF 에서 한글이 빠집니다. 데스크톱 Ubuntu 에는
+  대개 설치돼 있고, 서버·WSL·컨테이너에는 없습니다. hwp-master 는 이때 경고(R105)를 냅니다.
+</details>
+
+<details>
+<summary><strong>Windows</strong> — 아직 hwp-master 로 확인하지 않은 경로</summary>
+
+[python.org](https://www.python.org/downloads/) 설치 때 **"Add to PATH"** 를 켜고, [rustup](https://rustup.rs/) 으로
+Rust 를 설치한 뒤 macOS 와 같은 `cargo install` 을 실행합니다. rhwp 릴리스는 Windows 바이너리도 같은 `native-skia`
+기능으로 빌드하지만, Windows 에서 hwp-master 전체를 돌려 보지는 않았습니다. 문제가 생기면 이슈로 알려 주세요.
 </details>
 
 <details>
@@ -90,7 +103,8 @@ hwp-master 는 **파일을 읽고 쓰고 명령을 실행할 수 있는 AI 에�
 ```bash
 git clone https://github.com/planet6897/hwp-master.git
 cd hwp-master
-python3 skills/hwp-master/scripts/rhwp_locate.py    # rhwp 경로·버전 확인
+python3 skills/hwp-master/scripts/rhwp_locate.py    # rhwp 경로·버전 확인 (Linux 는 한글 글꼴도)
+python3 -m unittest discover -s tests               # 선택: 자동 테스트 (rhwp 0.9.0 에서 모두 OK)
 ```
 
 > 저장소가 비공개인 동안에는 이 저장소에 접근 권한이 있는 GitHub 계정이 필요합니다.
@@ -150,6 +164,8 @@ AI: 문서 기획을 확인해 주세요.
 ```
 
 AI 가 장별 집필, 한글 문서 조립, 규약·조판 검사, 미리보기까지 진행하고 결과를 알려 줍니다.
+
+이 흐름으로 만든 2쪽 보고서(기획·원고·결과 HWPX·한컴 PDF 대조)는 [examples/report/](examples/report/) 에 있습니다.
 
 **빠른 생성 (확인 단계 생략)**: 2쪽 이하의 짧은 문서는 그렇게 말하면 확인 없이 바로 만듭니다.
 

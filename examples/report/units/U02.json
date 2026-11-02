@@ -1,0 +1,15 @@
+{"unit": "U02", "blocks": [
+ {"type": "heading", "level": 1, "text": "도구 현황"},
+ {"type": "paragraph", "text": "□ rhwp"},
+ {"type": "paragraph", "text": "  ○ Rust·WebAssembly 기반 오픈소스 HWP·HWPX 뷰어·에디터, MIT 라이선스"},
+ {"type": "paragraph", "text": "  ○ HWP 5.0·HWPX 파싱, SVG·PNG·PDF 내보내기, 웹 에디터 제공"},
+ {"type": "paragraph", "text": "  ○ 배포 경로: 웹 데모, VS Code 확장, Chrome·Edge·Firefox 확장, npm 패키지, GitHub 릴리스 CLI"},
+ {"type": "paragraph", "text": "  ○ AI 에이전트용 MCP 서버 내장"},
+ {"type": "paragraph", "text": "  ○ 개발 규모: 외부 기여자 40명 이상, Rust 테스트 3,400건 이상과 시각 회귀 CI 운영"},
+ {"type": "paragraph", "text": "  ○ 최신 릴리스 v0.8.7: v0.8.6 이후 2,395커밋·230개 PR 반영"},
+ {"type": "paragraph", "text": "□ hwp-master"},
+ {"type": "paragraph", "text": "  ○ 자료나 주제로 한컴에서 바로 편집할 수 있는 HWPX 문서를 만드는 Claude 스킬"},
+ {"type": "paragraph", "text": "  ○ 문서 생성·편집은 rhwp 가 맡고, 스킬은 기획·집필 절차와 결과 검사를 담당"},
+ {"type": "paragraph", "text": "  ○ 작업 경로 7종(새 문서·빠른 문서·형식 변환·서식 채우기·명단 문서·부분 수정·번호 정리)과 시험지 위임"},
+ {"type": "paragraph", "text": "  ○ 원본은 고치지 않고 결과를 새 파일로 만들며, 검사 오류가 있으면 완료로 보고하지 않음"}
+]}

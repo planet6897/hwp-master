@@ -1,0 +1,8 @@
+{
+  "title": "rhwp 기반 한글 문서 자동화 도입 검토",
+  "font": "함초롬바탕",
+  "page_size": {"width_mm": 210, "height_mm": 297},
+  "doctype": "report",
+  "convention": "gaejosik",
+  "max_pages": 3
+}

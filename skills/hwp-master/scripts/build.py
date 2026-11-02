@@ -129,6 +129,10 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
     font_args = []
     for fp in font_paths:
         font_args += ["--font-path", fp]
+    if preview or png:
+        font = rhwp_locate.korean_font_status(font_paths)
+        if not font["ok"]:
+            report["findings"].append(hds.Finding("warning", "R105", font["hint"]).to_dict())
     if preview:
         pdf = out_hwpx.with_suffix(".preview.pdf")
         steps["preview_pdf"] = run_json([rhwp, "export-pdf", str(out_hwpx), "-o", str(pdf)] + font_args)

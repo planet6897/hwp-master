@@ -1,0 +1,11 @@
+{"unit": "U04", "blocks": [
+ {"type": "heading", "level": 1, "text": "제약 사항"},
+ {"type": "paragraph", "text": "□ rhwp 버전"},
+ {"type": "paragraph", "text": "  ○ hwp-master 는 rhwp 0.9.0 이상이 필요하며, 최신 릴리스 v0.8.7 에서는 자동 테스트 57건 중 8건 실패"},
+ {"type": "paragraph", "text": "  ○ 0.9.0 릴리스 전까지는 소스 빌드로 설치 필요(Rust 툴체인, 빌드 약 11분)"},
+ {"type": "paragraph", "text": "□ 새 문서의 표현 범위"},
+ {"type": "paragraph", "text": "  ○ 제목·문단·표만 작성 가능하고 그림·각주·수식·머리말·꼬리말·셀 병합·글자 서식은 미지원"},
+ {"type": "paragraph", "text": "  ○ 개요 번호 모양은 한글 기본형(1., 1.1.)만 사용 가능"},
+ {"type": "paragraph", "text": "  ○ 기관 서식의 스타일·용지를 이어받아 새 문서를 만드는 기능은 아직 없음"},
+ {"type": "paragraph", "text": "□ 미리보기 차이: rhwp 미리보기는 한컴 화면과 다를 수 있어 제출 전 한컴에서 확인 필요"}
+]}
