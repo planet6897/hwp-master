@@ -6,7 +6,8 @@
     공통 옵션: [--rhwp PATH] [--no-preview] [--png] [--font-path DIR ...]
     Quick 전용: [--max-pages N] [--convention gongmun|gaejosik]
 
-단계: (조립) → HDS 검사(오류면 중단) → rhwp scaffold → 빌드 영수증 → rhwp verify(표 수·제목 포함)
+단계: (조립) → HDS 검사(오류면 중단) → rhwp scaffold(+ 쪽 나눔·각주·머리말/꼬리말 edit, native.py)
+      → 편집 반영 검사 → 빌드 영수증 → rhwp verify(표 수·제목 포함)
       → export-structure 개요 대조 → layout-anomaly·쪽수 한도 → 미리보기 PDF/PNG → report.json
 검사는 판정만 하고 산출물을 고치지 않는다. 오류가 있으면 exit 1.
 쪽수 한도는 Default 에서 spec_lock.json 의 max_pages, Quick 에서 --max-pages 로 준다.
@@ -24,6 +25,7 @@ from typing import List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import conventions  # noqa: E402
 import hds  # noqa: E402
+import native  # noqa: E402
 import receipt  # noqa: E402
 import rhwp_locate  # noqa: E402
 
@@ -68,12 +70,17 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
 
     spec_path = workdir / "document.hds.json"
     spec_path.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    out_hwpx.parent.mkdir(parents=True, exist_ok=True)
-    steps["scaffold"] = run_json([rhwp, "scaffold", str(spec_path), "-o", str(out_hwpx), "--json"])
-    if steps["scaffold"]["exit"] != 0:
+    produced = native.produce(doc, out_hwpx, rhwp, workdir / "native")
+    steps["scaffold"] = produced["scaffold"]
+    if produced["edits"]:
+        steps["edits"] = produced["edits"]
+    if not produced["ok"]:
         report["ok"] = False
-        report["stoppedAt"] = "scaffold"
+        report["stoppedAt"] = "edits" if produced["scaffold"]["exit"] == 0 else "scaffold"
+        report["findings"].append(hds.Finding("error", "R106", produced["error"]).to_dict())
         return report
+    for problem in native.check(out_hwpx, doc):
+        report["findings"].append(hds.Finding("error", "R106", f"편집 반영 확인 실패: {problem}").to_dict())
     rec = receipt.make(spec_path, out_hwpx, rhwp)
     if receipt_dir is not None:
         receipt_dir.mkdir(parents=True, exist_ok=True)

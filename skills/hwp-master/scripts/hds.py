@@ -4,11 +4,18 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
 
     {"version": "1", "title": str?, "font": str?,
      "page_size": {"width_mm": num, "height_mm": num}?,
-     "blocks": [heading | paragraph | table]}
+     "header"?: {"text": str}, "footer"?: {"text": str},
+     "blocks": [heading | paragraph | table | page_break]}
 
-    heading   {"type": "heading", "level": 1..7, "text": str}
-    paragraph {"type": "paragraph", "text": str}
-    table     {"type": "table", "rows": [[str]], "cell_align"?: str | [str]}
+    heading    {"type": "heading", "level": 1..7, "text": str}
+    paragraph  {"type": "paragraph", "text": str,
+                "footnotes"?: [{"text": str, "after"?: str}]}
+    table      {"type": "table", "rows": [[str]], "cell_align"?: str | [str]}
+    page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
+
+header/footer 의 text 안 "{page}" 는 쪽 번호가 된다. footnotes 는 after 문자열(문단에서
+처음 나오는 곳) 바로 뒤, after 가 없으면 문단 끝에 각주 번호를 단다.
+제목·문단·표는 rhwp scaffold 명세 v1 그대로이고, 나머지는 native.py 가 rhwp edit 으로 붙인다.
 
 검사 결과는 Finding 목록이다. severity 가 "error" 이면 차단, "warning" 이면 비차단.
 검사기는 검사만 하고 명세를 고치지 않는다.
@@ -25,12 +32,15 @@ from typing import Iterable, List, Optional
 import conventions
 
 HDS_VERSION = "1"
-TOP_KEYS = {"version", "title", "font", "page_size", "blocks"}
+TOP_KEYS = {"version", "title", "font", "page_size", "header", "footer", "blocks"}
 BLOCK_KEYS = {
     "heading": {"type", "level", "text"},
-    "paragraph": {"type", "text"},
+    "paragraph": {"type", "text", "footnotes"},
     "table": {"type", "rows", "cell_align"},
+    "page_break": {"type"},
 }
+HF_KEYS = ("header", "footer")
+PAGE_TOKEN = "{page}"
 CELL_ALIGNS = {"justify", "left", "center", "right"}
 
 # 제목 앞의 수동 번호: "1.", "1.2.", "가.", "Ⅲ.", "1)", "(가)", "①" 등
@@ -116,8 +126,60 @@ def validate_blocks(blocks, where_prefix: str = "") -> List[Finding]:
                 ))
         if btype == "paragraph" and not b["text"].strip():
             out.append(_warn("W203", "빈 문단 — 간격 조정용이면 문단 간격 규약을 쓰세요", where))
+        if btype == "paragraph" and "footnotes" in b:
+            out.extend(_validate_footnotes(b, where))
         if btype == "table":
             out.extend(_validate_table(b, where))
+    return out
+
+
+def _validate_footnotes(b: dict, where: str) -> List[Finding]:
+    notes = b["footnotes"]
+    if not isinstance(notes, list) or not notes:
+        return [_err("E106", "footnotes 는 비어 있지 않은 배열이어야 합니다", where)]
+    out: List[Finding] = []
+    for k, n in enumerate(notes):
+        w = f"{where}.footnotes[{k}]"
+        if not isinstance(n, dict) or set(n) - {"text", "after"}:
+            out.append(_err("E106", "각주는 {text, after?} 객체여야 합니다", w))
+            continue
+        if not isinstance(n.get("text"), str) or not n["text"].strip():
+            out.append(_err("E106", "각주 text 는 비어 있지 않은 문자열이어야 합니다", w))
+        after = n.get("after")
+        if after is not None and (not isinstance(after, str) or not after or after not in b["text"]):
+            out.append(_err("E107", f"각주 after {after!r} 가 문단 글자에 없습니다", w))
+    return out
+
+
+def validate_page_breaks(blocks, where_prefix: str = "", whole: bool = True) -> List[Finding]:
+    """E105: 쪽 나눔은 블록 사이에만 한 번씩. whole=False(단위 하나)면 맨 앞·끝은 허용한다."""
+    if not isinstance(blocks, list):
+        return []
+    out: List[Finding] = []
+    kinds = [b.get("type") if isinstance(b, dict) else None for b in blocks]
+    for i, k in enumerate(kinds):
+        if k != "page_break":
+            continue
+        where = f"{where_prefix}blocks[{i}]"
+        if i > 0 and kinds[i - 1] == "page_break":
+            out.append(_err("E105", "쪽 나눔이 연달아 있습니다", where))
+        elif whole and (i == 0 or i == len(kinds) - 1):
+            out.append(_err("E105", "쪽 나눔은 문서 맨 앞이나 맨 끝에 둘 수 없습니다", where))
+    return out
+
+
+def validate_header_footer(doc: dict, where: str = "") -> List[Finding]:
+    out: List[Finding] = []
+    for key in HF_KEYS:
+        if key not in doc:
+            continue
+        hf = doc[key]
+        w = f"{where}{key}"
+        if not (isinstance(hf, dict) and set(hf) == {"text"} and isinstance(hf["text"], str)
+                and hf["text"].strip()):
+            out.append(_err("E108", f"{key} 는 {{text: 비어 있지 않은 문자열}} 이어야 합니다", w))
+        elif hf["text"].count(PAGE_TOKEN) > 1:
+            out.append(_err("E108", f"{key}.text 의 {PAGE_TOKEN} 는 한 번만 쓸 수 있습니다", w))
     return out
 
 
@@ -187,8 +249,10 @@ def validate_document(doc) -> List[Finding]:
     for key in ("title", "font"):
         if key in doc and not isinstance(doc[key], str):
             out.append(_err("E004", f"{key} 는 문자열이어야 합니다"))
+    out.extend(validate_header_footer(doc))
     blocks = doc.get("blocks", [])
     out.extend(validate_blocks(blocks))
+    out.extend(validate_page_breaks(blocks))
     out.extend(lint_table_widths(blocks, width))
     return out
 
@@ -208,7 +272,7 @@ def assemble(project: Path) -> dict:
     """spec_lock.json + outline.json 순서의 units/*.json → HDS 문서."""
     lock = load_json(project / "spec_lock.json")
     doc = {"version": HDS_VERSION}
-    for key in ("title", "font", "page_size"):
+    for key in ("title", "font", "page_size") + HF_KEYS:
         if lock.get(key) is not None:
             doc[key] = lock[key]
     order = _unit_order(project)
@@ -253,7 +317,9 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
     if convention is not None and convention not in conventions.CONVENTIONS:
         out.append(_err("E009", f"spec_lock.convention 은 {list(conventions.CONVENTIONS)} 중 하나여야 합니다",
                         "spec_lock.json"))
+    out.extend(validate_header_footer(lock, "spec_lock.json:"))
     width = float((lock.get("page_size") or {}).get("width_mm", A4_WIDTH_MM))
+    all_blocks = []
     for u in units:
         uid = u.get("id")
         path = project / "units" / f"{uid}.json"
@@ -276,6 +342,15 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
         out.extend(lint_table_widths(blocks, width, prefix))
         out.extend(_lint_unit_budget(u, blocks, prefix))
         out.extend(conventions.lint_convention(blocks, convention, prefix))
+        out.extend(validate_page_breaks(blocks, prefix, whole=False))
+        if isinstance(blocks, list):
+            all_blocks.extend(blocks)
+    if stage == "final" and not any(f.severity == "error" for f in out):
+        kinds = [b.get("type") for b in all_blocks if isinstance(b, dict)]
+        if kinds and "page_break" in (kinds[0], kinds[-1]):
+            out.append(_err("E105", "쪽 나눔은 문서 맨 앞이나 맨 끝에 둘 수 없습니다"))
+        elif any(a == b == "page_break" for a, b in zip(kinds, kinds[1:])):
+            out.append(_err("E105", "단위 경계에서 쪽 나눔이 연달아 있습니다"))
     return out
 
 

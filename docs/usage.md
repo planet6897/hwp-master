@@ -101,7 +101,7 @@ Claude 는 해당 장(`units/*.json`)을 고쳐 다시 빌드합니다. 한컴�
 python3 $HM/scripts/build.py --quick 회의결과.hds.json -o 회의결과.hwpx --max-pages 1 --convention gaejosik
 ```
 
-HDS 는 제목(`heading`)·문단(`paragraph`)·표(`table`) 세 가지 블록으로 씁니다. 작성법은
+HDS 는 제목(`heading`)·문단(`paragraph`)·표(`table`)·쪽 나눔(`page_break`) 블록으로 쓰고, 문단에 각주(`footnotes`), 문서에 머리말(`header`)·꼬리말(`footer`, `{page}` 쪽 번호)을 붙일 수 있습니다. 작성법은
 `$HM/references/hds_authoring.md` 에 있습니다. 제목에 번호("1. 추진 배경")를 직접 쓰지 않습니다 — 한글이 자동으로 붙입니다.
 
 ### 4.3 다른 형식 자료를 옮기기 (Convert-in)
@@ -240,6 +240,6 @@ hwp-master 가 아니라 rhwp 의 `rhwp-exam-ingest` 스킬이 만듭니다. Cla
 
 ## 7. 지금 할 수 없는 것
 
-- 새 문서의 블록은 제목·문단·표뿐입니다. 그림·각주·수식·머리말/꼬리말·셀 병합·글자 서식(굵게 등)은 아직 만들 수 없습니다.
+- 새 문서에서 그림·수식·목록·셀 병합·글자 서식(굵게 등)은 아직 만들 수 없습니다. 각주 구분선은 없고, 머리말·꼬리말은 모든 쪽에 같은 한 줄입니다.
 - 기관 서식의 스타일·용지를 이어받아 **새 문서를 만드는** 기능은 아직 없습니다. 서식은 Template Fill 로 칸을 채우는 방식으로 씁니다.
 - 개요 번호 모양은 한글 기본(`1.`, `1.1.`)입니다.

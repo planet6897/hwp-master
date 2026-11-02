@@ -23,6 +23,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import native  # noqa: E402
 import rhwp_locate  # noqa: E402
 
 RECEIPT_KIND = "hwp-master/build-receipt"
@@ -45,7 +46,8 @@ def make(spec_path: Path, output: Path, rhwp: str) -> dict:
         "receiptVersion": RECEIPT_VERSION,
         "created": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "rhwpVersion": rhwp_version(rhwp),
-        "command": ["rhwp", "scaffold", "<spec>", "-o", "<output>"],
+        "command": ["rhwp", "scaffold", "<spec>", "-o", "<output>"] + (
+            [] if native.plan_empty(native.split(json.loads(spec_bytes))[1]) else ["+ rhwp edit (native.py)"]),
         "specSha256": sha256_bytes(spec_bytes),
         "spec": spec_bytes.decode("utf-8"),
         "output": output.name,
@@ -72,10 +74,10 @@ def verify(rec: dict, rhwp: str) -> dict:
         spec = Path(tmp) / "spec.json"
         out = Path(tmp) / "out.hwpx"
         spec.write_bytes(spec_bytes)
-        proc = subprocess.run([rhwp, "scaffold", str(spec), "-o", str(out)],
-                              capture_output=True, text=True, timeout=600)
-        if proc.returncode != 0:
-            raise RuntimeError(f"scaffold 실패 (exit {proc.returncode}): {proc.stderr.strip()[-500:]}")
+        produced = native.produce(json.loads(spec_bytes), out, rhwp, Path(tmp) / "work")
+        if not produced["ok"]:
+            detail = produced.get("scaffold", {}).get("stderr") or produced.get("edits", [{}])[-1]
+            raise RuntimeError(f"{produced.get('error')}: {str(detail)[-500:]}")
         result["actualOutputSha256"] = sha256_bytes(out.read_bytes())
     result["reproduced"] = result["specIntact"] and (
         result["actualOutputSha256"] == result["expectedOutputSha256"])

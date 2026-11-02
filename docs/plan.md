@@ -236,6 +236,10 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
 ### M2. scaffold v2 코어 확장 (rhwp PR, 3~5주, 블록별 이슈)
 
 - P0 블록(runs·style·list·table 병합/열 폭·page_break) → P1(image·footnote·header_footer·caption).
+- 2026-11-03: `page_break`·`footnote`·`header_footer`(쪽 번호 포함)는 코어 확장 없이 scaffold 결과에
+  `rhwp edit` 을 적용하는 방식(`scripts/native.py`)으로 먼저 제공했다. 한컴 2024 대조 실루엣 98.58~100%
+  (남은 차이는 제목 번호 간격, rhwp #8433). 본문 흐름 안 그림(`image`)은 `edit insert-image` 가 쪽 좌표 고정
+  개체라 코어 확장이 필요하다.
 - 각 블록은 rhwp 이슈 `task/<이슈번호>-scaffold-<블록>` 브랜치로 진행한다.
 - 완료 기준: 블록별로 rhwp 정본 게이트 통과(§7).
 

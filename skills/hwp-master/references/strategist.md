@@ -32,11 +32,13 @@
   "page_size": {"width_mm": 210, "height_mm": 297},
   "doctype": "report",
   "convention": "gaejosik",
-  "max_pages": 10
+  "max_pages": 10,
+  "footer": {"text": "- {page} -"}
 }
 ```
 
-`title`·`font`·`page_size`만 HDS로 넘어간다. 나머지는 검사 규칙 선택에 쓴다.
+`title`·`font`·`page_size`와 선택 필드 `header`·`footer`(모든 쪽 한 줄, `{page}`는 쪽 번호)가 HDS로
+넘어간다. 나머지는 검사 규칙 선택에 쓴다. 쪽 번호는 2쪽 이상 보고서에 넣고, 머리말은 제출처가 요구할 때만 쓴다.
 `max_pages`는 제출 요건의 쪽수 한도다(없으면 검사하지 않음). 빌드 쪽수가 넘으면 R104 오류다.
 `convention`은 본문 항목 규약이다(없으면 검사하지 않음).
 
