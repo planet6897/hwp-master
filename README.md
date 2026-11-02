@@ -10,6 +10,8 @@
 > HDS v1 블록은 제목·문단·표. 전체 계획은 [docs/plan.md](docs/plan.md), M0 대조 결과는 [docs/m0_findings.md](docs/m0_findings.md),
 > 예제 결과물은 [examples/](examples/).
 
+**사용법은 [docs/usage.md](docs/usage.md)** — 설치 확인, 라우트 고르기와 Claude 에게 요청하는 예, 라우트별 명령, 결과 확인, 막혔을 때.
+
 ## 작업 흐름 (요약)
 
 ```

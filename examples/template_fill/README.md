@@ -11,9 +11,9 @@
 재현 (rhwp 0.9.0, 같은 입력이면 같은 SHA-256):
 
 ```bash
-python3 skills/hwp-master/scripts/project_manager.py init tf-demo
-cp examples/template_fill/form.hwpx examples/template_fill/data.json projects/tf-demo/sources/
-python3 skills/hwp-master/scripts/template_fill.py fill projects/tf-demo sources/form.hwpx --data sources/data.json
+P=$(python3 skills/hwp-master/scripts/project_manager.py init tf-demo)   # projects/tf-demo_<날짜>
+cp examples/template_fill/form.hwpx examples/template_fill/data.json $P/sources/
+python3 skills/hwp-master/scripts/template_fill.py fill $P sources/form.hwpx --data sources/data.json
 ```
 
 측정: 2026-11-02, `scripts/visual_sweep.py --silhouette-only --compat 2024 --dpi 96`(rhwp 저장소),
