@@ -9,7 +9,7 @@ metadata:
 
 # hwp-master (초안)
 
-> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify 라우트, Exam 위임, HDS v1 = 제목·문단·표, 규약 검사(gongmun·gaejosik).
+> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표, 규약 검사(gongmun·gaejosik).
 > 전체 계획: 저장소의 `docs/plan.md`.
 
 ## 스크립트
@@ -24,6 +24,7 @@ metadata:
 | `scripts/convert.py` | Convert-in: MD·DOCX·PDF → `outline.json`·`units/` (정규화·손실 보고) |
 | `scripts/merge.py` | Mail-merge: 서식·명단 대조 → `batch fill --dry-run` → `batch fill --verify` → 행 수 보존 판정 |
 | `scripts/beautify.py` | Beautify: `propose`(손 번호 → 개요 번호 계획) · `apply`(적용 → 내용 보존·조판 판정, 문제 문단 자동 제외) |
+| `scripts/template_fill.py` | Template Fill: `inspect`(서식 칸 조사·자료 틀) · `fill`(목록 반복 → 칸 채움 → 캡슐 사슬 → 판정) · `register`(기관 서식 등록) |
 | `scripts/edit.py` | Edit Native: `inspect`(편집 대상 조사) · `apply`(dry-run → 실행 → 작업 캡슐 → 전후 렌더 비교) |
 
 ## 원칙
@@ -41,7 +42,7 @@ metadata:
 | 주제/자료로 새 문서 | Default | `workflows/generate.md` |
 | 짧은 문서를 빠르게 | Quick | `workflows/generate.md` (Quick 절) |
 | MD·DOCX·PDF 자료를 한글 문서로 | Convert-in | `workflows/convert.md` |
-| 기관 서식에 내용 채우기 | Template Fill | 미구현 (M3) |
+| 기관 서식의 `{{칸}}`·누름틀에 내용 채우기 (목록 반복 포함) | Template Fill | `workflows/template.md` |
 | 기존 HWP/HWPX 수정 (누름틀·문구·표 셀·체크박스) | Edit Native | `workflows/edit.md` |
 | 서식 하나에 명단 N행 → 문서 N개 | Mail-merge | `workflows/merge.md` |
 | 시험지 자료 → 한글 시험지 | Exam (위임) | `workflows/exam.md` → rhwp `rhwp-exam-ingest` |

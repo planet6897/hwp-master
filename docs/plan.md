@@ -164,7 +164,7 @@ ppt-master의 brand/style/layout/deck 4분류를 HWP에 맞춰 다음처럼 바�
 |---|---|---|
 | Default | 주제/자료 | 전체 파이프라인 |
 | Quick | 짧은 문서 | Strategist·확인 게이트 생략, 단일 HDS → scaffold → final 검사 (재개 불가) |
-| Template Fill | 기관 서식 + 자료 | 서식 상속 scaffold 또는 `run fill_template` |
+| Template Fill | 기관 서식 + 자료 | 구현: 자리표시(`{{키}}`·`{{목록.필드}}`)·누름틀 → `run` 반복·채움 계획 사슬(`template_fill.py`, `workflows/template.md`). 서식 상속 scaffold(`--template`)는 rhwp 코어 확장 대기 |
 | Edit Native | 기존 HWP/HWPX | `rhwp-safe-edit` 경로(`run` 계획서·`--dry-run`·`--verify`), 원본 무수정 |
 | Beautify | 기존 문서 | 내용·쪽 구성 유지, 스타일 바인딩·번호 자동화만 적용(`apply-style`·`apply-para-format`) |
 | Convert-in | DOCX/PDF/MD | intake → HDS → scaffold (서식 정규화 포함) |
