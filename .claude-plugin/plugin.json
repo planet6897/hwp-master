@@ -1,6 +1,6 @@
 {
   "name": "hwp-master",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "자료(PDF·DOCX·MD·웹·기존 HWP)나 주제로 한컴에서 편집 가능한 네이티브 HWPX 문서를 rhwp로 만들고, 기관 서식 채우기·명단 메일머지·기존 문서 편집과 번호 정리까지 검사기로 판정하는 스킬",
   "author": {"name": "planet6897"},
   "homepage": "https://github.com/planet6897/hwp-master",

@@ -25,7 +25,7 @@ Claude Code 에서 플러그인으로 설치했다면 새 세션에서 "hwp-mast
 
 ```bash
 # 플러그인 설치
-HM=~/.claude/plugins/cache/hwp-master/hwp-master/0.1.0/skills/hwp-master
+HM=$(ls -d ~/.claude/plugins/cache/hwp-master/hwp-master/*/skills/hwp-master | tail -1)   # 설치된 버전 폴더
 # 수동 복사:   HM=~/.claude/skills/hwp-master
 # 저장소 clone: HM=<clone 위치>/skills/hwp-master
 python3 $HM/scripts/rhwp_locate.py      # rhwp 경로와 버전 확인
