@@ -4,6 +4,9 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
 `rhwp edit` 을 순서대로 적용해 붙인다.
 
     page_break 블록          → edit insert-page-break (다음 블록 문단 앞에서 쪽 나눔)
+    image 블록               → 표시 글자 문단 → edit delete-text + insert-picture
+                               + set-picture {"treatAsChar":true} + apply-para-format 정렬,
+                               caption 은 가운데 정렬 문단
     paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·글자색)
     paragraph.footnotes      → edit insert-footnote + insert-footnote-text
     header / footer          → edit insert-header-footer + insert-header-footer-text
@@ -25,6 +28,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from xml.etree import ElementTree as ET
 
+HU_PER_MM = 7200 / 25.4
+HU_PER_PX = 75  # 96dpi 픽셀 1개 (rhwp insert-picture 의 원본 크기 환산과 같다)
+A4_WIDTH_MM = 210.0
+SIDE_MARGINS_MM = 60.0  # scaffold 기본 좌우 여백 30mm × 2
+IMAGE_MARK = "[[hwp-master:image:{n}]]"
 HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 HH = "http://www.hancom.co.kr/hwpml/2011/head"
 PAGE_TOKEN = "{page}"
@@ -34,12 +42,26 @@ def split(doc: dict) -> tuple:
     """HDS → (scaffold 명세, 편집 계획). 편집 계획이 비면 scaffold 만으로 끝난다."""
     spec = {k: copy.deepcopy(v) for k, v in doc.items() if k not in ("header", "footer", "blocks")}
     blocks: List[dict] = []
-    plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "header": doc.get("header"),
+    plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "images": [],
+                               "aligns": [], "header": doc.get("header"),
                                "footer": doc.get("footer")}
     pending_break = False
     for b in doc.get("blocks", []):
         if b.get("type") == "page_break":
             pending_break = True
+            continue
+        if b.get("type") == "image":
+            if pending_break:
+                plan["page_breaks"].append(len(blocks))
+                pending_break = False
+            mark = IMAGE_MARK.format(n=len(plan["images"]))
+            plan["images"].append({"block": len(blocks), "mark": mark, "path": b["path"],
+                                   "width_mm": b.get("width_mm")})
+            plan["aligns"].append({"block": len(blocks), "align": b.get("align", "center")})
+            blocks.append({"type": "paragraph", "text": mark})
+            if b.get("caption"):
+                plan["aligns"].append({"block": len(blocks), "align": "center"})
+                blocks.append({"type": "paragraph", "text": b["caption"]})
             continue
         b = copy.deepcopy(b)
         notes = b.pop("footnotes", None) or []
@@ -69,8 +91,49 @@ def char_props(mark: dict) -> str:
 
 
 def plan_empty(plan: dict) -> bool:
-    return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"]
+    return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"] or plan["images"]
                 or plan["header"] or plan["footer"])
+
+
+def image_size_px(path: Path) -> Optional[tuple]:
+    """PNG·JPEG 헤더만 읽어 (가로, 세로) 픽셀. 모르면 None."""
+    data = path.read_bytes()
+    if data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR":
+        return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    if data[:2] == b"\xff\xd8":
+        i = 2
+        while i + 9 < len(data):
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            marker = data[i + 1]
+            if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+                i += 2
+                continue
+            seg = int.from_bytes(data[i + 2:i + 4], "big")
+            if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                return int.from_bytes(data[i + 7:i + 9], "big"), int.from_bytes(data[i + 5:i + 7], "big")
+            i += 2 + seg
+    return None
+
+
+def image_width_hu(doc: dict, img: dict) -> int:
+    """그림 너비(HWPUNIT). width_mm 가 없으면 원본 픽셀 크기, 본문 폭을 넘으면 본문 폭."""
+    content_mm = float((doc.get("page_size") or {}).get("width_mm", A4_WIDTH_MM)) - SIDE_MARGINS_MM
+    if img.get("width_mm"):
+        return round(img["width_mm"] * HU_PER_MM)
+    size = image_size_px(Path(img["path"]))
+    natural = size[0] * HU_PER_PX if size else round(content_mm * HU_PER_MM)
+    return min(natural, round(content_mm * HU_PER_MM))
+
+
+def resolve_images(doc: dict, base: Path) -> dict:
+    """image.path 를 base 기준 절대 경로로 바꾼 사본. 빌드가 명세를 저장하기 전에 부른다."""
+    out = copy.deepcopy(doc)
+    for b in out.get("blocks", []):
+        if isinstance(b, dict) and b.get("type") == "image" and isinstance(b.get("path"), str):
+            b["path"] = str((base / b["path"]).resolve())
+    return out
 
 
 def top_paragraphs(hwpx: Path) -> List[dict]:
@@ -183,7 +246,8 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
         return result
 
     paras = map_blocks(top_paragraphs(first), spec["blocks"], bool(spec.get("title")))
-    need = set(plan["page_breaks"]) | {f["block"] for f in plan["footnotes"] + plan["emphasis"]}
+    need = set(plan["page_breaks"]) | {f["block"] for f in plan["footnotes"] + plan["emphasis"]
+                                       + plan["images"] + plan["aligns"]}
     missing = sorted(i for i in need if paras[i] is None)
     if missing:
         result["error"] = f"scaffold 산출물에서 블록 문단을 찾지 못함: blocks {missing}"
@@ -204,6 +268,23 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
     for bi in plan["page_breaks"]:
         if not step(["insert-page-break", "--para", str(paras[bi]), "--offset", "0"]):
             result["error"] = "쪽 나눔 삽입 실패"
+            return result
+    for img in plan["images"]:
+        para = str(paras[img["block"]])
+        if not Path(img["path"]).is_file():
+            result["error"] = f"그림 파일이 없습니다: {img['path']}"
+            return result
+        if not (step(["delete-text", "--para", para, "--offset", "0", "--count", str(len(img["mark"]))])
+                and step(["insert-picture", "--image", img["path"], "--para", para, "--offset", "0",
+                          "--width", str(image_width_hu(doc, img))])
+                and step(["set-picture", "--section", "0", "--para", para, "--ctrl", "0",
+                          "--props", '{"treatAsChar":true}'])):
+            result["error"] = "그림 삽입 실패"
+            return result
+    for al in plan["aligns"]:
+        if not step(["apply-para-format", "--para", str(paras[al["block"]]),
+                     "--props", json.dumps({"alignment": al["align"]}, separators=(",", ":"))]):
+            result["error"] = "문단 정렬 실패"
             return result
     # 강조는 각주보다 먼저: 각주 컨트롤이 들어가기 전이라 오프셋이 HDS 글자 위치 그대로다.
     for em in plan["emphasis"]:
@@ -248,6 +329,12 @@ def check(out: Path, doc: dict) -> List[str]:
     for f in plan["footnotes"]:
         if escape(f["text"]) not in xml:
             problems.append(f"각주 본문 누락: {f['text'][:30]!r}")
+    got = sum('treatAsChar="1"' in seg.split("</hp:pic>")[0] for seg in xml.split("<hp:pic ")[1:])
+    if got != len(plan["images"]):
+        problems.append(f"글자처럼 취급한 그림 {got}개 (계획 {len(plan['images'])}개)")
+    for img in plan["images"]:
+        if img["mark"] in xml:
+            problems.append(f"그림 표시 글자가 남음: {img['mark']}")
     if plan["emphasis"]:
         spec, _ = split(doc)
         paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))

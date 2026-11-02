@@ -176,7 +176,12 @@ def main() -> int:
     if args.quick:
         if not args.output:
             ap.error("--quick 에는 -o <out.hwpx> 가 필요합니다")
-        doc = hds.load_json(args.quick)
+        doc = native.resolve_images(hds.load_json(args.quick), args.quick.resolve().parent)
+        missing = hds.lint_image_files(doc.get("blocks"), Path("/"))
+        if missing:
+            for f in missing:
+                print(f"[오류 {f.code}] {f.where} {f.message}")
+            return 1
         workdir = args.output.parent / (args.output.stem + ".build")
         report = build(doc, args.output, workdir, rhwp, not args.no_preview, args.png, args.font_path,
                        max_pages=args.max_pages, receipt_dir=workdir, convention=args.convention)
@@ -187,7 +192,7 @@ def main() -> int:
         if not lint["ok"]:
             print(json.dumps(lint, ensure_ascii=False, indent=1))
             return 1
-        doc = hds.assemble(project)
+        doc = native.resolve_images(hds.assemble(project), project.resolve())
         name = hds.load_json(project / "project.json")["name"]
         stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
         out = project / "exports" / f"{name}_{stamp}.hwpx"

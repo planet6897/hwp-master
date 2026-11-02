@@ -39,9 +39,19 @@ def rhwp_version(rhwp: str) -> str:
     return proc.stdout.strip()
 
 
+def image_hashes(spec: dict) -> dict:
+    """명세가 참조하는 그림 파일 → SHA-256 (없으면 None). 재현은 같은 그림 바이트를 전제한다."""
+    out = {}
+    for b in spec.get("blocks", []):
+        if isinstance(b, dict) and b.get("type") == "image":
+            p = Path(b["path"])
+            out[b["path"]] = sha256_bytes(p.read_bytes()) if p.is_file() else None
+    return out
+
+
 def make(spec_path: Path, output: Path, rhwp: str) -> dict:
     spec_bytes = spec_path.read_bytes()
-    return {
+    rec = {
         "kind": RECEIPT_KIND,
         "receiptVersion": RECEIPT_VERSION,
         "created": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -53,6 +63,10 @@ def make(spec_path: Path, output: Path, rhwp: str) -> dict:
         "output": output.name,
         "outputSha256": sha256_bytes(output.read_bytes()),
     }
+    images = image_hashes(json.loads(spec_bytes))
+    if images:
+        rec["images"] = images
+    return rec
 
 
 def save(rec: dict, path: Path) -> None:
@@ -70,6 +84,8 @@ def verify(rec: dict, rhwp: str) -> dict:
         "expectedOutputSha256": rec["outputSha256"],
     }
     result["rhwpVersionSame"] = result["rhwpVersion"] == rec.get("rhwpVersion")
+    if rec.get("images"):
+        result["imagesIntact"] = image_hashes(json.loads(spec_bytes)) == rec["images"]
     with tempfile.TemporaryDirectory(prefix="hwpm-receipt-") as tmp:
         spec = Path(tmp) / "spec.json"
         out = Path(tmp) / "out.hwpx"
@@ -79,7 +95,7 @@ def verify(rec: dict, rhwp: str) -> dict:
             detail = produced.get("scaffold", {}).get("stderr") or produced.get("edits", [{}])[-1]
             raise RuntimeError(f"{produced.get('error')}: {str(detail)[-500:]}")
         result["actualOutputSha256"] = sha256_bytes(out.read_bytes())
-    result["reproduced"] = result["specIntact"] and (
+    result["reproduced"] = result["specIntact"] and result.get("imagesIntact", True) and (
         result["actualOutputSha256"] == result["expectedOutputSha256"])
     return result
 

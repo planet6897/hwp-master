@@ -30,7 +30,7 @@ class LintTest(unittest.TestCase):
                 self.assertEqual(codes(self.doc({"type": "heading", "level": 1, "text": text})), [])
 
     def test_unknown_block_and_field(self):
-        self.assertEqual(codes(self.doc({"type": "image", "path": "a.png"})), ["E002"])
+        self.assertEqual(codes(self.doc({"type": "equation", "script": "a+b"})), ["E002"])
         self.assertEqual(codes(self.doc({"type": "paragraph", "text": "a", "bold": True})), ["E003"])
         self.assertEqual(codes({"version": "1", "blocks": [], "theme": "x"}), ["E003"])
 

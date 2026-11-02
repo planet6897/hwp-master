@@ -7,7 +7,9 @@ import json
 import sys
 import tempfile
 import unittest
+import struct
 import zipfile
+import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +32,15 @@ DOC = {"version": "1", "title": "블록 확장 시험",
            {"type": "heading", "level": 1, "text": "둘째 장"},
            {"type": "paragraph", "text": "□ 새 쪽에서 시작한다"},
        ]}
+
+
+def png_bytes(w: int, h: int) -> bytes:
+    """흰 RGB PNG (stdlib 만으로)."""
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    raw = b"".join(b"\x00" + b"\xff" * (3 * w) for _ in range(h))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
 
 
 def codes(findings):
@@ -99,6 +110,46 @@ class ValidateTest(unittest.TestCase):
             self.assertIn("E108", codes(hds.validate_document(doc)), hf)
 
 
+class ImageTest(unittest.TestCase):
+    def test_split_image_and_caption(self):
+        doc = {"version": "1", "blocks": [
+            {"type": "table", "rows": [["가"]]},
+            {"type": "image", "path": "/x/a.png", "caption": "<그림 1> 가"},
+            {"type": "paragraph", "text": "끝"}]}
+        spec, plan = native.split(doc)
+        self.assertEqual([b.get("text") for b in spec["blocks"]],
+                         [None, native.IMAGE_MARK.format(n=0), "<그림 1> 가", "끝"])
+        self.assertEqual(plan["images"][0]["block"], 1)
+        self.assertEqual(plan["aligns"], [{"block": 1, "align": "center"}, {"block": 2, "align": "center"}])
+
+    def test_image_size_and_width(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            png = Path(tmp) / "a.png"
+            png.write_bytes(png_bytes(40, 20))
+            self.assertEqual(native.image_size_px(png), (40, 20))
+            jpg = Path(tmp) / "a.jpg"  # SOI + APP0 + SOF0(높이 30, 너비 50)
+            jpg.write_bytes(b"\xff\xd8" + b"\xff\xe0\x00\x04\x00\x00"
+                            + b"\xff\xc0\x00\x11\x08\x00\x1e\x00\x32" + b"\x00" * 12)
+            self.assertEqual(native.image_size_px(jpg), (50, 30))
+            doc = {"version": "1"}
+            self.assertEqual(native.image_width_hu(doc, {"path": str(png)}), 40 * 75)
+            big = Path(tmp) / "b.png"
+            big.write_bytes(png_bytes(2000, 10))
+            self.assertEqual(native.image_width_hu(doc, {"path": str(big)}), round(150 * native.HU_PER_MM))
+            self.assertEqual(native.image_width_hu(doc, {"path": str(big), "width_mm": 50}),
+                             round(50 * native.HU_PER_MM))
+
+    def test_validate_image(self):
+        bad = [{"path": ""}, {"path": "a.gif"}, {"path": "a.png", "width_mm": 0},
+               {"path": "a.png", "caption": ""}, {"path": "a.png", "align": "justify"}]
+        for b in bad:
+            doc = {"version": "1", "blocks": [dict(b, type="image")]}
+            self.assertIn("E111", codes(hds.validate_document(doc)), b)
+        doc = {"version": "1", "blocks": [{"type": "image", "path": "a.png", "width_mm": 200}]}
+        self.assertIn("E112", codes(hds.validate_document(doc)))
+        self.assertIn("E113", codes(hds.lint_image_files(doc["blocks"], Path("/nonexistent"))))
+
+
 class ProjectLintTest(unittest.TestCase):
     """단위 끝의 쪽 나눔은 허용하지만, 문서 끝이나 단위 경계에서 겹치면 오류."""
 
@@ -161,6 +212,34 @@ class ProduceTest(unittest.TestCase):
         self.assertTrue(any("강조 미반영" in p for p in problems), problems)
         self.assertTrue(any("각주" in p for p in problems), problems)
         self.assertEqual(native.check(out, DOC), [])
+
+    def test_image_block(self):
+        png = self.dir / "fig.png"
+        png.write_bytes(png_bytes(400, 200))
+        doc = {"version": "1", "title": "그림", "blocks": [
+            {"type": "paragraph", "text": "앞 문단"},
+            {"type": "table", "rows": [["가", "나"]]},
+            {"type": "image", "path": str(png), "caption": "<그림 1> 시험"},
+            {"type": "paragraph", "text": "뒤 문단"}]}
+        out = self.dir / "img" / "out.hwpx"
+        result = native.produce(doc, out, self.rhwp, self.dir / "img" / "work")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(native.check(out, doc), [])
+        paras = native.top_paragraphs(out)
+        texts = [p["text"] for p in paras]
+        cap = texts.index("<그림 1> 시험")
+        # 그림 문단은 표 뒤, 캡션 바로 앞이고 표시 글자는 지워졌다
+        self.assertEqual(texts[cap - 1], "")
+        self.assertGreater(cap - 1, next(i for i, p in enumerate(paras) if p["table"]))
+        self.assertEqual(texts[cap + 1], "뒤 문단")
+        self.assertEqual(native.check(self.dir / "img" / "work" / "scaffold.hwpx", doc)[0][:4], "글자처럼")
+        spec = self.dir / "img.json"
+        spec.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+        rec = receipt.make(spec, out, self.rhwp)
+        self.assertIn(str(png), rec["images"])
+        self.assertTrue(receipt.verify(rec, self.rhwp)["reproduced"])
+        png.write_bytes(png_bytes(400, 201))
+        self.assertFalse(receipt.verify(rec, self.rhwp)["reproduced"])
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")

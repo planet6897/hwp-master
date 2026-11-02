@@ -13,6 +13,8 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
                 "emphasis"?: [{"text": str, "bold"?, "italic"?, "underline"?: bool, "color"?: "#RRGGBB"}]}
     table      {"type": "table", "rows": [[str]], "cell_align"?: str | [str]}
     page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
+    image      {"type": "image", "path": str, "width_mm"?: num, "caption"?: str,
+                "align"?: "left"|"center"|"right"}  # 글자처럼 취급한 그림 한 줄
 
 header/footer 의 text 안 "{page}" 는 쪽 번호가 된다. footnotes 는 after 문자열(문단에서
 처음 나오는 곳) 바로 뒤, after 가 없으면 문단 끝에 각주 번호를 단다. emphasis 는 문단에서 text 가
@@ -40,7 +42,10 @@ BLOCK_KEYS = {
     "paragraph": {"type", "text", "footnotes", "emphasis"},
     "table": {"type", "rows", "cell_align"},
     "page_break": {"type"},
+    "image": {"type", "path", "width_mm", "caption", "align"},
 }
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
+IMAGE_ALIGNS = ("left", "center", "right")
 HF_KEYS = ("header", "footer")
 PAGE_TOKEN = "{page}"
 CELL_ALIGNS = {"justify", "left", "center", "right"}
@@ -134,6 +139,8 @@ def validate_blocks(blocks, where_prefix: str = "") -> List[Finding]:
             out.extend(_validate_emphasis(b, where))
         if btype == "table":
             out.extend(_validate_table(b, where))
+        if btype == "image":
+            out.extend(_validate_image(b, where))
     return out
 
 
@@ -179,6 +186,47 @@ def _validate_emphasis(b: dict, where: str) -> List[Finding]:
             out.append(_err("E109", "color 는 #RRGGBB 형식이어야 합니다", w))
         if not any(m.get(k) for k in EMPHASIS_STYLES):
             out.append(_err("E109", "bold·italic·underline·color 중 하나는 있어야 합니다", w))
+    return out
+
+
+def _validate_image(b: dict, where: str) -> List[Finding]:
+    out: List[Finding] = []
+    path = b.get("path")
+    if not isinstance(path, str) or not path.strip():
+        out.append(_err("E111", "image.path 는 비어 있지 않은 문자열이어야 합니다", where))
+    elif not path.lower().endswith(IMAGE_EXTS):
+        out.append(_err("E111", f"그림 형식은 {', '.join(IMAGE_EXTS)} 만 됩니다: {path!r}", where))
+    w = b.get("width_mm")
+    if w is not None and (isinstance(w, bool) or not isinstance(w, (int, float)) or w <= 0):
+        out.append(_err("E111", "image.width_mm 는 양수여야 합니다", where))
+    cap = b.get("caption")
+    if cap is not None and (not isinstance(cap, str) or not cap.strip()):
+        out.append(_err("E111", "image.caption 은 비어 있지 않은 문자열이어야 합니다", where))
+    if b.get("align", "center") not in IMAGE_ALIGNS:
+        out.append(_err("E111", f"image.align 은 {IMAGE_ALIGNS} 중 하나여야 합니다", where))
+    return out
+
+
+def lint_image_widths(blocks, page_width_mm: float, where_prefix: str = "") -> List[Finding]:
+    """E112: width_mm 가 본문 폭을 넘음."""
+    content = page_width_mm - SIDE_MARGINS_MM
+    out: List[Finding] = []
+    for i, b in enumerate(blocks if isinstance(blocks, list) else []):
+        if isinstance(b, dict) and b.get("type") == "image":
+            w = b.get("width_mm")
+            if isinstance(w, (int, float)) and not isinstance(w, bool) and w > content:
+                out.append(_err("E112", f"그림 너비 {w}mm 가 본문 폭 {content:.0f}mm 를 넘습니다",
+                                f"{where_prefix}blocks[{i}]"))
+    return out
+
+
+def lint_image_files(blocks, base: Path, where_prefix: str = "") -> List[Finding]:
+    """E113: 그림 파일이 없음 (base 기준 상대 경로)."""
+    out: List[Finding] = []
+    for i, b in enumerate(blocks if isinstance(blocks, list) else []):
+        if isinstance(b, dict) and b.get("type") == "image" and isinstance(b.get("path"), str):
+            if not (base / b["path"]).is_file():
+                out.append(_err("E113", f"그림 파일이 없습니다: {b['path']}", f"{where_prefix}blocks[{i}]"))
     return out
 
 
@@ -285,6 +333,7 @@ def validate_document(doc) -> List[Finding]:
     out.extend(validate_blocks(blocks))
     out.extend(validate_page_breaks(blocks))
     out.extend(lint_table_widths(blocks, width))
+    out.extend(lint_image_widths(blocks, width))
     return out
 
 
@@ -374,6 +423,8 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
         out.extend(_lint_unit_budget(u, blocks, prefix))
         out.extend(conventions.lint_convention(blocks, convention, prefix))
         out.extend(validate_page_breaks(blocks, prefix, whole=False))
+        out.extend(lint_image_widths(blocks, width, prefix))
+        out.extend(lint_image_files(blocks, project, prefix))
         if isinstance(blocks, list):
             all_blocks.extend(blocks)
     if stage == "final" and not any(f.severity == "error" for f in out):
