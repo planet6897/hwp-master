@@ -30,7 +30,8 @@ Default 라우트로 35쪽짜리 공공 업무계획을 4쪽 개조식 요약 �
 
 ## 재현
 
-rhwp `devel` `ea86816b`(0.9.0) 에서 같은 원고는 같은 바이트의 HWPX 를 만듭니다(2026-11-03 확인).
+rhwp `devel` `ea86816b`(0.9.0)와 배포 바이너리 `rhwp-0.9.0-4e2cc6b` 모두 같은 원고로 같은 바이트의 HWPX 를 만듭니다
+(2026-11-03 확인).
 
 ```bash
 P=$(python3 skills/hwp-master/scripts/project_manager.py init plan-demo | tail -1)

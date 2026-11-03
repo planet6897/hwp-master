@@ -13,7 +13,7 @@
 - 문서 엔진: [rhwp](https://github.com/edwardkim/rhwp) — HWP/HWPX 를 읽고 쓰는 오픈소스 엔진의 CLI 를 호출합니다.
 - hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다. 검사에서 오류가 하나라도 나오면 완료로 보고하지 않습니다.
 
-> 상태: 0.1.14 — 새 문서(Default·Quick)·형식 변환·서식 채우기·명단 문서·부분 수정·번호 정리, 시험지 위임.
+> 상태: 0.1.15 — 새 문서(Default·Quick)·형식 변환·서식 채우기·명단 문서·부분 수정·번호 정리, 시험지 위임.
 > 새 문서의 블록은 제목·문단·표·쪽 나눔·그림(캡션)·목록(□ ○ - · 단계, 내어쓰기)·목차(쪽 번호)·표 캡션·제목 행·열 폭 비율·셀 병합·셀 강조와 글자 강조(굵게·기울임·밑줄·취소선·색·형광펜·크기)·캡션 자동 번호·각주·머리말·꼬리말(쪽 번호)·용지 방향과 여백입니다. 예제 결과물은 [examples/](examples/) 에 있습니다.
 
 ## 빠른 시작
@@ -23,66 +23,50 @@
 **필요한 것은 [Python](https://www.python.org/downloads/) 3.9 이상과 rhwp 0.9.0 이상 두 가지입니다.**
 hwp-master 스크립트는 Python 표준 라이브러리만 쓰므로 `pip install` 할 것이 없습니다.
 
-rhwp 0.9.0 은 아직 릴리스 전이라 소스에서 빌드합니다. 최신 릴리스 v0.8.7 로는 누름틀 채우기·표 행 반복의 저장
-자기검증이 맞지 않아(exit 3) 이 저장소 자동 테스트 57건 중 8건이 실패합니다.
-
-<details>
-<summary><strong>macOS</strong> — 확인한 경로 (2026-11-02, rhwp <code>devel</code> <code>0c1e5a6f</code>, 빌드 약 11분)</summary>
+**rhwp 는 이 저장소의 Release 에 올린 바이너리로 설치합니다(빌드 불필요).** 공개 upstream
+[edwardkim/rhwp](https://github.com/edwardkim/rhwp) 의 고정 커밋을 GitHub Actions 에서 그대로 빌드한 것이고(MIT),
+어느 Release·커밋·SHA-256 을 쓸지는 `skills/hwp-master/rhwp_release.json` 에 고정돼 있습니다.
 
 ```bash
-# Python (이미 있으면 생략)
-brew install python
-
-# Rust 툴체인 (이미 있으면 생략)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# rhwp CLI — 릴리스 바이너리와 같은 native-skia 기능을 켜야 PNG·PDF 미리보기가 동작합니다
-cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel \
-  --features native-skia --bin rhwp rhwp
-
-rhwp --version    # rhwp v0.9.0
+python3 skills/hwp-master/scripts/install_rhwp.py
+# rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-4e2cc6b/rhwp/rhwp
+python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다
 ```
-</details>
+
+| OS | 파일 | 확인 |
+|---|---|---|
+| macOS (Apple Silicon) | `rhwp-0.9.0-4e2cc6b-macos-aarch64.tar.gz` | 설치·hwp-master 전체 테스트·예제 재현 (2026-11-03) |
+| Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-4e2cc6b-linux-x86_64.tar.gz` | 빌드 runner 에서 PNG 내보내기 검증 |
+| Windows x86_64 | `rhwp-0.9.0-4e2cc6b-windows-x86_64.zip` | 빌드 runner 에서 PNG 내보내기 검증 |
+
+- 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
+- 받기는 `gh release download` 를 먼저 씁니다. 저장소가 비공개인 동안에는 [GitHub CLI](https://cli.github.com/) 로
+  `gh auth login` 한 계정에 저장소 권한이 있어야 합니다.
+- Linux 미리보기(PNG·PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
+  HWPX 는 정상이고 미리보기 한글만 빠지며, hwp-master 가 경고(R105)를 냅니다.
+- Intel Mac·Linux ARM 은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
 
 <details>
-<summary><strong>Linux (Ubuntu / Debian)</strong> — 확인한 경로 (2026-11-03, 새 <code>ubuntu:24.04</code> 컨테이너, rhwp <code>devel</code> <code>ea86816b</code>, 24코어에서 빌드 11~20분)</summary>
+<summary><strong>소스에서 빌드</strong> — Intel Mac·Linux ARM, 또는 다른 rhwp 커밋을 쓸 때</summary>
 
 ```bash
-# Python·빌드 도구, rhwp 가 링크하는 fontconfig·freetype, 미리보기용 한글 글꼴
-sudo apt install python3 build-essential curl git \
-  libfontconfig1-dev libfreetype6-dev fonts-noto-cjk
-
 # Rust 툴체인 (이미 있으면 생략)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-. "$HOME/.cargo/env"
+# Linux 는 먼저: sudo apt install build-essential libfontconfig1-dev libfreetype6-dev fonts-noto-cjk
 
+# native-skia 기능을 켜야 PNG·PDF 미리보기가 동작합니다
 cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel \
   --features native-skia --bin rhwp rhwp
-
 rhwp --version    # rhwp v0.9.0
 ```
 
-- `libfontconfig1-dev`·`libfreetype6-dev` 가 없으면 빌드 마지막에 `unable to find library -lfreetype` 로 실패합니다.
-- 한글 글꼴이 없으면 HWPX 는 정상으로 만들어지지만 미리보기 PNG·PDF 에서 한글이 빠집니다. 데스크톱 Ubuntu 에는
-  대개 설치돼 있고, 서버·WSL·컨테이너에는 없습니다. hwp-master 는 이때 경고(R105)를 냅니다.
+macOS 약 11분, Linux 24코어 11~20분 걸렸습니다(2026-11-02~03). Linux 에서 `libfontconfig1-dev`·`libfreetype6-dev` 가
+없으면 빌드 마지막에 `unable to find library -lfreetype` 로 실패합니다. 이 저장소 관리자는
+`gh workflow run rhwp-binaries.yml -f rhwp_ref=<커밋 SHA>` 로 새 Release 를 만들 수 있습니다.
 </details>
 
-<details>
-<summary><strong>Windows</strong> — 아직 hwp-master 로 확인하지 않은 경로</summary>
-
-[python.org](https://www.python.org/downloads/) 설치 때 **"Add to PATH"** 를 켜고, [rustup](https://rustup.rs/) 으로
-Rust 를 설치한 뒤 macOS 와 같은 `cargo install` 을 실행합니다. rhwp 릴리스는 Windows 바이너리도 같은 `native-skia`
-기능으로 빌드하지만, Windows 에서 hwp-master 전체를 돌려 보지는 않았습니다. 문제가 생기면 이슈로 알려 주세요.
-</details>
-
-<details>
-<summary><strong>rhwp 0.9.0 이 릴리스된 뒤</strong> — 빌드 없이 설치</summary>
-
-[rhwp Releases](https://github.com/edwardkim/rhwp/releases) 에서 OS 별 압축 파일을 받아 `SHA256SUMS.txt` 로 확인하고,
-압축을 풀어 `rhwp` 를 PATH 에 둡니다. rhwp CLI 는 crates.io·npm 에는 없습니다.
-</details>
-
-PATH 에 두지 않으려면 `RHWP_BIN=/경로/rhwp` 로 지정합니다.
+찾는 순서는 `--rhwp` 인자 → `RHWP_BIN` 환경변수 → 설치 스크립트 바이너리 → PATH 의 `rhwp` 입니다. 직접 빌드한 rhwp 를
+쓰려면 `RHWP_BIN=/경로/rhwp` 로 지정합니다.
 
 ### 2. 에이전트 고르기
 

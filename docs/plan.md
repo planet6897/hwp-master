@@ -296,6 +296,11 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
   marketplace add → install → 스킬 인식 확인), README 설치 안내, `examples/template_fill/`. rhwp CLI 는 crates.io·npm 에
   없고 릴리스 v0.8.7 은 테스트 8건 실패라 0.9.0 릴리스 전에는 `cargo install --git … --branch devel --features native-skia`.
   `npx skills add` 경로는 미검증. 저장소 공개 여부는 사용자 결정.
+- 2026-11-03: rhwp 바이너리 배포 — `.github/workflows/rhwp-binaries.yml`(workflow_dispatch, rhwp 커밋 SHA 입력)이
+  upstream 고정 커밋을 macOS arm64·Linux x86_64(ubuntu-22.04)·Windows x86_64 에서 native-skia 로 빌드·PNG 검증해
+  `rhwp-<버전>-<커밋>` Release 에 SHA256SUMS 와 붙인다. 첫 Release `rhwp-0.9.0-4e2cc6b`(upstream devel 4e2cc6bb).
+  `install_rhwp.py` 가 `rhwp_release.json` 의 SHA-256 으로 대조해 설치, `rhwp_locate` 가 찾는다.
+  Linux runner 는 rhwp 작업 트리 때문에 디스크가 모자라 도구 정리 단계를 넣었다.
 
 ## 7. rhwp 코어 PR 시 지켜야 할 정본 게이트
 

@@ -2,7 +2,7 @@
 name: hwp-master
 description: 자료(PDF·DOCX·MD·웹·기존 HWP) 또는 주제를 받아 한컴에서 편집 가능한 네이티브 HWPX 문서(개조식 보고서·사업계획서·제안서·기안문·회의록)를 rhwp로 생성합니다. 트리거 — "한글 문서로 만들어줘", "hwp 보고서 작성", "사업계획서 hwpx로", "이 자료로 기안문", "/hwp-master".
 metadata:
-  version: 0.1.14
+  version: 0.1.15
   license: MIT
   repository: https://github.com/planet6897/hwp-master
 ---
@@ -17,6 +17,7 @@ metadata:
 | 스크립트 | 용도 |
 |---|---|
 | `scripts/rhwp_locate.py` | rhwp 위치·버전 확인 (최소 0.9.0) |
+| `scripts/install_rhwp.py` | 이 저장소 Release 의 rhwp 바이너리 설치 (`rhwp_release.json` 의 SHA-256 대조) |
 | `scripts/project_manager.py` | `init` · `import-sources` · `validate --stage early/final` · `status` |
 | `scripts/hds_lint.py` | HDS 문서 또는 프로젝트 검사 (오류 차단, 경고 비차단) |
 | `scripts/build.py` | 조립 → 검사 → `rhwp scaffold` + 편집 후처리(`native.py`) → 영수증 → verify·개요 대조·조판 이상·쪽수 한도 → 미리보기 → `validation/report.json` |
@@ -64,6 +65,7 @@ metadata:
 
 ## 정지 규칙
 
-- `rhwp` 바이너리를 찾지 못하거나 최소 버전 미만이면 중단하고 설치 안내를 한다.
+- `rhwp` 바이너리를 찾지 못하거나 최소 버전 미만이면 중단하고, 사용자 동의를 받아 `python3 scripts/install_rhwp.py` 로 설치한다
+  (macOS Apple Silicon·Linux x86_64·Windows x86_64). 다른 플랫폼은 README 의 소스 빌드를 안내한다.
 - Strategist 확인 게이트에서 사용자 확인 없이 집필로 넘어가지 않는다 (Quick 제외).
 - final 검사에 오류가 1건이라도 있으면 산출물을 완료로 보고하지 않는다.
