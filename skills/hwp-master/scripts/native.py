@@ -379,8 +379,12 @@ def role_char_props(st: dict, role: str) -> Optional[str]:
 
 
 def role_para_props(st: dict, role: str) -> Optional[str]:
-    """줄 간격·역할의 문단 위·아래 간격 → apply-para-format props (없으면 None)."""
+    """줄 간격·역할의 문단 위·아래 간격 → apply-para-format props (없으면 None).
+
+    개요(heading)는 다음 문단과 함께 둔다(keepWithNext) — 쪽 끝에 제목만 남는 외톨이 제목을 막는다."""
     props: Dict[str, object] = {}
+    if role == "heading":
+        props["keepWithNext"] = True
     if st.get("line_spacing") is not None:
         props.update({"lineSpacing": int(st["line_spacing"]), "lineSpacingType": "Percent"})
     for side, key in (("before", "spacingBefore"), ("after", "spacingAfter")):
@@ -1108,7 +1112,7 @@ def _check_style(out: Path, doc: dict, shown, plan: dict) -> List[str]:
     spec, _ = split(doc, shown)
     paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
     styles, shapes, spacings = char_styles(out), char_shapes(out), para_line_spacings(out)
-    gaps = para_spacings(out)
+    gaps, layouts = para_spacings(out), para_layout(out)
     sized = {}
     for em in plan["emphasis"]:
         if "fontSize" in json.loads(em["props"]):
@@ -1137,6 +1141,8 @@ def _check_style(out: Path, doc: dict, shown, plan: dict) -> List[str]:
                 problems.append(f"문서 글꼴 미반영: {where} {bad} (계획 {font})")
         if ls is not None and spacings[pi] != ("PERCENT", int(ls)):
             problems.append(f"문서 줄 간격 미반영: {where} {spacings[pi]} (계획 {int(ls)}%)")
+        if role == "heading" and not (layouts[pi] and layouts[pi][1]):
+            problems.append(f"개요 다음 문단과 함께 미반영: {where}")
         for k, side in enumerate(("before", "after")):
             v = st.get(f"{role}_space_{side}")
             if v is not None:

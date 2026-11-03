@@ -7,7 +7,11 @@
    "height_mm": 297
   },
   "style": {
-   "table_pt": 11.0
+   "table_pt": 11.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
   },
   "marker_system": [
    "□",
@@ -27,7 +31,16 @@
   "line_spacing": 0.42,
   "marker_system": 0.03,
   "pagenum": 0.69,
-  "ending": 0.78
+  "ending": 0.78,
+  "title_font": 0.39,
+  "heading_font": 0.47,
+  "table_font": 0.41,
+  "title_space_before": 0.3,
+  "title_space_after": 0.7,
+  "heading_space_before": 0.28,
+  "heading_space_after": 0.65,
+  "body_space_before": 0.61,
+  "body_space_after": 0.83
  },
  "unsupported": [],
  "stats": {
@@ -67,6 +80,23 @@
   "by": "type",
   "documents": 1622,
   "collected": "2026-11",
-  "note": "공공기관 공개 문서 1622건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+  "note": "공공기관 공개 문서 1622건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님",
+  "refreshed": {
+   "keys": [
+    "body_font",
+    "body_space_after",
+    "body_space_before",
+    "heading_font",
+    "heading_space_after",
+    "heading_space_before",
+    "table_font",
+    "title_font",
+    "title_space_after",
+    "title_space_before"
+   ],
+   "documents": 1592,
+   "candidates": 1965,
+   "rhwp": "0.9.0"
+  }
  }
 }

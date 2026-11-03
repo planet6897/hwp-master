@@ -390,7 +390,7 @@ class RoleStyleValidateTest(unittest.TestCase):
         self.assertEqual(json.loads(native.role_char_props(st, "title")),
                          {"fontSize": 1800, "fontName": "HY헤드라인M"})
         self.assertEqual(json.loads(native.role_para_props(st, "heading")),
-                         {"lineSpacing": 170, "lineSpacingType": "Percent",
+                         {"keepWithNext": True, "lineSpacing": 170, "lineSpacingType": "Percent",
                           "spacingBefore": 10 * native.SPACE_PROP_PER_PT, "spacingAfter": 4 * native.SPACE_PROP_PER_PT})
         self.assertIsNone(native.role_char_props({"line_spacing": 160}, "body"))
         self.assertEqual(native.style_fonts({"style": FONTS}), list(FONTS.values()))
