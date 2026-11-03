@@ -257,6 +257,9 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
   받아 보류(rhwp 코어 확장 필요).
 - 2026-11-03: 강조에 `size`(fontSize, pt×100)·`highlight`(shadeColor)·`strike`(strikethrough) 추가, 캡션 자동 번호
   (`{n}`, 그림·표 따로)와 표 캡션(표 위, keepWithNext). 그림 문단도 캡션과 묶는다. 한컴 2024 대조 실루엣 99.85%.
+- 2026-11-03: 용지 방향(`orientation`)·여백(`margins_mm`) — `edit set-page-def`. 가로는 scaffold 세로 치수에
+  `landscape:true`(한컴 저장 방식 NARROWLY, A4 상수 59528×84188 유지). scaffold 가 표 폭을 만들 때 용지를 쓰므로
+  용지를 바꾼 뒤 모든 표를 `set-column-widths` 로 새 본문 폭(본문 - 표 바깥 여백 2mm)에 맞춘다. 한컴 2024 대조 99.98~99.99%.
 - 각 블록은 rhwp 이슈 `task/<이슈번호>-scaffold-<블록>` 브랜치로 진행한다.
 - 완료 기준: 블록별로 rhwp 정본 게이트 통과(§7).
 

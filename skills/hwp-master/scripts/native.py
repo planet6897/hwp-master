@@ -37,10 +37,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from xml.etree import ElementTree as ET
 
+import hds
+
 HU_PER_MM = 7200 / 25.4
 HU_PER_PX = 75  # 96dpi 픽셀 1개 (rhwp insert-picture 의 원본 크기 환산과 같다)
-A4_WIDTH_MM = 210.0
-SIDE_MARGINS_MM = 60.0  # scaffold 기본 좌우 여백 30mm × 2
+TABLE_OUTER_HU = 283 * 2  # scaffold 표 바깥 여백 좌우 (약 1mm 씩)
 IMAGE_MARK = "[[hwp-master:image:{n}]]"
 IMAGE_MARK_RE = re.compile(r"\[\[hwp-master:image:\d+\]\]")
 HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
@@ -61,10 +62,16 @@ TABLE_STYLE_KEYS = ("header_row", "header_fill", "col_widths", "merges", "cell_e
 
 def split(doc: dict) -> tuple:
     """HDS → (scaffold 명세, 편집 계획). 편집 계획이 비면 scaffold 만으로 끝난다."""
-    spec = {k: copy.deepcopy(v) for k, v in doc.items() if k not in ("header", "footer", "blocks")}
+    spec = {k: copy.deepcopy(v) for k, v in doc.items()
+            if k not in ("header", "footer", "blocks", "orientation", "margins_mm")}
+    page = page_props(doc)
+    if page and doc.get("orientation") == "landscape" and "page_size" in spec:
+        # scaffold 는 세로 치수로 만들고, 가로는 한컴처럼 landscape 표시로 돌린다
+        w, h = spec["page_size"]["width_mm"], spec["page_size"]["height_mm"]
+        spec["page_size"] = {"width_mm": min(w, h), "height_mm": max(w, h)}
     blocks: List[dict] = []
     plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "images": [],
-                               "aligns": [], "indents": [], "tables": [], "header": doc.get("header"),
+                               "aligns": [], "indents": [], "tables": [], "page": page, "header": doc.get("header"),
                                "footer": doc.get("footer")}
     pending_break = False
     counters = {"image": 0, "table": 0}
@@ -130,21 +137,21 @@ def split(doc: dict) -> tuple:
             ntab = sum(1 for x in blocks if x.get("type") == "table")
             style = {k: b[k] for k in TABLE_STYLE_KEYS if k in b}
             b = {k: v for k, v in b.items() if k not in TABLE_STYLE_KEYS}
-            if any(style.get(k) for k in TABLE_STYLE_KEYS):
-                merges = [{"row": m["row"], "col": m["col"], "rowspan": m.get("rowspan", 1),
-                           "colspan": m.get("colspan", 1)} for m in style.get("merges") or []]
-                cell_marks = []
-                for m in style.get("cell_emphasis") or []:
-                    cell = b["rows"][m["row"]][m["col"]] if m["col"] < len(b["rows"][m["row"]]) else ""
-                    start = cell.index(m["text"]) if m.get("text") else 0
-                    count = len(m["text"]) if m.get("text") else len(cell)
-                    cell_marks.append({"row": m["row"], "col": m["col"], "start": start, "count": count,
-                                       "props": char_props(m)})
-                plan["tables"].append({
-                    "table": ntab, "cols": max(len(r) for r in b["rows"]),
-                    "header_fill": (style.get("header_fill") or HEADER_FILL).upper()
-                    if style.get("header_row") else None,
-                    "col_widths": style.get("col_widths"), "merges": merges, "cell_emphasis": cell_marks})
+            # 용지가 바뀌면 꾸밈 없는 표도 새 본문 폭으로 맞추므로 모든 표를 적는다
+            merges = [{"row": m["row"], "col": m["col"], "rowspan": m.get("rowspan", 1),
+                       "colspan": m.get("colspan", 1)} for m in style.get("merges") or []]
+            cell_marks = []
+            for m in style.get("cell_emphasis") or []:
+                cell = b["rows"][m["row"]][m["col"]] if m["col"] < len(b["rows"][m["row"]]) else ""
+                start = cell.index(m["text"]) if m.get("text") else 0
+                count = len(m["text"]) if m.get("text") else len(cell)
+                cell_marks.append({"row": m["row"], "col": m["col"], "start": start, "count": count,
+                                   "props": char_props(m)})
+            plan["tables"].append({
+                "table": ntab, "cols": max(len(r) for r in b["rows"]),
+                "header_fill": (style.get("header_fill") or HEADER_FILL).upper()
+                if style.get("header_row") else None,
+                "col_widths": style.get("col_widths"), "merges": merges, "cell_emphasis": cell_marks})
         add_para(b)
     spec["blocks"] = blocks
     return spec, plan
@@ -195,9 +202,32 @@ def props_match(shape: dict, want: dict) -> bool:
     return True
 
 
+def table_styled(tb: dict) -> bool:
+    return bool(tb["header_fill"] or tb["col_widths"] or tb["merges"] or tb["cell_emphasis"])
+
+
 def plan_empty(plan: dict) -> bool:
     return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"] or plan["images"]
-                or plan["indents"] or plan["tables"] or plan["header"] or plan["footer"])
+                or plan["indents"] or any(table_styled(t) for t in plan["tables"]) or plan["page"]
+                or plan["header"] or plan["footer"])
+
+
+def page_props(doc: dict) -> Optional[dict]:
+    """orientation·margins_mm → edit set-page-def props (HWPUNIT). 기본 용지면 None."""
+    if doc.get("orientation") != "landscape" and not doc.get("margins_mm"):
+        return None
+    props: Dict[str, object] = {}
+    if doc.get("orientation") == "landscape":
+        # 너비·높이는 scaffold 가 만든 세로 치수(A4 는 한컴 상수 59528×84188)를 그대로 두고 돌리기만 한다
+        props["landscape"] = True
+    for key, value in (doc.get("margins_mm") or {}).items():
+        props["margin" + key.capitalize()] = round(value * HU_PER_MM)
+    return props
+
+
+def table_total_hu(doc: dict) -> int:
+    """scaffold 와 같은 셈의 표 폭: 본문 폭 - 표 바깥 여백 1mm × 2 (rhwp scaffold builder)."""
+    return max(round(hds.page_geometry(doc)["content_mm"] * HU_PER_MM) - TABLE_OUTER_HU, 7200)
 
 
 def image_size_px(path: Path) -> Optional[tuple]:
@@ -224,7 +254,7 @@ def image_size_px(path: Path) -> Optional[tuple]:
 
 def image_width_hu(doc: dict, img: dict) -> int:
     """그림 너비(HWPUNIT). width_mm 가 없으면 원본 픽셀 크기, 본문 폭을 넘으면 본문 폭."""
-    content_mm = float((doc.get("page_size") or {}).get("width_mm", A4_WIDTH_MM)) - SIDE_MARGINS_MM
+    content_mm = hds.page_geometry(doc)["content_mm"]
     if img.get("width_mm"):
         return round(img["width_mm"] * HU_PER_MM)
     size = image_size_px(Path(img["path"]))
@@ -326,6 +356,19 @@ def para_aligns(hwpx: Path) -> Dict[str, str]:
     for pp in head.iter(f"{{{HH}}}paraPr"):
         al = pp.find(f"{{{HH}}}align")
         out[pp.get("id")] = al.get("horizontal") if al is not None else None
+    return out
+
+
+def page_def(hwpx: Path) -> dict:
+    """구역 0 용지: set-page-def props 와 같은 키 (HWPUNIT)."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    pp = root.find(f".//{{{HP}}}pagePr")
+    mg = pp.find(f"{{{HP}}}margin")
+    out = {"width": int(pp.get("width")), "height": int(pp.get("height")),
+           "landscape": pp.get("landscape") == "NARROWLY"}
+    for key in ("left", "right", "top", "bottom", "header", "footer"):
+        out["margin" + key.capitalize()] = int(mg.get(key))
     return out
 
 
@@ -510,11 +553,16 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
                      "--props", json.dumps(props, separators=(",", ":"))]):
             result["error"] = "문단 정렬 실패"
             return result
+    if plan["page"]:
+        if not step(["set-page-def", "--props", json.dumps(plan["page"], separators=(",", ":"))]):
+            result["error"] = "용지 설정 실패"
+            return result
     widths = table_widths(cur) if plan["tables"] else []
+    new_total = table_total_hu(doc) if plan["page"] else None
     for tb in plan["tables"]:
         t = str(tb["table"])
-        if tb["col_widths"]:
-            cols = split_widths(widths[tb["table"]], tb["col_widths"])
+        if tb["col_widths"] or new_total:
+            cols = split_widths(new_total or widths[tb["table"]], tb["col_widths"] or [1] * tb["cols"])
             if not step(["set-column-widths", "--table", t, "--widths", ",".join(map(str, cols))]):
                 result["error"] = "표 열 폭 설정 실패"
                 return result
@@ -630,6 +678,16 @@ def check(out: Path, doc: dict) -> List[str]:
             if got != (ind["left"], ind["indent"]):
                 problems.append(f"목록 들여쓰기 미반영: blocks[{ind['block']}] {got} "
                                 f"(계획 {(ind['left'], ind['indent'])})")
+    if plan["page"]:
+        got = page_def(out)
+        for k, v in plan["page"].items():
+            if got.get(k) != v:
+                problems.append(f"용지 설정 {k}={got.get(k)} (계획 {v})")
+    if plan["page"] and plan["tables"]:
+        want_total = table_total_hu(doc)
+        for i, w in enumerate(table_widths(out)):
+            if abs(w - want_total) > len(plan["tables"][i]["col_widths"] or [0] * plan["tables"][i]["cols"]):
+                problems.append(f"표 {i} 폭 {w} (본문 폭 기준 {want_total})")
     if plan["tables"]:
         tables, fills, aligns = table_cells(out), fill_colors(out), para_aligns(out)
         shapes = char_shapes(out)

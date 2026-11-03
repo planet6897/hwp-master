@@ -223,7 +223,10 @@ class TableStyleTest(unittest.TestCase):
             {"table": 1, "cols": 2, "header_fill": "#DCE6F2", "col_widths": None, "merges": [],
              "cell_emphasis": []},
             {"table": 2, "cols": 2, "header_fill": None, "col_widths": [1, 4], "merges": [],
+             "cell_emphasis": []},
+            {"table": 3, "cols": 1, "header_fill": None, "col_widths": None, "merges": [],
              "cell_emphasis": []}])
+        self.assertEqual([native.table_styled(t) for t in plan["tables"]], [True, True, True, False])
 
     def test_split_widths(self):
         self.assertEqual(native.split_widths(41952, [2, 3, 2]), [11986, 17979, 11987])
@@ -242,8 +245,8 @@ class TableStyleTest(unittest.TestCase):
         cell = "가" * 14
         even = [{"type": "table", "rows": [[cell, "b", "c"]]}]
         wide = [{"type": "table", "rows": [[cell, "b", "c"]], "col_widths": [4, 1, 1]}]
-        self.assertEqual([f.code for f in hds.lint_table_widths(even, 210)], ["W201"])
-        self.assertEqual([f.code for f in hds.lint_table_widths(wide, 210)], [])
+        self.assertEqual([f.code for f in hds.lint_table_widths(even, 150)], ["W201"])
+        self.assertEqual([f.code for f in hds.lint_table_widths(wide, 150)], [])
 
 
 MERGE_DOC = {"version": "1", "title": "병합", "blocks": [
@@ -282,10 +285,10 @@ class MergeTest(unittest.TestCase):
     def test_w201_merged_width(self):
         cell = "가" * 30
         rows = [[cell, ""], ["a", "b"]]
-        self.assertEqual([f.code for f in hds.lint_table_widths([{"type": "table", "rows": rows}], 210)],
+        self.assertEqual([f.code for f in hds.lint_table_widths([{"type": "table", "rows": rows}], 150)],
                          ["W201"])
         merged = {"type": "table", "rows": rows, "merges": [{"row": 0, "col": 0, "colspan": 2}]}
-        self.assertEqual(hds.lint_table_widths([merged], 210), [])
+        self.assertEqual(hds.lint_table_widths([merged], 150), [])
 
 
 class CaptionEmphasisTest(unittest.TestCase):
@@ -328,6 +331,43 @@ class CaptionEmphasisTest(unittest.TestCase):
         found = hds.validate_blocks(blocks)
         self.assertEqual([(f.code, f.where) for f in found],
                          [("W204", "blocks[0]"), ("E120", "blocks[1]"), ("E120", "blocks[2]")])
+
+
+class PageTest(unittest.TestCase):
+    def test_geometry(self):
+        geo = hds.page_geometry({"orientation": "landscape", "margins_mm": {"left": 20, "right": 20}})
+        self.assertEqual((geo["width_mm"], geo["height_mm"], geo["content_mm"]), (297.0, 210.0, 257.0))
+        self.assertEqual(hds.page_geometry({})["content_mm"], 150.0)
+
+    def test_page_props_and_split(self):
+        doc = {"version": "1", "orientation": "landscape", "page_size": {"width_mm": 297, "height_mm": 210},
+               "margins_mm": {"left": 20, "top": 15}, "blocks": [{"type": "table", "rows": [["a"]]}]}
+        spec, plan = native.split(doc)
+        self.assertNotIn("orientation", spec)
+        self.assertNotIn("margins_mm", spec)
+        self.assertEqual(spec["page_size"], {"width_mm": 210, "height_mm": 297})  # scaffold 는 세로 치수
+        self.assertEqual(plan["page"], {"landscape": True, "marginLeft": round(20 * native.HU_PER_MM),
+                                        "marginTop": round(15 * native.HU_PER_MM)})
+        self.assertFalse(native.plan_empty(plan))
+        self.assertIsNone(native.page_props({"version": "1", "orientation": "portrait"}))
+        # 본문 폭 297-20-30 = 247mm 에서 표 바깥 여백 2mm 를 뺀다
+        self.assertEqual(native.table_total_hu(doc), round(247 * native.HU_PER_MM) - 566)
+
+    def test_validate(self):
+        base = {"version": "1", "blocks": [{"type": "paragraph", "text": "a"}]}
+        self.assertEqual(codes(hds.validate_document(dict(base, orientation="landscape",
+                                                          margins_mm={"left": 15, "right": 15}))), [])
+        for bad in ({"orientation": "wide"}, {"margins_mm": {"inner": 10}}, {"margins_mm": {"left": -1}},
+                    {"margins_mm": {"left": 90, "right": 90}}, {"orientation": "landscape", "margins_mm": {"top": 90, "bottom": 90}}):
+            self.assertEqual(codes(hds.validate_document(dict(base, **bad))), ["E121"], bad)
+
+    def test_image_width_uses_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            png = Path(tmp) / "wide.png"
+            png.write_bytes(png_bytes(3000, 100))  # 본문 폭보다 넓은 그림은 본문 폭으로 줄어든다
+            img = {"path": str(png)}
+            self.assertEqual(native.image_width_hu({"orientation": "landscape"}, img), round(237 * native.HU_PER_MM))
+            self.assertEqual(native.image_width_hu({}, img), round(150 * native.HU_PER_MM))
 
 
 class ProjectLintTest(unittest.TestCase):
@@ -495,6 +535,24 @@ class ProduceTest(unittest.TestCase):
         self.assertIn("<그림 1> 시험", texts)
         problems = native.check(self.dir / "cap" / "work" / "scaffold.hwpx", doc)
         self.assertTrue(any("정렬·묶음" in p for p in problems), problems)
+
+    def test_landscape_and_margins(self):
+        doc = {"version": "1", "title": "가로", "orientation": "landscape",
+               "margins_mm": {"left": 20, "right": 20, "top": 15},
+               "blocks": [{"type": "table", "header_row": True, "rows": [["a", "b", "c"], ["1", "2", "3"]]},
+                          {"type": "table", "col_widths": [1, 3], "rows": [["x", "y"]]},
+                          {"type": "table", "rows": [["plain"]]}]}
+        out = self.dir / "page" / "out.hwpx"
+        result = native.produce(doc, out, self.rhwp, self.dir / "page" / "work")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(native.check(out, doc), [])
+        page = native.page_def(out)
+        self.assertEqual((page["width"], page["height"], page["landscape"]), (59528, 84188, True))
+        # 꾸밈 없는 표까지 모두 새 본문 폭으로 넓어진다
+        self.assertEqual(native.table_widths(out), [native.table_total_hu(doc)] * 3)
+        self.assertGreater(native.table_total_hu(doc), max(native.table_widths(self.dir / "page" / "work" / "scaffold.hwpx")))
+        problems = native.check(self.dir / "page" / "work" / "scaffold.hwpx", doc)
+        self.assertTrue(any("용지 설정" in p for p in problems) and any("폭" in p for p in problems), problems)
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")

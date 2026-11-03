@@ -2,14 +2,14 @@
 name: hwp-master
 description: 자료(PDF·DOCX·MD·웹·기존 HWP) 또는 주제를 받아 한컴에서 편집 가능한 네이티브 HWPX 문서(개조식 보고서·사업계획서·제안서·기안문·회의록)를 rhwp로 생성합니다. 트리거 — "한글 문서로 만들어줘", "hwp 보고서 작성", "사업계획서 hwpx로", "이 자료로 기안문", "/hwp-master".
 metadata:
-  version: 0.1.11
+  version: 0.1.12
   license: MIT
   repository: https://github.com/planet6897/hwp-master
 ---
 
 # hwp-master (초안)
 
-> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표(캡션·제목 행·열 폭·병합·셀 강조)·쪽 나눔·그림·목록 + 글자 강조(크기·형광펜·취소선 포함)·캡션 자동 번호·각주·머리말·꼬리말, 규약 검사(gongmun·gaejosik).
+> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표(캡션·제목 행·열 폭·병합·셀 강조)·쪽 나눔·그림·목록 + 글자 강조(크기·형광펜·취소선 포함)·캡션 자동 번호·각주·머리말·꼬리말·용지 방향·여백, 규약 검사(gongmun·gaejosik).
 > 전체 계획: 저장소의 `docs/plan.md`.
 
 ## 스크립트

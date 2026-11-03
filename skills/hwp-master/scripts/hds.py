@@ -4,6 +4,7 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
 
     {"version": "1", "title": str?, "font": str?,
      "page_size": {"width_mm": num, "height_mm": num}?,
+     "orientation": "portrait"|"landscape"?, "margins_mm": {left, right, top, bottom, header, footer}?,
      "header"?: {"text": str}, "footer"?: {"text": str},
      "blocks": [heading | paragraph | table | page_break | image | list]}
 
@@ -43,7 +44,12 @@ from typing import Iterable, List, Optional
 import conventions
 
 HDS_VERSION = "1"
-TOP_KEYS = {"version", "title", "font", "page_size", "header", "footer", "blocks"}
+TOP_KEYS = {"version", "title", "font", "page_size", "orientation", "margins_mm", "header", "footer", "blocks"}
+PAGE_KEYS = ("page_size", "orientation", "margins_mm")
+MARGIN_KEYS = ("left", "right", "top", "bottom", "header", "footer")
+# scaffold 기본 여백(mm): 좌우 30, 위 20, 아래·머리말·꼬리말 15
+DEFAULT_MARGINS_MM = {"left": 30.0, "right": 30.0, "top": 20.0, "bottom": 15.0, "header": 15.0, "footer": 15.0}
+MIN_CONTENT_MM = 50.0
 BLOCK_KEYS = {
     "heading": {"type", "level", "text"},
     "paragraph": {"type", "text", "footnotes", "emphasis"},
@@ -280,9 +286,49 @@ def _validate_caption(cap, where: str) -> List[Finding]:
     return []
 
 
-def lint_image_widths(blocks, page_width_mm: float, where_prefix: str = "") -> List[Finding]:
-    """E112: width_mm 가 본문 폭을 넘음."""
-    content = page_width_mm - SIDE_MARGINS_MM
+def page_geometry(spec: dict) -> dict:
+    """HDS(또는 spec_lock) → 실제 용지 가로·세로와 여백(mm). 값이 틀리면 기본값으로 본다."""
+    ps = spec.get("page_size") if isinstance(spec.get("page_size"), dict) else {}
+    try:
+        w, h = float(ps.get("width_mm", A4_WIDTH_MM)), float(ps.get("height_mm", 297.0))
+    except (TypeError, ValueError):
+        w, h = A4_WIDTH_MM, 297.0
+    if spec.get("orientation") == "landscape":
+        w, h = max(w, h), min(w, h)
+    margins = dict(DEFAULT_MARGINS_MM)
+    if isinstance(spec.get("margins_mm"), dict):
+        margins.update({k: float(v) for k, v in spec["margins_mm"].items()
+                        if k in MARGIN_KEYS and isinstance(v, (int, float)) and not isinstance(v, bool)})
+    return {"width_mm": w, "height_mm": h, "margins": margins,
+            "content_mm": w - margins["left"] - margins["right"]}
+
+
+def validate_page(spec: dict, where: str = "") -> List[Finding]:
+    """E121: orientation·margins_mm 형식, 본문 폭이 너무 좁음."""
+    out: List[Finding] = []
+    o = spec.get("orientation")
+    if o is not None and o not in ("portrait", "landscape"):
+        out.append(_err("E121", "orientation 은 portrait 또는 landscape 여야 합니다", where))
+    m = spec.get("margins_mm")
+    if m is not None:
+        if not (isinstance(m, dict) and m and set(m) <= set(MARGIN_KEYS) and all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 100 for v in m.values())):
+            out.append(_err("E121", f"margins_mm 는 {list(MARGIN_KEYS)} 중 일부를 0~100 mm 숫자로 줍니다", where))
+            return out
+    geo = page_geometry(spec)
+    if geo["content_mm"] < MIN_CONTENT_MM:
+        out.append(_err("E121", f"본문 폭이 {geo['content_mm']:.0f}mm 입니다 — 좌우 여백을 줄이세요 "
+                                f"(최소 {MIN_CONTENT_MM:.0f}mm)", where))
+    body_h = geo["height_mm"] - geo["margins"]["top"] - geo["margins"]["bottom"] \
+        - geo["margins"]["header"] - geo["margins"]["footer"]
+    if body_h < MIN_CONTENT_MM:
+        out.append(_err("E121", f"본문 높이가 {body_h:.0f}mm 입니다 — 위아래·머리말·꼬리말 여백을 줄이세요", where))
+    return out
+
+
+def lint_image_widths(blocks, content_mm: float, where_prefix: str = "") -> List[Finding]:
+    """E112: width_mm 가 본문 폭(content_mm)을 넘음."""
+    content = content_mm
     out: List[Finding] = []
     for i, b in enumerate(blocks if isinstance(blocks, list) else []):
         if isinstance(b, dict) and b.get("type") == "image":
@@ -458,10 +504,12 @@ def col_ratios(b: dict, ncols: int) -> List[float]:
     return [1.0 / ncols] * ncols
 
 
-def lint_table_widths(blocks, page_width_mm: float, where_prefix: str = "") -> List[Finding]:
-    """W201: 셀 텍스트가 열 폭(col_widths 비율, 없으면 균등) 한 줄을 넘는지 추정한다 (M0 F2 임시 경고)."""
+def lint_table_widths(blocks, content_mm: float, where_prefix: str = "") -> List[Finding]:
+    """W201: 셀 텍스트가 열 폭(col_widths 비율, 없으면 균등) 한 줄을 넘는지 추정한다 (M0 F2 임시 경고).
+
+    content_mm 은 본문 폭(용지 폭 - 좌우 여백)이다."""
     out: List[Finding] = []
-    content_mm = page_width_mm - SIDE_MARGINS_MM - TABLE_OUTER_MM
+    content_mm = content_mm - TABLE_OUTER_MM
     for i, b in enumerate(blocks if isinstance(blocks, list) else []):
         if not isinstance(b, dict) or b.get("type") != "table" or not isinstance(b.get("rows"), list):
             continue
@@ -496,13 +544,12 @@ def validate_document(doc) -> List[Finding]:
     if doc.get("version") != HDS_VERSION:
         out.append(_err("E006", f"version 은 {HDS_VERSION!r} 이어야 합니다"))
     ps = doc.get("page_size")
-    width = A4_WIDTH_MM
     if ps is not None:
         if not (isinstance(ps, dict) and set(ps) == {"width_mm", "height_mm"}
                 and all(isinstance(ps[k], (int, float)) and ps[k] > 0 for k in ps)):
             out.append(_err("E007", "page_size 는 {width_mm, height_mm} 양수여야 합니다"))
-        else:
-            width = float(ps["width_mm"])
+    out.extend(validate_page(doc))
+    width = page_geometry(doc)["content_mm"]
     for key in ("title", "font"):
         if key in doc and not isinstance(doc[key], str):
             out.append(_err("E004", f"{key} 는 문자열이어야 합니다"))
@@ -530,7 +577,7 @@ def assemble(project: Path) -> dict:
     """spec_lock.json + outline.json 순서의 units/*.json → HDS 문서."""
     lock = load_json(project / "spec_lock.json")
     doc = {"version": HDS_VERSION}
-    for key in ("title", "font", "page_size") + HF_KEYS:
+    for key in ("title", "font") + PAGE_KEYS + HF_KEYS:
         if lock.get(key) is not None:
             doc[key] = lock[key]
     order = _unit_order(project)
@@ -576,7 +623,8 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
         out.append(_err("E009", f"spec_lock.convention 은 {list(conventions.CONVENTIONS)} 중 하나여야 합니다",
                         "spec_lock.json"))
     out.extend(validate_header_footer(lock, "spec_lock.json:"))
-    width = float((lock.get("page_size") or {}).get("width_mm", A4_WIDTH_MM))
+    out.extend(validate_page(lock, "spec_lock.json"))
+    width = page_geometry(lock)["content_mm"]
     all_blocks = []
     for u in units:
         uid = u.get("id")
