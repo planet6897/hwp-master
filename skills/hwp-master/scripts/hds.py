@@ -5,7 +5,7 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
     {"version": "1", "title": str?, "font": str?,
      "page_size": {"width_mm": num, "height_mm": num}?,
      "header"?: {"text": str}, "footer"?: {"text": str},
-     "blocks": [heading | paragraph | table | page_break]}
+     "blocks": [heading | paragraph | table | page_break | image | list]}
 
     heading    {"type": "heading", "level": 1..7, "text": str}
     paragraph  {"type": "paragraph", "text": str,
@@ -15,6 +15,9 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
     page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
     image      {"type": "image", "path": str, "width_mm"?: num, "caption"?: str,
                 "align"?: "left"|"center"|"right"}  # 글자처럼 취급한 그림 한 줄
+    list       {"type": "list", "items": [str | {"text": str, "level"?: 1..,
+                "footnotes"?, "emphasis"?}], "markers"?: [str]}
+                # 단계별 글머리(기본 □ ○ - ·)·왼쪽 여백·내어쓰기를 붙인 문단들
 
 header/footer 의 text 안 "{page}" 는 쪽 번호가 된다. footnotes 는 after 문자열(문단에서
 처음 나오는 곳) 바로 뒤, after 가 없으면 문단 끝에 각주 번호를 단다. emphasis 는 문단에서 text 가
@@ -43,7 +46,10 @@ BLOCK_KEYS = {
     "table": {"type", "rows", "cell_align"},
     "page_break": {"type"},
     "image": {"type", "path", "width_mm", "caption", "align"},
+    "list": {"type", "items", "markers"},
 }
+LIST_ITEM_KEYS = {"text", "level", "footnotes", "emphasis"}
+LIST_DEFAULT_LEVELS = 4
 IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
 IMAGE_ALIGNS = ("left", "center", "right")
 HF_KEYS = ("header", "footer")
@@ -141,6 +147,47 @@ def validate_blocks(blocks, where_prefix: str = "") -> List[Finding]:
             out.extend(_validate_table(b, where))
         if btype == "image":
             out.extend(_validate_image(b, where))
+        if btype == "list":
+            out.extend(_validate_list(b, where))
+    return out
+
+
+def _validate_list(b: dict, where: str) -> List[Finding]:
+    out: List[Finding] = []
+    markers = b.get("markers")
+    levels = LIST_DEFAULT_LEVELS
+    if markers is not None:
+        if (not isinstance(markers, list) or not markers or not all(
+                isinstance(m, str) and m and not any(c.isspace() for c in m) and len(m) <= 3
+                for m in markers)):
+            out.append(_err("E115", "list.markers 는 빈칸 없는 3글자 이하 문자열의 배열이어야 합니다", where))
+        else:
+            levels = len(markers)
+    items = b.get("items")
+    if not isinstance(items, list) or not items:
+        return out + [_err("E114", "list.items 는 비어 있지 않은 배열이어야 합니다", where)]
+    prev = 0
+    for k, item in enumerate(items):
+        w = f"{where}.items[{k}]"
+        if isinstance(item, str):
+            item = {"text": item}
+        if not isinstance(item, dict) or set(item) - LIST_ITEM_KEYS:
+            out.append(_err("E114", "목록 항목은 문자열이나 {text, level?, footnotes?, emphasis?} 객체여야 합니다", w))
+            continue
+        if not isinstance(item.get("text"), str) or not item["text"].strip():
+            out.append(_err("E114", "목록 항목 text 는 비어 있지 않은 문자열이어야 합니다", w))
+            continue
+        level = item.get("level", 1)
+        if not isinstance(level, int) or isinstance(level, bool) or not 1 <= level <= levels:
+            out.append(_err("E114", f"목록 level 은 1~{levels} 정수여야 합니다", w))
+            continue
+        if level > prev + 1:
+            out.append(_err("E114", f"목록 단계를 건너뛰었습니다: {prev} 단계 다음에 {level} 단계", w))
+        prev = level
+        if "footnotes" in item:
+            out.extend(_validate_footnotes(item, w))
+        if "emphasis" in item:
+            out.extend(_validate_emphasis(item, w))
     return out
 
 
@@ -441,7 +488,13 @@ def _lint_unit_budget(u: dict, blocks, where: str) -> List[Finding]:
     if not isinstance(target, int) or target <= 0 or not isinstance(blocks, list):
         return []
     chars = 0
+    flat = []
     for b in blocks:
+        if isinstance(b, dict) and b.get("type") == "list" and isinstance(b.get("items"), list):
+            flat.extend({"text": it} if isinstance(it, str) else it for it in b["items"])
+        else:
+            flat.append(b)
+    for b in flat:
         if not isinstance(b, dict):
             continue
         if isinstance(b.get("text"), str):

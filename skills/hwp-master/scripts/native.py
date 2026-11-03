@@ -9,6 +9,8 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
                                caption 은 가운데 정렬 문단
     paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·글자색)
     paragraph.footnotes      → edit insert-footnote + insert-footnote-text
+    list 블록                → 항목마다 "글머리 + 빈칸 + 글" 문단 + apply-para-format
+                               왼쪽 여백(단계)·내어쓰기(글머리 폭)
     header / footer          → edit insert-header-footer + insert-header-footer-text
                                (+ "{page}" 자리에 insert-field-in-hf 쪽 번호)
 
@@ -22,6 +24,7 @@ import copy
 import json
 import re
 import subprocess
+import unicodedata
 import zipfile
 from xml.sax.saxutils import escape
 from pathlib import Path
@@ -36,6 +39,14 @@ IMAGE_MARK = "[[hwp-master:image:{n}]]"
 HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 HH = "http://www.hancom.co.kr/hwpml/2011/head"
 PAGE_TOKEN = "{page}"
+LIST_MARKERS = ("□", "○", "-", "·")
+LIST_STEP_HU = 1000  # 단계마다 왼쪽 여백 10pt
+# 글머리 + 빈칸 한 개의 폭(본문 10pt 기준 HWPUNIT). 한컴 2024 가 함초롬바탕 10pt 를 그린 PDF 의
+# 글자 상자 간격에서 쟀다: "□ " 14.75pt, "○ " 14.75pt, "- " 10.55pt, "· " 8.16pt, "가. " 약 18pt.
+SPACE_HU = 475
+MARKER_HU = {"-": 580, "·": 341, "ㆍ": 341, "*": 500, ".": 300, ")": 330, "(": 330}
+BODY_HEIGHT_HU = 1000  # scaffold 본문 글자 크기 10pt
+
 
 
 def split(doc: dict) -> tuple:
@@ -43,12 +54,44 @@ def split(doc: dict) -> tuple:
     spec = {k: copy.deepcopy(v) for k, v in doc.items() if k not in ("header", "footer", "blocks")}
     blocks: List[dict] = []
     plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "images": [],
-                               "aligns": [], "header": doc.get("header"),
+                               "aligns": [], "indents": [], "header": doc.get("header"),
                                "footer": doc.get("footer")}
     pending_break = False
+
+    def add_para(b: dict, prefix: str = "") -> None:
+        nonlocal pending_break
+        b = copy.deepcopy(b)
+        notes = b.pop("footnotes", None) or []
+        marks = b.pop("emphasis", None) or []
+        if pending_break:
+            plan["page_breaks"].append(len(blocks))
+            pending_break = False
+        text = prefix + b.get("text", "")
+        if "text" in b or prefix:
+            b["text"] = text
+        start = len(prefix)
+        for n in notes:
+            after = n.get("after")
+            offset = len(text) if after is None else text.index(after, start) + len(after)
+            plan["footnotes"].append({"block": len(blocks), "offset": offset, "text": n["text"]})
+        for m in marks:
+            plan["emphasis"].append({"block": len(blocks), "offset": text.index(m["text"], start),
+                                     "count": len(m["text"]), "props": char_props(m)})
+        blocks.append(b)
+
     for b in doc.get("blocks", []):
         if b.get("type") == "page_break":
             pending_break = True
+            continue
+        if b.get("type") == "list":
+            markers = b.get("markers") or LIST_MARKERS
+            for item in b["items"]:
+                item = {"text": item} if isinstance(item, str) else dict(item)
+                level = item.pop("level", 1)
+                marker = markers[level - 1]
+                left, hang = list_indent(level, marker)
+                plan["indents"].append({"block": len(blocks), "left": left, "indent": -hang})
+                add_para({"type": "paragraph", **item}, marker + " ")
             continue
         if b.get("type") == "image":
             if pending_break:
@@ -63,23 +106,25 @@ def split(doc: dict) -> tuple:
                 plan["aligns"].append({"block": len(blocks), "align": "center"})
                 blocks.append({"type": "paragraph", "text": b["caption"]})
             continue
-        b = copy.deepcopy(b)
-        notes = b.pop("footnotes", None) or []
-        marks = b.pop("emphasis", None) or []
-        if pending_break:
-            plan["page_breaks"].append(len(blocks))
-            pending_break = False
-        for n in notes:
-            text = b.get("text", "")
-            after = n.get("after")
-            offset = len(text) if after is None else text.index(after) + len(after)
-            plan["footnotes"].append({"block": len(blocks), "offset": offset, "text": n["text"]})
-        for m in marks:
-            plan["emphasis"].append({"block": len(blocks), "offset": b["text"].index(m["text"]),
-                                     "count": len(m["text"]), "props": char_props(m)})
-        blocks.append(b)
+        add_para(b)
     spec["blocks"] = blocks
     return spec, plan
+
+
+def marker_hu(marker: str) -> int:
+    """글머리 글자들의 폭(HWPUNIT, 본문 10pt). 표에 없는 글자는 전각 1em, 반각 0.55em 으로 본다."""
+    total = 0
+    for ch in marker:
+        if ch in MARKER_HU:
+            total += MARKER_HU[ch]
+        else:
+            total += BODY_HEIGHT_HU if unicodedata.east_asian_width(ch) in ("W", "F", "A") else 550
+    return total
+
+
+def list_indent(level: int, marker: str) -> tuple:
+    """(왼쪽 여백, 내어쓰기) HWPUNIT. 둘째 줄부터 글머리 뒤 글자에 맞춘다."""
+    return (level - 1) * LIST_STEP_HU, marker_hu(marker) + SPACE_HU
 
 
 def char_props(mark: dict) -> str:
@@ -92,7 +137,7 @@ def char_props(mark: dict) -> str:
 
 def plan_empty(plan: dict) -> bool:
     return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"] or plan["images"]
-                or plan["header"] or plan["footer"])
+                or plan["indents"] or plan["header"] or plan["footer"])
 
 
 def image_size_px(path: Path) -> Optional[tuple]:
@@ -145,6 +190,23 @@ def top_paragraphs(hwpx: Path) -> List[dict]:
         text = "".join(t.text or "" for run in p.findall(f"{{{HP}}}run") for t in run.findall(f"{{{HP}}}t"))
         out.append({"text": text, "table": p.find(f".//{{{HP}}}tbl") is not None})
     return out
+
+
+def para_margins(hwpx: Path) -> List[Optional[tuple]]:
+    """최상위 문단마다 (왼쪽 여백, 들여쓰기) HWPUNIT. paraPr 의 HwpUnitChar 갈래(한컴 2024 가 쓰는 값)."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+        head = ET.fromstring(z.read("Contents/header.xml"))
+    hc = "http://www.hancom.co.kr/hwpml/2011/core"
+    shapes = {}
+    for pp in head.iter(f"{{{HH}}}paraPr"):
+        margin = pp.find(f".//{{{HH}}}margin")
+        if margin is None:
+            continue
+        left, intent = margin.find(f"{{{hc}}}left"), margin.find(f"{{{hc}}}intent")
+        if left is not None and intent is not None:
+            shapes[pp.get("id")] = (int(left.get("value")), int(intent.get("value")))
+    return [shapes.get(p.get("paraPrIDRef")) for p in root.findall(f"{{{HP}}}p")]
 
 
 def char_styles(hwpx: Path) -> List[List[str]]:
@@ -247,7 +309,8 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
 
     paras = map_blocks(top_paragraphs(first), spec["blocks"], bool(spec.get("title")))
     need = set(plan["page_breaks"]) | {f["block"] for f in plan["footnotes"] + plan["emphasis"]
-                                       + plan["images"] + plan["aligns"]}
+                                       + plan["images"] + plan["aligns"]
+                                       + plan["indents"]}
     missing = sorted(i for i in need if paras[i] is None)
     if missing:
         result["error"] = f"scaffold 산출물에서 블록 문단을 찾지 못함: blocks {missing}"
@@ -285,6 +348,13 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
         if not step(["apply-para-format", "--para", str(paras[al["block"]]),
                      "--props", json.dumps({"alignment": al["align"]}, separators=(",", ":"))]):
             result["error"] = "문단 정렬 실패"
+            return result
+    # apply-para-format 의 여백 값은 HWPUNIT 의 2배로 받는다(4000 → 저장 2000 = 20pt).
+    for ind in plan["indents"]:
+        props = {"marginLeft": ind["left"] * 2, "indent": ind["indent"] * 2}
+        if not step(["apply-para-format", "--para", str(paras[ind["block"]]),
+                     "--props", json.dumps(props, separators=(",", ":"))]):
+            result["error"] = "목록 들여쓰기 실패"
             return result
     # 강조는 각주보다 먼저: 각주 컨트롤이 들어가기 전이라 오프셋이 HDS 글자 위치 그대로다.
     for em in plan["emphasis"]:
@@ -348,6 +418,16 @@ def check(out: Path, doc: dict) -> List[str]:
                 for i in ids for k, v in want.items())
             if bad:
                 problems.append(f"강조 미반영: blocks[{em['block']}] {em['offset']}+{em['count']} {em['props']}")
+    if plan["indents"]:
+        spec, _ = split(doc)
+        paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
+        margins = para_margins(out)
+        for ind in plan["indents"]:
+            pi = paras[ind["block"]]
+            got = margins[pi] if pi is not None else None
+            if got != (ind["left"], ind["indent"]):
+                problems.append(f"목록 들여쓰기 미반영: blocks[{ind['block']}] {got} "
+                                f"(계획 {(ind['left'], ind['indent'])})")
     for kind in ("header", "footer"):
         hf = plan[kind]
         has = f"<hp:{kind} " in xml

@@ -80,6 +80,28 @@ def gaejosik_marker(text: str) -> Optional[Tuple[int, str]]:
     return None
 
 
+LIST_MARKERS = ("□", "○", "-", "·")  # native.LIST_MARKERS 와 같다
+
+
+def _paragraph_like(blocks, where_prefix: str):
+    """(위치, 블록). list 블록은 빌드 결과처럼 "글머리 + 빈칸 + 글" 문단 항목들로 펼친다."""
+    for i, b in enumerate(blocks):
+        if not isinstance(b, dict):
+            continue
+        where = f"{where_prefix}blocks[{i}]"
+        if b.get("type") != "list" or not isinstance(b.get("items"), list):
+            yield where, b
+            continue
+        markers = b.get("markers") if isinstance(b.get("markers"), list) else LIST_MARKERS
+        for k, item in enumerate(b["items"]):
+            item = {"text": item} if isinstance(item, str) else item
+            level = item.get("level", 1) if isinstance(item, dict) else None
+            if (not isinstance(item, dict) or not isinstance(item.get("text"), str)
+                    or not isinstance(level, int) or not 1 <= level <= len(markers)):
+                continue  # 형식 오류는 hds 검증(E114)이 알린다
+            yield f"{where}.items[{k}]", {"type": "paragraph", "text": f"{markers[level - 1]} {item['text']}"}
+
+
 def lint_convention(blocks, convention: Optional[str], where_prefix: str = "") -> list:
     """규약 위반 Finding 목록. convention 이 없거나 모르는 값이면 검사하지 않는다."""
     from hds import _err, _warn  # 순환 import 를 피해 호출 시점에 가져온다
@@ -89,15 +111,12 @@ def lint_convention(blocks, convention: Optional[str], where_prefix: str = "") -
     out = []
     counters = {}  # 단계 → 마지막 순번
     deepest = 0  # 마지막 항목의 단계 (0 = 아직 없음)
-    for i, b in enumerate(blocks):
-        if not isinstance(b, dict):
-            continue
+    for where, b in _paragraph_like(blocks, where_prefix):
         if b.get("type") == "heading":
             counters, deepest = {}, 0
             continue
         if b.get("type") != "paragraph" or not isinstance(b.get("text"), str):
             continue
-        where = f"{where_prefix}blocks[{i}]"
         text = b["text"].lstrip()
 
         if convention == "gongmun":

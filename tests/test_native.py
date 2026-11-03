@@ -150,6 +150,57 @@ class ImageTest(unittest.TestCase):
         self.assertIn("E113", codes(hds.lint_image_files(doc["blocks"], Path("/nonexistent"))))
 
 
+LIST_DOC = {"version": "1", "title": "목록", "blocks": [
+    {"type": "list", "items": [
+        {"text": "첫째 항목", "emphasis": [{"text": "첫째", "bold": True}]},
+        {"text": "하위 - 항목", "level": 2, "footnotes": [{"text": "근거", "after": "하위"}]},
+        "둘째 항목"]},
+    {"type": "paragraph", "text": "목록 뒤 문단"},
+    {"type": "list", "markers": ["1.", "가."], "items": ["번호", {"text": "하위", "level": 2}]}]}
+
+
+class ListTest(unittest.TestCase):
+    def test_split_list(self):
+        spec, plan = native.split(LIST_DOC)
+        self.assertEqual([b["text"] for b in spec["blocks"]],
+                         ["□ 첫째 항목", "○ 하위 - 항목", "□ 둘째 항목", "목록 뒤 문단", "1. 번호", "가. 하위"])
+        self.assertTrue(all(b["type"] == "paragraph" for b in spec["blocks"]))
+        # 단계마다 10pt, 내어쓰기는 글머리 + 빈칸 폭 (한컴 2024 실측)
+        self.assertEqual(plan["indents"], [
+            {"block": 0, "left": 0, "indent": -1475}, {"block": 1, "left": 1000, "indent": -1475},
+            {"block": 2, "left": 0, "indent": -1475}, {"block": 4, "left": 0, "indent": -1325},
+            {"block": 5, "left": 1000, "indent": -1775}])
+        # 강조·각주 위치는 글머리만큼 밀리고, 글머리 안의 "-" 와 헷갈리지 않는다
+        self.assertEqual(plan["emphasis"][0]["offset"], 2)
+        self.assertEqual(plan["footnotes"], [{"block": 1, "offset": 4, "text": "근거"}])
+        self.assertFalse(native.plan_empty(plan))
+
+    def test_validate_list(self):
+        self.assertEqual(codes(hds.validate_blocks(LIST_DOC["blocks"])), [])
+        bad = [{"type": "list", "items": []},
+               {"type": "list", "items": [{"text": "a", "level": 2}]},
+               {"type": "list", "items": ["a", {"text": "b", "level": 5}]},
+               {"type": "list", "items": [{"text": " "}]},
+               {"type": "list", "items": [{"text": "a", "bullet": "x"}]},
+               {"type": "list", "markers": ["1.", "가."], "items": ["a", {"text": "b", "level": 2},
+                                                             {"text": "c", "level": 3}]},
+               {"type": "list", "items": [{"text": "a", "emphasis": [{"text": "z", "bold": True}]}]}]
+        self.assertEqual(codes(hds.validate_blocks(bad)), ["E114"] * 6 + ["E110"])
+        self.assertEqual(codes(hds.validate_blocks([{"type": "list", "markers": ["a b"], "items": ["x"]}])),
+                         ["E115"])
+
+    def test_convention_sees_items(self):
+        import conventions
+        blocks = [{"type": "list", "items": ["수출 증가", {"text": "반도체가 늘었습니다.", "level": 3}]}]
+        found = [(f.code, f.where) for f in conventions.lint_convention(blocks, "gaejosik")]
+        self.assertEqual(found, [("C011", "blocks[0].items[1]"), ("C111", "blocks[0].items[1]")])
+
+    def test_budget_counts_items(self):
+        unit = {"target_chars": 10}
+        blocks = [{"type": "list", "items": ["가나다라마", {"text": "바사아자차", "footnotes": [{"text": "x"}]}]}]
+        self.assertEqual(hds._lint_unit_budget(unit, blocks, "u"), [])
+
+
 class ProjectLintTest(unittest.TestCase):
     """단위 끝의 쪽 나눔은 허용하지만, 문서 끝이나 단위 경계에서 겹치면 오류."""
 
@@ -248,6 +299,20 @@ class ProduceTest(unittest.TestCase):
         self.assertTrue(receipt.verify(rec, self.rhwp)["reproduced"])
         png.write_bytes(png_bytes(400, 201))
         self.assertFalse(receipt.verify(rec, self.rhwp)["reproduced"])
+
+    def test_list_block(self):
+        out = self.dir / "list" / "out.hwpx"
+        result = native.produce(LIST_DOC, out, self.rhwp, self.dir / "list" / "work")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(native.check(out, LIST_DOC), [])
+        margins = native.para_margins(out)
+        texts = [p["text"] for p in native.top_paragraphs(out)]
+        # 목록 문단만 여백이 바뀌고 뒤 일반 문단은 그대로다
+        self.assertEqual(margins[texts.index("○ 하위 - 항목")], (1000, -1475))
+        self.assertEqual(margins[texts.index("목록 뒤 문단")][0], 0)
+        self.assertEqual(margins[texts.index("목록 뒤 문단")][1], 0)
+        problems = native.check(self.dir / "list" / "work" / "scaffold.hwpx", LIST_DOC)
+        self.assertTrue(any("목록 들여쓰기 미반영" in p for p in problems), problems)
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")
