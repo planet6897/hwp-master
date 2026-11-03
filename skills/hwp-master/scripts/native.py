@@ -22,6 +22,10 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
                                왼쪽 여백(단계)·내어쓰기(글머리 폭)
     header / footer          → edit insert-header-footer + insert-header-footer-text
                                (+ "{page}" 자리에 insert-field-in-hf 쪽 번호)
+    style                    → 문단마다 edit apply-char-format fontSize(제목·개요·본문) +
+                               apply-para-format lineSpacing, 표 셀마다 apply-char-format-in-cell
+                               fontSize(table_pt). 강조보다 먼저 적용해 강조 크기가 이긴다.
+                               목록 들여쓰기·글머리 폭은 본문 크기에 비례해 키운다.
 
 블록 → 문단 위치는 산술로 셈하지 않고 scaffold 산출물의 최상위 문단을 읽어 찾는다
 (제목 문단, 표 뒤 빈 문단 등 scaffold 가 덧붙이는 문단이 있기 때문).
@@ -64,6 +68,7 @@ LIST_STEP_HU = 1000  # 단계마다 왼쪽 여백 10pt
 SPACE_HU = 475
 MARKER_HU = {"-": 580, "·": 341, "ㆍ": 341, "*": 500, ".": 300, ")": 330, "(": 330}
 BODY_HEIGHT_HU = 1000  # scaffold 본문 글자 크기 10pt
+BODY_PT = 10
 HEADER_FILL = "#D9D9D9"  # 머리 행 기본 배경 (회색 15%)
 TABLE_STYLE_KEYS = ("header_row", "header_fill", "col_widths", "merges", "cell_emphasis")
 
@@ -74,7 +79,7 @@ def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
 
     toc_pages 는 목차 항목(제목 블록 순번 → 쪽)이다. 없으면 쪽 번호 자리에 TOC_PLACEHOLDER 를 둔다."""
     spec = {k: copy.deepcopy(v) for k, v in doc.items()
-            if k not in ("header", "footer", "blocks", "orientation", "margins_mm")}
+            if k not in ("header", "footer", "blocks", "orientation", "margins_mm", "style")}
     page = page_props(doc)
     if page and doc.get("orientation") == "landscape" and "page_size" in spec:
         # scaffold 는 세로 치수로 만들고, 가로는 한컴처럼 landscape 표시로 돌린다
@@ -83,7 +88,8 @@ def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
     blocks: List[dict] = []
     plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "images": [],
                                "aligns": [], "indents": [], "tables": [], "page": page, "toc": None, "header": doc.get("header"),
-                               "footer": doc.get("footer")}
+                               "footer": doc.get("footer"), "style": doc.get("style") or None}
+    scale = ((doc.get("style") or {}).get("body_pt") or BODY_PT) / BODY_PT
     pending_break = False
     counters = {"image": 0, "table": 0}
 
@@ -124,7 +130,7 @@ def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
             for e in entries:
                 page = (toc_pages or {}).get(e["heading"], TOC_PLACEHOLDER)
                 plan["toc"]["entries"].append({**e, "block": len(blocks), "page": page})
-                plan["indents"].append({"block": len(blocks), "left": (e["level"] - 1) * LIST_STEP_HU,
+                plan["indents"].append({"block": len(blocks), "left": round((e["level"] - 1) * LIST_STEP_HU * scale),
                                         "indent": 0, "tab_right": True})
                 add_para({"type": "paragraph", "text": f"{e['number']} {e['text']}\t{page}"})
             continue
@@ -134,7 +140,7 @@ def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
                 item = {"text": item} if isinstance(item, str) else dict(item)
                 level = item.pop("level", 1)
                 marker = markers[level - 1]
-                left, hang = list_indent(level, marker)
+                left, hang = list_indent(level, marker, scale)
                 plan["indents"].append({"block": len(blocks), "left": left, "indent": -hang})
                 add_para({"type": "paragraph", **item}, marker + " ")
             continue
@@ -175,7 +181,8 @@ def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
                 cell_marks.append({"row": m["row"], "col": m["col"], "start": start, "count": count,
                                    "props": char_props(m)})
             plan["tables"].append({
-                "table": ntab, "cols": max(len(r) for r in b["rows"]),
+                "table": ntab, "cols": max(len(r) for r in b["rows"]), "rows": len(b["rows"]),
+                "pt": (doc.get("style") or {}).get("table_pt"),
                 "header_fill": (style.get("header_fill") or HEADER_FILL).upper()
                 if style.get("header_row") else None,
                 "col_widths": style.get("col_widths"), "merges": merges, "cell_emphasis": cell_marks})
@@ -241,9 +248,46 @@ def marker_hu(marker: str) -> int:
     return total
 
 
-def list_indent(level: int, marker: str) -> tuple:
-    """(왼쪽 여백, 내어쓰기) HWPUNIT. 둘째 줄부터 글머리 뒤 글자에 맞춘다."""
-    return (level - 1) * LIST_STEP_HU, marker_hu(marker) + SPACE_HU
+def list_indent(level: int, marker: str, scale: float = 1.0) -> tuple:
+    """(왼쪽 여백, 내어쓰기) HWPUNIT. 둘째 줄부터 글머리 뒤 글자에 맞춘다.
+
+    scale 은 본문 글자 크기 / 10pt 다(style.body_pt). 폭은 10pt 실측값을 그 비율로 키운다."""
+    if scale == 1.0:
+        return (level - 1) * LIST_STEP_HU, marker_hu(marker) + SPACE_HU
+    return round((level - 1) * LIST_STEP_HU * scale), round((marker_hu(marker) + SPACE_HU) * scale)
+
+
+def style_targets(spec: dict, plan: dict) -> List[tuple]:
+    """style 을 받을 scaffold 문단: (블록 순번 또는 "title", 글자 크기 pt 또는 None).
+
+    제목은 title_pt, 개요는 heading_pt, 본문 문단은 body_pt. 그림 문단은 글자가 없어 뺀다.
+    줄 간격은 이 문단 모두에 준다."""
+    st = plan.get("style") or {}
+    if not st:
+        return []
+    images = {img["block"] for img in plan["images"]}
+    out: List[tuple] = []
+    if spec.get("title"):
+        out.append(("title", st.get("title_pt")))
+    for bi, b in enumerate(spec["blocks"]):
+        if b.get("type") == "heading":
+            out.append((bi, st.get("heading_pt")))
+        elif b.get("type") == "paragraph" and bi not in images:
+            out.append((bi, st.get("body_pt")))
+    return out
+
+
+def para_line_spacings(hwpx: Path) -> List[Optional[tuple]]:
+    """최상위 문단마다 (줄 간격 종류, 값). paraPr 의 HwpUnitChar 갈래(첫 lineSpacing)."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+        head = ET.fromstring(z.read("Contents/header.xml"))
+    shapes = {}
+    for pp in head.iter(f"{{{HH}}}paraPr"):
+        ls = pp.find(f".//{{{HH}}}lineSpacing")
+        if ls is not None:
+            shapes[pp.get("id")] = (ls.get("type"), int(ls.get("value")))
+    return [shapes.get(p.get("paraPrIDRef")) for p in root.findall(f"{{{HP}}}p")]
 
 
 def char_props(mark: dict) -> str:
@@ -278,7 +322,7 @@ def plan_empty(plan: dict) -> bool:
     # 표가 하나라도 있으면 "쪽 영역 안으로 제한"을 켜야 하므로 편집이 필요하다
     return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"] or plan["images"]
                 or plan["indents"] or plan["tables"] or plan["page"]
-                or plan["header"] or plan["footer"])
+                or plan["header"] or plan["footer"] or plan.get("style"))
 
 
 def page_props(doc: dict) -> Optional[dict]:
@@ -633,9 +677,10 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
         return result
 
     paras = map_blocks(top_paragraphs(first), spec["blocks"], bool(spec.get("title")))
+    targets = style_targets(spec, plan)
     need = set(plan["page_breaks"]) | {f["block"] for f in plan["footnotes"] + plan["emphasis"]
                                        + plan["images"] + plan["aligns"]
-                                       + plan["indents"]}
+                                       + plan["indents"]} | {t for t, _ in targets if t != "title"}
     missing = sorted(i for i in need if paras[i] is None)
     if missing:
         result["error"] = f"scaffold 산출물에서 블록 문단을 찾지 못함: blocks {missing}"
@@ -702,6 +747,14 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
                 result["error"] = "표 셀 병합 실패"
                 return result
         hidden = covered_cells(tb["merges"])
+        if tb.get("pt") is not None:
+            props = json.dumps({"fontSize": int(round(tb["pt"] * 100))}, separators=(",", ":"))
+            for r in range(tb["rows"]):
+                for c in range(tb["cols"]):
+                    if (r, c) not in hidden and not step(["apply-char-format-in-cell", "--table", t, "--row", str(r),
+                                                          "--col", str(c), "--props", props]):
+                        result["error"] = "표 글자 크기 적용 실패"
+                        return result
         if tb["header_fill"]:
             props = json.dumps({"fillType": "solid", "fillColor": tb["header_fill"], "isHeader": True},
                                separators=(",", ":"))
@@ -728,6 +781,19 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
         if not step(["apply-para-format", "--para", str(paras[ind["block"]]),
                      "--props", json.dumps(props, separators=(",", ":"))]):
             result["error"] = "목록 들여쓰기 실패"
+            return result
+    # 문서 글자 크기·줄 간격은 강조보다 먼저: 강조의 size 가 문서 크기를 덮어쓴다.
+    ls = (plan.get("style") or {}).get("line_spacing")
+    for target, pt in targets:
+        para = "0" if target == "title" else str(paras[target])
+        if pt is not None and not step(["apply-char-format", "--para", para, "--props",
+                                        json.dumps({"fontSize": int(round(pt * 100))}, separators=(",", ":"))]):
+            result["error"] = "문서 글자 크기 적용 실패"
+            return result
+        if ls is not None and not step(["apply-para-format", "--para", para, "--props",
+                                        json.dumps({"lineSpacing": int(ls), "lineSpacingType": "Percent"},
+                                                   separators=(",", ":"))]):
+            result["error"] = "문서 줄 간격 적용 실패"
             return result
     # 강조는 각주보다 먼저: 각주 컨트롤이 들어가기 전이라 오프셋이 HDS 글자 위치 그대로다.
     for em in plan["emphasis"]:
@@ -816,6 +882,8 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
             if got != (ind["left"], ind["indent"]):
                 problems.append(f"목록 들여쓰기 미반영: blocks[{ind['block']}] {got} "
                                 f"(계획 {(ind['left'], ind['indent'])})")
+    if plan.get("style"):
+        problems.extend(_check_style(out, doc, shown, plan))
     if plan["page"]:
         got = page_def(out)
         for k, v in plan["page"].items():
@@ -849,6 +917,18 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
             if got_spans != want_spans:
                 problems.append(f"{where} 병합 {got_spans} (계획 {want_spans})")
             by_addr = {(c["row"], c["col"]): c for c in cells}
+            if tb.get("pt") is not None:
+                want = int(round(tb["pt"] * 100))
+                sized = {}
+                for em in tb["cell_emphasis"]:
+                    if "fontSize" in json.loads(em["props"]):
+                        sized.setdefault((em["row"], em["col"]), set()).update(
+                            range(em["start"], em["start"] + em["count"]))
+                for c in cells:
+                    skip = sized.get((c["row"], c["col"]), set())
+                    if any(shapes.get(cid, {}).get("height") != want
+                           for k, cid in enumerate(c["chars"]) if k not in skip):
+                        problems.append(f"{where} 표 글자 크기 미반영: 셀 ({c['row']},{c['col']}) (계획 {want})")
             for em in tb["cell_emphasis"]:
                 want = json.loads(em["props"])
                 ids = by_addr.get((em["row"], em["col"]), {}).get("chars", [])[em["start"]:em["start"] + em["count"]]
@@ -875,6 +955,35 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
         if hf and kind in HF_CENTER and hf_aligns(out).get(kind) != "CENTER":
             problems.append(f"{kind} 가운데 정렬 미반영")
     return problems + problems_toc
+
+
+def _check_style(out: Path, doc: dict, shown, plan: dict) -> List[str]:
+    """style 의 글자 크기·줄 간격이 대상 문단에 들어갔는가. 크기를 준 강조 범위는 강조 크기를 따른다."""
+    spec, _ = split(doc, shown)
+    paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
+    styles, shapes, spacings = char_styles(out), char_shapes(out), para_line_spacings(out)
+    sized = {}
+    for em in plan["emphasis"]:
+        if "fontSize" in json.loads(em["props"]):
+            sized.setdefault(em["block"], set()).update(range(em["offset"], em["offset"] + em["count"]))
+    ls = plan["style"].get("line_spacing")
+    problems = []
+    for target, pt in style_targets(spec, plan):
+        pi = 0 if target == "title" else paras[target]
+        where = "제목" if target == "title" else f"blocks[{target}]"
+        if pi is None:
+            problems.append(f"문서 서식 대상 문단 없음: {where}")
+            continue
+        if pt is not None:
+            want = int(round(pt * 100))
+            skip = sized.get(target, set())
+            bad = [shapes.get(cid, {}).get("height") for k, cid in enumerate(styles[pi])
+                   if k not in skip and shapes.get(cid, {}).get("height") != want]
+            if bad:
+                problems.append(f"문서 글자 크기 미반영: {where} {sorted(set(bad))} (계획 {want})")
+        if ls is not None and spacings[pi] != ("PERCENT", int(ls)):
+            problems.append(f"문서 줄 간격 미반영: {where} {spacings[pi]} (계획 {int(ls)}%)")
+    return problems
 
 
 def toc_pages_shown(out: Path, doc: dict) -> Optional[Dict[int, int]]:
