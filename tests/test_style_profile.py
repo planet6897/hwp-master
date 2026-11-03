@@ -363,5 +363,131 @@ class BuiltinProfilesTest(unittest.TestCase):
         self.assertEqual(json.loads(proc.stdout), [])
 
 
+ROLE_STYLE = {"body_pt": 14, "title_pt": 18, "heading_pt": 16,
+              "title_space_after": 12, "heading_space_before": 10, "heading_space_after": 4,
+              "body_space_before": 3, "body_space_after": 0}
+ROLE_DOC = {"version": "1", "title": "역할 서식 시험", "style": ROLE_STYLE,
+            "blocks": [{"type": "heading", "level": 1, "text": "추진 배경"},
+                       {"type": "list", "items": ["첫째 항목", "둘째 항목"]},
+                       {"type": "table", "rows": [["구분", "값"], ["가", "1"]]},
+                       {"type": "paragraph", "text": "끝 문단"}]}
+FONTS = {"title_font": "HY헤드라인M", "heading_font": "HY견고딕", "body_font": "휴먼명조", "table_font": "맑은 고딕"}
+
+
+class RoleStyleValidateTest(unittest.TestCase):
+    def test_valid(self):
+        self.assertEqual(codes(hds.validate_document(dict(ROLE_DOC, style={**ROLE_STYLE, **FONTS}))), [])
+
+    def test_invalid(self):
+        for bad in ({"title_font": ""}, {"body_font": " 바탕"}, {"body_font": "가" * 65}, {"table_font": 3},
+                    {"body_font": 'a"b'}, {"body_space_before": -1}, {"body_space_before": 101},
+                    {"heading_space_after": 2.3}, {"title_space_before": True}, {"list_space_before": 3}):
+            with self.subTest(bad=bad):
+                self.assertIn("E123", codes(hds.validate_document(dict(ROLE_DOC, style=bad))))
+
+    def test_props(self):
+        st = {**ROLE_STYLE, **FONTS, "line_spacing": 170}
+        self.assertEqual(json.loads(native.role_char_props(st, "title")),
+                         {"fontSize": 1800, "fontName": "HY헤드라인M"})
+        self.assertEqual(json.loads(native.role_para_props(st, "heading")),
+                         {"lineSpacing": 170, "lineSpacingType": "Percent",
+                          "spacingBefore": 10 * native.SPACE_PROP_PER_PT, "spacingAfter": 4 * native.SPACE_PROP_PER_PT})
+        self.assertIsNone(native.role_char_props({"line_spacing": 160}, "body"))
+        self.assertEqual(native.style_fonts({"style": FONTS}), list(FONTS.values()))
+
+
+class RoleStyleBuildTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rhwp = rhwp_locate.locate(None)["path"]
+
+    def test_spacing_applied_and_checked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "o.hwpx"
+            res = native.produce(ROLE_DOC, out, self.rhwp, Path(tmp) / "w")
+            self.assertTrue(res["ok"], res.get("error"))
+            self.assertEqual(native.check(out, ROLE_DOC, self.rhwp), [])
+            gaps = native.para_spacings(out)
+            self.assertEqual(gaps[0][1], 1200)            # 제목 아래 12pt
+            self.assertEqual(gaps[1], (1000, 400))        # 개요 위 10pt·아래 4pt
+            self.assertEqual(gaps[2], (300, 0))           # 목록 항목 = 본문
+
+    def test_check_catches_missing_spacing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "o.hwpx"
+            plain = dict(ROLE_DOC, style={"body_pt": 14})
+            self.assertTrue(native.produce(plain, out, self.rhwp, Path(tmp) / "w")["ok"])
+            problems = native.check(out, ROLE_DOC, self.rhwp)
+            self.assertTrue(any("문단 위 간격 미반영" in p for p in problems), problems)
+
+    def test_fonts_applied_or_refused(self):
+        doc = dict(ROLE_DOC, style={**ROLE_STYLE, **FONTS})
+        with tempfile.TemporaryDirectory() as tmp:
+            import build
+            out = Path(tmp) / "o.hwpx"
+            if not native.supports_font_name(self.rhwp):
+                # fontName 을 모르는 rhwp: 조용히 무시하지 않고 E125 로 멈춘다
+                rep = build.build(doc, out, Path(tmp) / "b", self.rhwp, False, False, [])
+                self.assertFalse(rep["ok"])
+                self.assertIn("E125", [f["code"] for f in rep["findings"]])
+                self.skipTest("설치된 rhwp 가 fontName 을 지원하지 않음 — E125 확인만 함")
+            res = native.produce(doc, out, self.rhwp, Path(tmp) / "w")
+            self.assertTrue(res["ok"], res.get("error"))
+            self.assertEqual(native.check(out, doc, self.rhwp), [])
+            shapes, styles = native.char_shapes(out), native.char_styles(out)
+            fonts = [{shapes[c]["font"] for c in ids} for ids in styles if ids]
+            self.assertEqual(fonts[0], {"HY헤드라인M"})
+            self.assertEqual(fonts[1], {"HY견고딕"})
+            self.assertEqual(fonts[2], {"휴먼명조"})
+            cells = native.table_cells(out)[0]
+            self.assertEqual({shapes[c]["font"] for cell in cells for c in cell["chars"]}, {"맑은 고딕"})
+
+    def test_lock_drops_role_fonts_without_support(self):
+        home = os.environ.get("HWP_MASTER_HOME")
+        with tempfile.TemporaryDirectory() as tmp:
+            os.environ["HWP_MASTER_HOME"] = str(Path(tmp) / "home")
+            try:
+                prof = style_profile.summarize([feature()] * 2, [])
+                prof["recommend"]["style"].update({"title_font": "HY헤드라인M", "body_space_before": 3})
+                style_profile.register(prof, "역할시험", force=False)
+                old = native.supports_font_name
+                native.supports_font_name = lambda rhwp: False
+                try:
+                    proj = Path(tmp) / "p"
+                    proj.mkdir()
+                    res = style_profile.lock("역할시험", proj, force=False, rhwp=self.rhwp)
+                finally:
+                    native.supports_font_name = old
+                spec = json.loads((proj / "spec_lock.json").read_text(encoding="utf-8"))
+                self.assertNotIn("title_font", spec["style"])
+                self.assertEqual(spec["style"]["body_space_before"], 3)
+                self.assertTrue(any("fontName" in u for u in res["unsupported"]))
+            finally:
+                if home is None:
+                    os.environ.pop("HWP_MASTER_HOME", None)
+                else:
+                    os.environ["HWP_MASTER_HOME"] = home
+
+
+class RoleSummarizeTest(unittest.TestCase):
+    def test_role_fonts_and_spacing(self):
+        def f(**kw):
+            base = feature()
+            base["title"] = dict(base["title"], font="HY헤드라인M", before=0.0, after=12.0)
+            base.update(top_marker_font="HY견고딕", heading_space=(10.0, 4.0), body_space=(0.0, 0.0))
+            base.update(kw)
+            return base
+        prof = style_profile.summarize([f(), f(), f(), f(top_marker_font="휴먼명조")], [])
+        st = prof["recommend"]["style"]
+        self.assertEqual(st["title_font"], "HY헤드라인M")
+        self.assertEqual(st["heading_font"], "HY견고딕")
+        self.assertNotIn("table_font", st)  # 문서 전체 글꼴(font)과 같으면 따로 두지 않는다
+        self.assertEqual((st["title_space_before"], st["title_space_after"]), (0.0, 12.0))
+        self.assertEqual((st["heading_space_before"], st["heading_space_after"]), (10.0, 4.0))
+        self.assertEqual(st["body_space_before"], 0.0)  # 0pt 도 다수결 값으로 남긴다
+        self.assertEqual(prof["agreement"]["heading_font"], 0.75)
+        self.assertEqual(codes(hds.validate_style(prof["recommend"])), [])
+
+
 if __name__ == "__main__":
     unittest.main()

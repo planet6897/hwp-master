@@ -23,7 +23,7 @@ HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔
 | `orientation` | `"portrait"`(기본) 또는 `"landscape"` | 용지 방향. 가로면 한글의 "가로" 용지로 저장된다 |
 | `margins_mm` | `{"left", "right", "top", "bottom", "header", "footer"}` 중 일부 (mm) | 용지 여백. 기본은 좌우 30, 위 20, 아래·머리말·꼬리말 15 |
 | `outline_numbering` | 수준 1 부터 1~7개의 `{"text": "^1.", "num_format": "roman_capital"}` | 제목(개요) 번호 모양. `^N`이 그 수준 번호가 되고, 생략한 뒤쪽 수준은 한글 기본(`1.` `가.` `1)` …). rhwp 가 지원해야 한다(아래) |
-| `style` | `{"body_pt", "heading_pt", "title_pt", "table_pt", "line_spacing"}` 중 일부 | 문서 전체 글자 크기(pt, 6~40, 0.5 단위)와 줄 간격(%, 80~400 정수). 기본은 본문·표 10, 개요 12, 제목 18, 줄 간격 160 |
+| `style` | `{"body_pt", "heading_pt", "title_pt", "table_pt", "line_spacing"}`, 역할별 글꼴 `{"title_font", "heading_font", "body_font", "table_font"}`, 문단 간격 `{"title_space_before", "title_space_after", "heading_space_before", "heading_space_after", "body_space_before", "body_space_after"}` 중 일부 | 문서 전체 글자 크기(pt, 6~40, 0.5 단위)와 줄 간격(%, 80~400 정수). 기본은 본문·표 10, 개요 12, 제목 18, 줄 간격 160. 글꼴은 1~64자 이름, 문단 위·아래 간격은 pt(0~100, 0.5 단위) |
 
 용지 방향이나 여백을 바꾸면 모든 표가 새 본문 폭으로 넓어지거나 좁아지고(열 비율은 유지), 그림의 최대 폭과
 W201·E112 검사도 그 본문 폭으로 잰다. 본문 폭이나 높이가 50mm 아래가 되는 여백은 오류(E121)다.
@@ -36,6 +36,23 @@ W201·E112 검사도 그 본문 폭으로 잰다. 본문 폭이나 높이가 50m
 `style`은 기관 문서 관행(예: 본문 휴먼명조 15pt, 줄 간격 160%)을 맞출 때 쓴다. 보통 Strategist 가 문서 유형
 프로필(`style_profile.py lock`)로 `spec_lock.json`에 넣는다. 본문 크기를 바꾸면 목록 들여쓰기·글머리 폭도 같은
 비율로 커지고, `table_pt`를 주면 W201 셀 넘침 추정도 그 크기로 잰다. 강조의 `size`는 `style`보다 우선한다.
+
+제목·개요·본문·표가 모두 같은 글꼴·크기·간격이면 문서가 단조로워진다. 역할마다 다르게 줄 수 있다.
+
+```json
+"font": "휴먼명조",
+"style": {"title_pt": 18, "heading_pt": 16, "body_pt": 14, "table_pt": 12, "line_spacing": 160,
+          "title_font": "HY헤드라인M", "heading_font": "HY견고딕", "table_font": "맑은 고딕",
+          "title_space_after": 12, "heading_space_before": 10, "heading_space_after": 4, "body_space_before": 3}
+```
+
+- 최상위 `font`는 문서 전체 기본 글꼴이고, `*_font`는 그 역할의 문단(표는 모든 셀)만 바꾼다.
+  역할 글꼴은 rhwp 글자 서식의 글꼴 이름(`fontName`)이 있어야 한다. 설치된 rhwp 가 모르면 빌드가 E125 로 멈춘다
+  (`font`만 쓰면 어느 rhwp 에서나 된다). 프로필 `lock`은 이때 역할 글꼴을 옮기지 않고 unsupported 에 적는다.
+- 문단 간격의 역할: `title`은 문서 제목, `heading`은 개요(제목 블록), `body`는 본문 문단·목록 항목·캡션이다.
+  간격용 빈 문단(W203) 대신 이 값을 쓴다.
+- 한컴에 그 글꼴이 없으면 한컴이 대체 글꼴로 보여 준다. 공문서에 흔한 글꼴(휴먼명조·HY헤드라인M·HY견고딕·바탕·
+  맑은 고딕)을 쓴다.
 
 ### 각주
 
@@ -175,7 +192,8 @@ W201·E112 검사도 그 본문 폭으로 잰다. 본문 폭이나 높이가 50m
 | E121 | `orientation` 값이 틀리거나 `margins_mm` 형식이 틀리거나 본문 폭·높이가 50mm 아래 |
 | E122 | `toc`가 두 개 이상이거나 `title`·`levels` 형식이 틀림 |
 | E124 | `outline_numbering` 형식이 틀리거나(1~7개, `text` 1~32자, `^N`은 자기 수준 이하, `num_format` 값) 설치된 rhwp 가 지원하지 않음 |
-| E123 | `style`이 빈 객체이거나 모르는 키가 있거나 글자 크기(6~40pt, 0.5 단위)·줄 간격(80~400% 정수) 범위 밖 |
+| E123 | `style`이 빈 객체이거나 모르는 키가 있거나 글자 크기(6~40pt, 0.5 단위)·줄 간격(80~400% 정수)·문단 간격(0~100pt, 0.5 단위) 범위 밖이거나 글꼴 이름이 1~64자 문자열이 아님 |
+| E125 | `style`에 역할별 글꼴(`*_font`)을 썼는데 설치된 rhwp 가 글꼴 이름(`fontName`)을 지원하지 않음 |
 | E005 | `cell_align`이 `justify`/`left`/`center`/`right`(또는 열별 목록)가 아님 |
 
 ## 경고

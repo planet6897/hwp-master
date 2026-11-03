@@ -6,7 +6,9 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
      "page_size": {"width_mm": num, "height_mm": num}?,
      "orientation": "portrait"|"landscape"?, "margins_mm": {left, right, top, bottom, header, footer}?,
      "header"?: {"text": str}, "footer"?: {"text": str},
-     "style"?: {"body_pt"?, "heading_pt"?, "title_pt"?, "table_pt"?: pt, "line_spacing"?: %},
+     "style"?: {"body_pt"?, "heading_pt"?, "title_pt"?, "table_pt"?: pt, "line_spacing"?: %,
+                "title_font"?, "heading_font"?, "body_font"?, "table_font"?: 글꼴 이름,
+                "{title,heading,body}_space_{before,after}"?: 문단 위·아래 간격 pt},
      "outline_numbering"?: [{"text": "^1.", "num_format"?: "roman_capital" | ...}],  # 제목 번호 모양
      "blocks": [heading | paragraph | table | page_break | image | list]}
 
@@ -59,9 +61,16 @@ OUTLINE_DEFAULTS = (("^1.", "digit"), ("^2.", "hangul_syllable"), ("^3)", "digit
 OUTLINE_TEXT_MAX = 32
 # 문서 전체 글자 크기(pt)·줄 간격(%). 없으면 scaffold 기본(본문·표 10, 개요 12, 제목 18, 줄 간격 160)
 STYLE_PT_KEYS = ("body_pt", "heading_pt", "title_pt", "table_pt")
-STYLE_KEYS = STYLE_PT_KEYS + ("line_spacing",)
+# 역할별 글꼴(제목·개요·본문·표). 문서 전체 글꼴은 최상위 font. rhwp 글자 서식 fontName 이 있어야 한다(E125)
+STYLE_FONT_KEYS = ("title_font", "heading_font", "body_font", "table_font")
+# 역할별 문단 위·아래 간격(pt). 목록 항목·캡션은 본문(body)으로 본다
+STYLE_SPACE_KEYS = tuple(f"{role}_space_{side}" for role in ("title", "heading", "body")
+                         for side in ("before", "after"))
+STYLE_KEYS = STYLE_PT_KEYS + ("line_spacing",) + STYLE_FONT_KEYS + STYLE_SPACE_KEYS
 STYLE_PT_RANGE = (6, 40)
 STYLE_LS_RANGE = (80, 400)
+STYLE_SPACE_RANGE = (0, 100)
+STYLE_FONT_MAX = 64
 PAGE_KEYS = ("page_size", "orientation", "margins_mm")
 MARGIN_KEYS = ("left", "right", "top", "bottom", "header", "footer")
 # scaffold 기본 여백(mm): 좌우 30, 위 20, 아래·머리말·꼬리말 15
@@ -411,18 +420,24 @@ def validate_page_breaks(blocks, where_prefix: str = "", whole: bool = True) -> 
 
 
 def validate_style(doc: dict, where: str = "") -> List[Finding]:
-    """E123: style 은 {body_pt, heading_pt, title_pt, table_pt: 6~40 pt, line_spacing: 80~400 %} 중 일부."""
+    """E123: style 은 글자 크기(6~40 pt)·줄 간격(80~400 %)·역할별 글꼴(이름)·문단 간격(0~100 pt) 중 일부."""
     st = doc.get("style")
     if st is None:
         return []
     msg = (f"style 은 {list(STYLE_KEYS)} 중 일부를 씁니다 — 글자 크기 {STYLE_PT_RANGE[0]}~{STYLE_PT_RANGE[1]}pt "
-           f"(0.5 단위), 줄 간격 {STYLE_LS_RANGE[0]}~{STYLE_LS_RANGE[1]}% 정수")
+           f"(0.5 단위), 줄 간격 {STYLE_LS_RANGE[0]}~{STYLE_LS_RANGE[1]}% 정수, 글꼴은 1~{STYLE_FONT_MAX}자 이름, "
+           f"문단 간격 {STYLE_SPACE_RANGE[0]}~{STYLE_SPACE_RANGE[1]}pt (0.5 단위)")
     if not isinstance(st, dict) or not st or set(st) - set(STYLE_KEYS):
         return [_err("E123", msg, where)]
     for k, v in st.items():
         num = isinstance(v, (int, float)) and not isinstance(v, bool)
         if k == "line_spacing":
             ok = num and float(v).is_integer() and STYLE_LS_RANGE[0] <= v <= STYLE_LS_RANGE[1]
+        elif k in STYLE_FONT_KEYS:
+            ok = (isinstance(v, str) and v.strip() == v and 0 < len(v) <= STYLE_FONT_MAX
+                  and v.isprintable() and '"' not in v and "\\" not in v)
+        elif k in STYLE_SPACE_KEYS:
+            ok = num and STYLE_SPACE_RANGE[0] <= v <= STYLE_SPACE_RANGE[1] and float(v * 2).is_integer()
         else:
             ok = num and STYLE_PT_RANGE[0] <= v <= STYLE_PT_RANGE[1] and float(v * 2).is_integer()
         if not ok:

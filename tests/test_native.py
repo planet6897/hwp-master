@@ -218,13 +218,13 @@ class TableStyleTest(unittest.TestCase):
         spec, plan = native.split(TABLE_DOC)
         self.assertTrue(all(set(b) <= {"type", "rows", "cell_align", "text"} for b in spec["blocks"]))
         self.assertEqual(plan["tables"], [
-            {"table": 0, "cols": 3, "rows": 2, "pt": None, "header_fill": "#D9D9D9", "col_widths": [2, 3, 2],
+            {"table": 0, "cols": 3, "rows": 2, "pt": None, "font": None, "header_fill": "#D9D9D9", "col_widths": [2, 3, 2],
              "merges": [], "cell_emphasis": []},
-            {"table": 1, "cols": 2, "rows": 2, "pt": None, "header_fill": "#DCE6F2", "col_widths": None,
+            {"table": 1, "cols": 2, "rows": 2, "pt": None, "font": None, "header_fill": "#DCE6F2", "col_widths": None,
              "merges": [], "cell_emphasis": []},
-            {"table": 2, "cols": 2, "rows": 1, "pt": None, "header_fill": None, "col_widths": [1, 4],
+            {"table": 2, "cols": 2, "rows": 1, "pt": None, "font": None, "header_fill": None, "col_widths": [1, 4],
              "merges": [], "cell_emphasis": []},
-            {"table": 3, "cols": 1, "rows": 1, "pt": None, "header_fill": None, "col_widths": None,
+            {"table": 3, "cols": 1, "rows": 1, "pt": None, "font": None, "header_fill": None, "col_widths": None,
              "merges": [], "cell_emphasis": []}])
         self.assertEqual([native.table_styled(t) for t in plan["tables"]], [True, True, True, False])
 
