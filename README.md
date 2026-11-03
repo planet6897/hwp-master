@@ -55,8 +55,7 @@ hwp-master 스킬을 Claude Code 사용자 스킬 폴더(`~/.claude/skills/hwp-m
    hwp-master 스킬이 자동으로 로딩된다는 안내로 마친다.
 </details>
 
-> 저장소가 비공개인 동안에는 이 저장소에 접근 권한이 있는 GitHub 계정이 필요합니다. clone 과 rhwp 받기에
-> 같은 계정을 쓰므로 [GitHub CLI](https://cli.github.com/) 로 `gh auth login` 해 두세요.
+> 공개 저장소라 GitHub 계정이나 로그인 없이 설치할 수 있습니다. clone 과 rhwp 받기 모두 공개 주소를 씁니다.
 
 > Claude Code 는 터미널 CLI 대신 VS Code / JetBrains 확장으로 써도 됩니다. 설치 요청은 같고, 끝난 뒤
 > **File → Open Folder** 로 `~/hwp-master` 폴더를 엽니다. 저장소 루트의 `AGENTS.md` 를 읽는 다른
@@ -93,7 +92,7 @@ rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardk
 | Windows x86_64 | `rhwp-0.9.0-4e2cc6b-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-03) |
 
 - 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
-- 받기는 `gh release download` 를 먼저 씁니다.
+- 받기는 [GitHub CLI](https://cli.github.com/) 가 있으면 `gh release download` 를, 없으면 공개 Release 주소를 씁니다(로그인 불필요).
 - Linux 미리보기(PNG·PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
   HWPX 는 정상이고 미리보기 한글만 빠지며, hwp-master 가 경고(R105)를 냅니다.
 - Intel Mac·Linux ARM 은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
@@ -232,6 +231,15 @@ projects/            작업 폴더 (Git 제외)
 - [hugohe3/ppt-master](https://github.com/hugohe3/ppt-master) — 작업 흐름, 역할 전환, 검사기 원칙, 설치 안내 구성
 - [hawa130/docx-master](https://github.com/hawa130/docx-master) — 스타일 바인딩·자동 번호 규약과 감사
 - [dashbear-ai/grant-master](https://github.com/dashbear-ai/grant-master) — 장문 단위 집필
+
+## 기여
+
+이슈와 Pull Request 를 환영합니다. `main` 브랜치는 보호되어 있어 직접 push 할 수 없고, 모든 변경은 Pull Request 로
+반영합니다(관리자 포함, 강제 push·브랜치 삭제 금지).
+
+1. 저장소를 fork 하거나 브랜치를 만들어 고칩니다.
+2. `python3 -m unittest discover -s tests` 가 모두 통과하는지 확인합니다.
+3. Pull Request 에 바꾼 내용과 확인 결과를 적습니다. 한글 문서 결과가 바뀌는 변경이면 재현에 쓴 hwp/hwpx 와 미리보기를 함께 올립니다.
 
 ## 라이선스
 

@@ -331,7 +331,7 @@ scaffold v2는 조판 결과를 바꾸는 생성 경로이므로 rhwp `CLAUDE.md
 
 ## 9. 결정이 필요한 사항
 
-1. ~~저장소 위치~~ → **결정됨**: `planet6897/hwp-master` 별도 저장소. (공개 범위 public/private와 라이선스는 생성 시 확정)
+1. ~~저장소 위치~~ → **결정됨**: `planet6897/hwp-master` 별도 저장소, 공개(public)·MIT. 2026-11-04 공개 전환, `main` 은 PR 로만 반영.
 2. 중간 표현: HDS(JSON, 권장) vs HTML 부분 집합 — M0 실험 후 확정.
 3. 1차 대상 문서 유형: 개조식 보고서 + 사업계획서(권장) 외 우선순위.
 4. 기본 산출 형식: HWPX(권장, scaffold 기본) vs HWP5 동시 산출.
