@@ -1,0 +1,68 @@
+{
+ "version": "1",
+ "documents": 270,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 10.0,
+   "table_pt": 13.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "□"
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 0.95,
+  "margins_mm": 0.19,
+  "font": 0.77,
+  "body_pt": 0.93,
+  "title_pt": 0.87,
+  "heading_pt": 0.03,
+  "table_pt": 0.7,
+  "line_spacing": 0.91,
+  "marker_system": 0.03,
+  "pagenum": 1.0,
+  "ending": 0.85
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 2.0,
+  "table_text_share_median": 0.51,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.04,
+  "endings": {
+   "nominal": 560,
+   "noun": 1345,
+   "narrative": 346
+  },
+  "marker_docs": {
+   "-": 9,
+   "○": 6,
+   "□": 14,
+   "1)": 16,
+   "Ⅰ.": 9,
+   "1.": 12,
+   "①": 4,
+   "가.": 8,
+   "(1)": 8,
+   "ㆍ": 6,
+   "제N조": 5,
+   "I.": 3,
+   "가)": 2
+  }
+ },
+ "name": "보도자료-국회입법조사처",
+ "corpus": {
+  "by": "agency",
+  "documents": 270,
+  "collected": "2026-07",
+  "note": "공공기관 공개 문서 270건의 관측 통계(2026-07 수집) — 공식 서식 기준이 아님"
+ }
+}

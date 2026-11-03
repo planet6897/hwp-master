@@ -1,0 +1,68 @@
+{
+ "version": "1",
+ "documents": 298,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "heading_pt": 15.0
+  },
+  "marker_system": [
+   "1."
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.21,
+  "font": 0.35,
+  "body_pt": 0.33,
+  "title_pt": 0.28,
+  "heading_pt": 0.66,
+  "table_pt": 0.34,
+  "line_spacing": 0.29,
+  "marker_system": 0.2,
+  "pagenum": 0.7,
+  "ending": 0.74
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 3.0,
+  "table_text_share_median": 0.29,
+  "header_pct": 0.07,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.5,
+  "endings": {
+   "noun": 7336,
+   "narrative": 3043,
+   "nominal": 1542
+  },
+  "marker_docs": {
+   "-": 151,
+   "가.": 125,
+   "①": 104,
+   "1.": 255,
+   "◇": 34,
+   "○": 177,
+   "□": 47,
+   "1)": 21,
+   "제N조": 6,
+   "ㆍ": 7,
+   "Ⅰ.": 8,
+   "▶": 6,
+   "가)": 3,
+   "(1)": 5,
+   "제N장": 1,
+   "(가)": 6
+  }
+ },
+ "name": "공고",
+ "corpus": {
+  "by": "type",
+  "documents": 298,
+  "collected": "2026-07",
+  "note": "공공기관 공개 문서 298건의 관측 통계(2026-07 수집) — 공식 서식 기준이 아님"
+ }
+}

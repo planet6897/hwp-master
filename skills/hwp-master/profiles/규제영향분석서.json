@@ -1,0 +1,85 @@
+{
+ "version": "1",
+ "documents": 278,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 10,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 10
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "title_pt": 16.0,
+   "heading_pt": 15.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "Ⅰ.",
+   "1.",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.92,
+  "font": 0.88,
+  "body_pt": 0.72,
+  "title_pt": 0.79,
+  "heading_pt": 0.94,
+  "table_pt": 0.31,
+  "line_spacing": 0.76,
+  "marker_system": 0.31,
+  "pagenum": 0.96,
+  "ending": 0.93
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 32.5,
+  "table_text_share_median": 0.42,
+  "header_pct": 0.01,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.91,
+  "endings": {
+   "noun": 13493,
+   "narrative": 1517,
+   "nominal": 6758
+  },
+  "marker_docs": {
+   "Ⅰ.": 240,
+   "1.": 273,
+   "□": 164,
+   "①": 252,
+   "○": 223,
+   "-": 249,
+   "ㆍ": 48,
+   "가.": 182,
+   "가)": 4,
+   "1)": 19,
+   "제N조": 50,
+   "▶": 4,
+   "(1)": 4,
+   "◇": 3,
+   "㉮": 1,
+   "제N장": 2
+  }
+ },
+ "name": "규제영향분석서",
+ "corpus": {
+  "by": "type",
+  "documents": 278,
+  "collected": "2026-07",
+  "note": "공공기관 공개 문서 278건의 관측 통계(2026-07 수집) — 공식 서식 기준이 아님"
+ }
+}

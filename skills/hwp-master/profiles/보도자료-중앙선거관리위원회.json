@@ -1,0 +1,67 @@
+{
+ "version": "1",
+ "documents": 300,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 14.0
+  },
+  "marker_system": [
+   "1."
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.16,
+  "font": 0.51,
+  "body_pt": 0.81,
+  "title_pt": 0.81,
+  "heading_pt": 0.37,
+  "table_pt": 0.45,
+  "line_spacing": 0.36,
+  "marker_system": 0.11,
+  "pagenum": 0.9,
+  "ending": 0.59
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 2.0,
+  "table_text_share_median": 0.2,
+  "header_pct": 0.03,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.07,
+  "endings": {
+   "narrative": 2224,
+   "noun": 1362,
+   "nominal": 214
+  },
+  "marker_docs": {
+   "○": 50,
+   "□": 44,
+   "1.": 67,
+   "-": 9,
+   "▶": 8,
+   "가.": 13,
+   "①": 6,
+   "1)": 2,
+   "◇": 2,
+   "Ⅰ.": 5,
+   "제N조": 5
+  }
+ },
+ "name": "보도자료-중앙선거관리위원회",
+ "corpus": {
+  "by": "agency",
+  "documents": 300,
+  "collected": "2026-07",
+  "note": "공공기관 공개 문서 300건의 관측 통계(2026-07 수집) — 공식 서식 기준이 아님"
+ }
+}
