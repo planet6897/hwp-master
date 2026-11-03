@@ -16,7 +16,10 @@
   },
   "style": {
    "title_pt": 15.0,
-   "line_spacing": 160
+   "line_spacing": 160,
+   "title_font": "휴먼명조",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0
   },
   "marker_system": [
    "□",
@@ -39,7 +42,16 @@
   "line_spacing": 0.59,
   "marker_system": 0.17,
   "pagenum": 0.5,
-  "ending": 0.52
+  "ending": 0.52,
+  "title_font": 0.97,
+  "heading_font": 0.39,
+  "table_font": 0.42,
+  "title_space_before": 0.87,
+  "title_space_after": 0.68,
+  "heading_space_before": 0.41,
+  "heading_space_after": 0.48,
+  "body_space_before": 0.28,
+  "body_space_after": 0.17
  },
  "unsupported": [],
  "stats": {
@@ -74,6 +86,23 @@
   "by": "agency",
   "documents": 76,
   "collected": "2026-11",
-  "note": "공공기관 공개 문서 76건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+  "note": "공공기관 공개 문서 76건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님",
+  "refreshed": {
+   "keys": [
+    "body_font",
+    "body_space_after",
+    "body_space_before",
+    "heading_font",
+    "heading_space_after",
+    "heading_space_before",
+    "table_font",
+    "title_font",
+    "title_space_after",
+    "title_space_before"
+   ],
+   "documents": 76,
+   "candidates": 76,
+   "rhwp": "0.9.0"
+  }
  }
 }

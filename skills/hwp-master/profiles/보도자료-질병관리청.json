@@ -8,7 +8,14 @@
   },
   "style": {
    "title_pt": 15.0,
-   "heading_pt": 14.0
+   "heading_pt": 14.0,
+   "title_font": "휴먼명조",
+   "table_font": "맑은 고딕",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
   },
   "marker_system": [
    "□"
@@ -29,7 +36,16 @@
   "line_spacing": 0.41,
   "marker_system": 0.19,
   "pagenum": 1.0,
-  "ending": 0.55
+  "ending": 0.55,
+  "title_font": 0.62,
+  "heading_font": 0.3,
+  "table_font": 0.62,
+  "title_space_before": 0.81,
+  "title_space_after": 0.86,
+  "heading_space_before": 0.24,
+  "heading_space_after": 0.61,
+  "body_space_before": 0.62,
+  "body_space_after": 0.7
  },
  "unsupported": [],
  "stats": {
@@ -62,6 +78,23 @@
   "by": "agency",
   "documents": 37,
   "collected": "2026-11",
-  "note": "공공기관 공개 문서 37건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+  "note": "공공기관 공개 문서 37건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님",
+  "refreshed": {
+   "keys": [
+    "body_font",
+    "body_space_after",
+    "body_space_before",
+    "heading_font",
+    "heading_space_after",
+    "heading_space_before",
+    "table_font",
+    "title_font",
+    "title_space_after",
+    "title_space_before"
+   ],
+   "documents": 37,
+   "candidates": 37,
+   "rhwp": "0.9.0"
+  }
  }
 }
