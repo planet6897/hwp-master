@@ -101,7 +101,7 @@ Claude 는 해당 장(`units/*.json`)을 고쳐 다시 빌드합니다. 한컴�
 python3 $HM/scripts/build.py --quick 회의결과.hds.json -o 회의결과.hwpx --max-pages 1 --convention gaejosik
 ```
 
-HDS 는 제목(`heading`)·문단(`paragraph`)·표(`table`)·쪽 나눔(`page_break`)·그림(`image`)·목록(`list`) 블록으로 쓰고(표는 제목 행 `header_row`·열 폭 비율 `col_widths`·병합 `merges`·셀 강조 `cell_emphasis`), 문단에 글자 강조(`emphasis`)·각주(`footnotes`), 문서에 머리말(`header`)·꼬리말(`footer`, `{page}` 쪽 번호)·용지 방향(`orientation`)·여백(`margins_mm`)을 붙일 수 있습니다. 작성법은
+HDS 는 제목(`heading`)·문단(`paragraph`)·표(`table`)·쪽 나눔(`page_break`)·그림(`image`)·목록(`list`)·목차(`toc`) 블록으로 쓰고(표는 제목 행 `header_row`·열 폭 비율 `col_widths`·병합 `merges`·셀 강조 `cell_emphasis`), 문단에 글자 강조(`emphasis`)·각주(`footnotes`), 문서에 머리말(`header`)·꼬리말(`footer`, `{page}` 쪽 번호)·용지 방향(`orientation`)·여백(`margins_mm`)을 붙일 수 있습니다. 작성법은
 `$HM/references/hds_authoring.md` 에 있습니다. 제목에 번호("1. 추진 배경")를 직접 쓰지 않습니다 — 한글이 자동으로 붙입니다.
 
 ### 4.3 다른 형식 자료를 옮기기 (Convert-in)

@@ -79,7 +79,7 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
         report["stoppedAt"] = "edits" if produced["scaffold"]["exit"] == 0 else "scaffold"
         report["findings"].append(hds.Finding("error", "R106", produced["error"]).to_dict())
         return report
-    for problem in native.check(out_hwpx, doc):
+    for problem in native.check(out_hwpx, doc, rhwp):
         report["findings"].append(hds.Finding("error", "R106", f"편집 반영 확인 실패: {problem}").to_dict())
     rec = receipt.make(spec_path, out_hwpx, rhwp)
     if receipt_dir is not None:

@@ -260,6 +260,9 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
 - 2026-11-03: 용지 방향(`orientation`)·여백(`margins_mm`) — `edit set-page-def`. 가로는 scaffold 세로 치수에
   `landscape:true`(한컴 저장 방식 NARROWLY, A4 상수 59528×84188 유지). scaffold 가 표 폭을 만들 때 용지를 쓰므로
   용지를 바꾼 뒤 모든 표를 `set-column-widths` 로 새 본문 폭(본문 - 표 바깥 여백 2mm)에 맞춘다. 한컴 2024 대조 99.98~99.99%.
+- 2026-11-03: 목차(`toc`) — 제목마다 "번호 제목<탭>쪽" 문단 + `tabAutoRight`(오른쪽 끝 자동 탭). 쪽 번호는 한 번
+  만든 결과의 `rhwp dump-pages --json`(paraIndex → 쪽)에서 읽어 다시 만든다. 7쪽 시험 문서에서 9개 항목 쪽 번호가
+  한컴 2024 PDF 의 실제 제목 쪽과 모두 같고, 실루엣 98.69~100%. 점선 채움(tab leader)은 편집 명령이 탭 정의를 받지 않아 없음.
 - 각 블록은 rhwp 이슈 `task/<이슈번호>-scaffold-<블록>` 브랜치로 진행한다.
 - 완료 기준: 블록별로 rhwp 정본 게이트 통과(§7).
 

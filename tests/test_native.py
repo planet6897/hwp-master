@@ -370,6 +370,39 @@ class PageTest(unittest.TestCase):
             self.assertEqual(native.image_width_hu({}, img), round(150 * native.HU_PER_MM))
 
 
+def toc_doc(title=None):
+    filler = "쪽을 채우는 본문 문단입니다. " * 14
+    blocks = [{"type": "toc"} if title is None else {"type": "toc", "title": title}, {"type": "page_break"}]
+    for ch in (1, 2):
+        blocks.append({"type": "heading", "level": 1, "text": f"{ch}장"})
+        blocks.append({"type": "heading", "level": 2, "text": f"{ch}장 1절"})
+        blocks += [{"type": "paragraph", "text": filler}] * 12
+        blocks.append({"type": "heading", "level": 3, "text": "목차 밖"})
+    return {"version": "1", "title": "목차", "blocks": blocks}
+
+
+class TocTest(unittest.TestCase):
+    def test_entries_and_split(self):
+        doc = toc_doc()
+        self.assertEqual([(e["heading"], e["number"], e["text"]) for e in native.toc_entries(doc, 2)],
+                         [(0, "1.", "1장"), (1, "1.1.", "1장 1절"), (3, "2.", "2장"), (4, "2.1.", "2장 1절")])
+        self.assertEqual([e["number"] for e in native.toc_entries(doc, 3)][:3], ["1.", "1.1.", "1.1.1."])
+        spec, plan = native.split(doc, {0: 2, 1: 2, 3: 3, 4: 3})
+        self.assertEqual([b["text"] for b in spec["blocks"][:5]],
+                         ["목차", "1. 1장\t2", "1.1. 1장 1절\t2", "2. 2장\t3", "2.1. 2장 1절\t3"])
+        self.assertEqual([(i["left"], i.get("tab_right")) for i in plan["indents"]],
+                         [(0, True), (1000, True), (0, True), (1000, True)])
+        self.assertEqual(plan["page_breaks"], [5])  # 목차 뒤 첫 제목에서 쪽 나눔
+        self.assertEqual(native.split(toc_doc(""))[0]["blocks"][0]["text"], "1. 1장\t0")
+
+    def test_validate(self):
+        self.assertEqual(codes(hds.validate_document(toc_doc())), [])
+        bad = {"version": "1", "blocks": [{"type": "toc", "levels": 4}, {"type": "toc", "title": 3}]}
+        self.assertEqual(codes(hds.validate_document(bad)), ["E122"] * 3)
+        lonely = {"version": "1", "blocks": [{"type": "toc"}, {"type": "paragraph", "text": "a"}]}
+        self.assertEqual([f.code for f in hds.validate_document(lonely)], ["W205"])
+
+
 class ProjectLintTest(unittest.TestCase):
     """단위 끝의 쪽 나눔은 허용하지만, 문서 끝이나 단위 경계에서 겹치면 오류."""
 
@@ -553,6 +586,22 @@ class ProduceTest(unittest.TestCase):
         self.assertGreater(native.table_total_hu(doc), max(native.table_widths(self.dir / "page" / "work" / "scaffold.hwpx")))
         problems = native.check(self.dir / "page" / "work" / "scaffold.hwpx", doc)
         self.assertTrue(any("용지 설정" in p for p in problems) and any("폭" in p for p in problems), problems)
+
+    def test_toc_pages(self):
+        doc = toc_doc()
+        out = self.dir / "toc" / "out.hwpx"
+        result = native.produce(doc, out, self.rhwp, self.dir / "toc" / "work")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(native.check(out, doc, self.rhwp), [])
+        pages = native.heading_pages(out, self.rhwp, doc)
+        self.assertEqual(result["toc_pages"], pages)  # 쪽 번호를 넣은 뒤에도 쪽 나눔이 같다
+        self.assertEqual(pages[0], 2)  # 목차 뒤 쪽 나눔
+        self.assertGreater(pages[3], pages[0])
+        texts = [p["text"] for p in native.top_paragraphs(out)]
+        self.assertIn(f"2. 2장\t{pages[3]}", texts)
+        # 첫 패스(자리표시 0)는 실제 쪽과 다르다고 잡힌다
+        problems = native.check(self.dir / "toc" / "work" / "toc-pass1.hwpx", doc, self.rhwp)
+        self.assertTrue(any("목차 쪽 번호 0" in p for p in problems), problems)
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")

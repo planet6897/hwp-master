@@ -20,6 +20,7 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
     page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
     image      {"type": "image", "path": str, "width_mm"?: num, "caption"?: str,  # "{n}" = 순번
                 "align"?: "left"|"center"|"right"}  # 글자처럼 취급한 그림 한 줄
+    toc        {"type": "toc", "title"?: str, "levels"?: 1..3}   # 제목 목록과 쪽 번호
     list       {"type": "list", "items": [str | {"text": str, "level"?: 1..,
                 "footnotes"?, "emphasis"?}], "markers"?: [str]}
                 # 단계별 글머리(기본 □ ○ - ·)·왼쪽 여백·내어쓰기를 붙인 문단들
@@ -58,6 +59,7 @@ BLOCK_KEYS = {
     "page_break": {"type"},
     "image": {"type", "path", "width_mm", "caption", "align"},
     "list": {"type", "items", "markers"},
+    "toc": {"type", "title", "levels"},
 }
 LIST_ITEM_KEYS = {"text", "level", "footnotes", "emphasis"}
 LIST_DEFAULT_LEVELS = 4
@@ -160,7 +162,33 @@ def validate_blocks(blocks, where_prefix: str = "") -> List[Finding]:
             out.extend(_validate_image(b, where))
         if btype == "list":
             out.extend(_validate_list(b, where))
+        if btype == "toc":
+            out.extend(_validate_toc(b, where))
+    tocs = [i for i, b in enumerate(blocks) if isinstance(b, dict) and b.get("type") == "toc"]
+    if len(tocs) > 1:
+        out.append(_err("E122", "목차는 문서에 하나만 둡니다", f"{where_prefix}blocks[{tocs[1]}]"))
     return out
+
+
+def _validate_toc(b: dict, where: str) -> List[Finding]:
+    out: List[Finding] = []
+    title = b.get("title")
+    if title is not None and not isinstance(title, str):
+        out.append(_err("E122", "toc.title 은 문자열이어야 합니다 (\"\" 이면 제목 없음)", where))
+    levels = b.get("levels", 2)
+    if not isinstance(levels, int) or isinstance(levels, bool) or not 1 <= levels <= 3:
+        out.append(_err("E122", "toc.levels 는 1~3 정수여야 합니다", where))
+    return out
+
+
+def lint_toc(blocks, where_prefix: str = "") -> List[Finding]:
+    """W205: 목차가 있는데 실을 제목이 없음."""
+    if not isinstance(blocks, list):
+        return []
+    tocs = [i for i, b in enumerate(blocks) if isinstance(b, dict) and b.get("type") == "toc"]
+    if tocs and not any(isinstance(b, dict) and b.get("type") == "heading" for b in blocks):
+        return [_warn("W205", "목차가 있지만 제목(heading) 블록이 없습니다", f"{where_prefix}blocks[{tocs[0]}]")]
+    return []
 
 
 def _validate_list(b: dict, where: str) -> List[Finding]:
@@ -559,6 +587,7 @@ def validate_document(doc) -> List[Finding]:
     out.extend(validate_page_breaks(blocks))
     out.extend(lint_table_widths(blocks, width))
     out.extend(lint_image_widths(blocks, width))
+    out.extend(lint_toc(blocks))
     return out
 
 
@@ -659,6 +688,9 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
             out.append(_err("E105", "쪽 나눔은 문서 맨 앞이나 맨 끝에 둘 수 없습니다"))
         elif any(a == b == "page_break" for a, b in zip(kinds, kinds[1:])):
             out.append(_err("E105", "단위 경계에서 쪽 나눔이 연달아 있습니다"))
+        if kinds.count("toc") > 1:
+            out.append(_err("E122", "목차는 문서에 하나만 둡니다 (여러 단위에 toc 가 있음)"))
+        out.extend(lint_toc(all_blocks))
     return out
 
 

@@ -7,6 +7,8 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
     image 블록               → 표시 글자 문단 → edit delete-text + insert-picture
                                + set-picture {"treatAsChar":true} + apply-para-format 정렬,
                                caption 은 가운데 정렬 문단("{n}" = 그림 순번), 그림 문단은 다음 문단과 같이
+    toc 블록                 → 제목마다 "번호 글<탭>쪽" 문단 + 오른쪽 끝 자동 탭(tabAutoRight). 쪽 번호는
+                               한 번 만든 결과의 rhwp dump-pages 에서 읽어 다시 만든다(produce 두 번)
     table.caption            → 표 위 가운데 문단("{n}" = 표 순번), 표와 같은 쪽에 둠(keepWithNext)
     paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·취소선·글자색·형광펜·크기)
     paragraph.footnotes      → edit insert-footnote + insert-footnote-text
@@ -48,6 +50,10 @@ HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 HH = "http://www.hancom.co.kr/hwpml/2011/head"
 PAGE_TOKEN = "{page}"
 CAPTION_TOKEN = "{n}"
+TOC_TITLE = "목차"
+TOC_TITLE_PT = 14
+TOC_LEVELS = 2
+TOC_PLACEHOLDER = 0
 LIST_MARKERS = ("□", "○", "-", "·")
 LIST_STEP_HU = 1000  # 단계마다 왼쪽 여백 10pt
 # 글머리 + 빈칸 한 개의 폭(본문 10pt 기준 HWPUNIT). 한컴 2024 가 함초롬바탕 10pt 를 그린 PDF 의
@@ -60,8 +66,10 @@ TABLE_STYLE_KEYS = ("header_row", "header_fill", "col_widths", "merges", "cell_e
 
 
 
-def split(doc: dict) -> tuple:
-    """HDS → (scaffold 명세, 편집 계획). 편집 계획이 비면 scaffold 만으로 끝난다."""
+def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
+    """HDS → (scaffold 명세, 편집 계획). 편집 계획이 비면 scaffold 만으로 끝난다.
+
+    toc_pages 는 목차 항목(제목 블록 순번 → 쪽)이다. 없으면 쪽 번호 자리에 TOC_PLACEHOLDER 를 둔다."""
     spec = {k: copy.deepcopy(v) for k, v in doc.items()
             if k not in ("header", "footer", "blocks", "orientation", "margins_mm")}
     page = page_props(doc)
@@ -71,7 +79,7 @@ def split(doc: dict) -> tuple:
         spec["page_size"] = {"width_mm": min(w, h), "height_mm": max(w, h)}
     blocks: List[dict] = []
     plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "images": [],
-                               "aligns": [], "indents": [], "tables": [], "page": page, "header": doc.get("header"),
+                               "aligns": [], "indents": [], "tables": [], "page": page, "toc": None, "header": doc.get("header"),
                                "footer": doc.get("footer")}
     pending_break = False
     counters = {"image": 0, "table": 0}
@@ -100,6 +108,22 @@ def split(doc: dict) -> tuple:
     for b in doc.get("blocks", []):
         if b.get("type") == "page_break":
             pending_break = True
+            continue
+        if b.get("type") == "toc":
+            entries = toc_entries(doc, b.get("levels", TOC_LEVELS))
+            plan["toc"] = {"entries": []}
+            title = b.get("title", TOC_TITLE)
+            if title:
+                plan["aligns"].append({"block": len(blocks), "align": "center", "keep": True})
+                plan["emphasis"].append({"block": len(blocks), "offset": 0, "count": len(title),
+                                         "props": char_props({"bold": True, "size": TOC_TITLE_PT})})
+                add_para({"type": "paragraph", "text": title})
+            for e in entries:
+                page = (toc_pages or {}).get(e["heading"], TOC_PLACEHOLDER)
+                plan["toc"]["entries"].append({**e, "block": len(blocks), "page": page})
+                plan["indents"].append({"block": len(blocks), "left": (e["level"] - 1) * LIST_STEP_HU,
+                                        "indent": 0, "tab_right": True})
+                add_para({"type": "paragraph", "text": f"{e['number']} {e['text']}\t{page}"})
             continue
         if b.get("type") == "list":
             markers = b.get("markers") or LIST_MARKERS
@@ -155,6 +179,47 @@ def split(doc: dict) -> tuple:
         add_para(b)
     spec["blocks"] = blocks
     return spec, plan
+
+
+def toc_entries(doc: dict, levels: int) -> List[dict]:
+    """목차 항목: 제목 블록 순번(heading), 단계, 개요 번호("1.1."), 글.
+
+    번호는 scaffold 개요 번호(한글 기본 1. / 1.1. / 1.1.1. …)와 같은 셈이다."""
+    out, counts, nh = [], [0] * 8, 0
+    for b in doc.get("blocks", []):
+        if b.get("type") != "heading":
+            continue
+        level = b["level"]
+        counts[level] += 1
+        for k in range(level + 1, 8):
+            counts[k] = 0
+        if level <= levels:
+            number = ".".join(str(counts[k]) for k in range(1, level + 1)) + "."
+            out.append({"heading": nh, "level": level, "number": number, "text": b["text"]})
+        nh += 1
+    return out
+
+
+def heading_pages(hwpx: Path, rhwp: str, doc: dict) -> Dict[int, int]:
+    """rhwp 쪽 나눔 결과에서 제목 블록 순번 → 쪽 번호(1부터)."""
+    spec, _ = split(doc)
+    paras = map_blocks(top_paragraphs(hwpx), spec["blocks"], bool(spec.get("title")))
+    proc = subprocess.run([rhwp, "dump-pages", str(hwpx), "--json"], capture_output=True, text=True, timeout=600)
+    if proc.returncode != 0:
+        raise RuntimeError(f"dump-pages 실패: {proc.stderr.strip()[-400:]}")
+    first_page: Dict[int, int] = {}
+    for i, page in enumerate(json.loads(proc.stdout)["pages"]):
+        for col in page.get("columns", []):
+            for item in col.get("items", []):
+                if isinstance(item.get("paraIndex"), int):
+                    first_page.setdefault(item["paraIndex"], i + 1)
+    out, nh = {}, 0
+    for bi, b in enumerate(spec["blocks"]):
+        if b.get("type") == "heading":
+            if paras[bi] is not None and paras[bi] in first_page:
+                out[nh] = first_page[paras[bi]]
+            nh += 1
+    return out
 
 
 def number_caption(caption: str, n: int) -> str:
@@ -271,13 +336,23 @@ def resolve_images(doc: dict, base: Path) -> dict:
     return out
 
 
+def _t_text(t) -> str:
+    """hp:t 의 글자. 안에 든 hp:tab 은 "\t" 로, 다른 인라인 요소는 건너뛰고 꼬리 글자는 잇는다."""
+    out = [t.text or ""]
+    for child in t:
+        if child.tag == f"{{{HP}}}tab":
+            out.append("\t")
+        out.append(child.tail or "")
+    return "".join(out)
+
+
 def top_paragraphs(hwpx: Path) -> List[dict]:
     """구역 0 의 최상위 문단 목록: 글자(본문 run 의 hp:t 만)와 표 포함 여부."""
     with zipfile.ZipFile(hwpx) as z:
         root = ET.fromstring(z.read("Contents/section0.xml"))
     out = []
     for p in root.findall(f"{{{HP}}}p"):
-        text = "".join(t.text or "" for run in p.findall(f"{{{HP}}}run") for t in run.findall(f"{{{HP}}}t"))
+        text = "".join(_t_text(t) for run in p.findall(f"{{{HP}}}run") for t in run.findall(f"{{{HP}}}t"))
         out.append({"text": text, "table": p.find(f".//{{{HP}}}tbl") is not None,
                     "pic": p.find(f".//{{{HP}}}pic") is not None})
     return out
@@ -490,9 +565,27 @@ def _hf(rhwp: str, kind: str, text: str, src: Path, work: Path, n: int, log: Lis
 
 
 def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
-    """HDS → out. 반환: {"ok", "scaffold": {...}, "edits": [...], "error"?}."""
+    """HDS → out. 반환: {"ok", "scaffold": {...}, "edits": [...], "error"?}.
+
+    목차가 있으면 두 번 만든다: 쪽 번호 자리표시로 한 번 만들어 rhwp 쪽 나눔에서 제목 쪽을 읽고,
+    그 쪽 번호를 넣어 다시 만든다(목차 줄 수는 같으므로 쪽 나눔이 바뀌지 않는다)."""
+    if not any(b.get("type") == "toc" for b in doc.get("blocks", [])):
+        return _produce_once(doc, out, rhwp, work, None)
+    first = _produce_once(doc, work / "toc-pass1.hwpx", rhwp, work / "pass1", None)
+    if not first["ok"]:
+        return first
+    try:
+        pages = heading_pages(work / "toc-pass1.hwpx", rhwp, doc)
+    except RuntimeError as exc:
+        return {"ok": False, "scaffold": first["scaffold"], "edits": first["edits"], "error": str(exc)}
+    result = _produce_once(doc, out, rhwp, work / "pass2", pages)
+    result["toc_pages"] = pages
+    return result
+
+
+def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Optional[Dict[int, int]]) -> dict:
     work.mkdir(parents=True, exist_ok=True)
-    spec, plan = split(doc)
+    spec, plan = split(doc, toc_pages)
     spec_path = work / "scaffold.json"
     spec_path.write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     first = out if plan_empty(plan) else work / "scaffold.hwpx"
@@ -594,6 +687,8 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
     # apply-para-format 의 여백 값은 HWPUNIT 의 2배로 받는다(4000 → 저장 2000 = 20pt).
     for ind in plan["indents"]:
         props = {"marginLeft": ind["left"] * 2, "indent": ind["indent"] * 2}
+        if ind.get("tab_right"):
+            props["tabAutoRight"] = True  # 목차 쪽 번호: 문단 오른쪽 끝 자동 탭
         if not step(["apply-para-format", "--para", str(paras[ind["block"]]),
                      "--props", json.dumps(props, separators=(",", ":"))]):
             result["error"] = "목록 들여쓰기 실패"
@@ -626,9 +721,16 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
     return result
 
 
-def check(out: Path, doc: dict) -> List[str]:
-    """산출물에 계획한 요소가 실제로 들어갔는지 센다. 어긋난 항목의 설명 목록."""
-    _, plan = split(doc)
+def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
+    """산출물에 계획한 요소가 실제로 들어갔는지 센다. 어긋난 항목의 설명 목록.
+
+    rhwp 를 주면 목차 쪽 번호가 산출물의 실제 제목 쪽과 같은지도 본다."""
+    shown = toc_pages_shown(out, doc)
+    _, plan = split(doc, shown)
+    if plan["toc"] is not None:
+        problems_toc = _check_toc(out, doc, rhwp)
+    else:
+        problems_toc = []
     with zipfile.ZipFile(out) as z:
         xml = z.read("Contents/section0.xml").decode("utf-8")
     problems = []
@@ -648,7 +750,7 @@ def check(out: Path, doc: dict) -> List[str]:
         if img["mark"] in xml:
             problems.append(f"그림 표시 글자가 남음: {img['mark']}")
     if plan["emphasis"]:
-        spec, _ = split(doc)
+        spec, _ = split(doc, shown)
         paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
         styles, shapes = char_styles(out), char_shapes(out)
         for em in plan["emphasis"]:
@@ -659,7 +761,7 @@ def check(out: Path, doc: dict) -> List[str]:
             if bad:
                 problems.append(f"강조 미반영: blocks[{em['block']}] {em['offset']}+{em['count']} {em['props']}")
     if plan["aligns"]:
-        spec, _ = split(doc)
+        spec, _ = split(doc, shown)
         paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
         layout = para_layout(out)
         for al in plan["aligns"]:
@@ -669,7 +771,7 @@ def check(out: Path, doc: dict) -> List[str]:
             if got is None or got[0] != want[0] or (want[1] and not got[1]):
                 problems.append(f"문단 정렬·묶음 미반영: blocks[{al['block']}] {got} (계획 {want})")
     if plan["indents"]:
-        spec, _ = split(doc)
+        spec, _ = split(doc, shown)
         paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
         margins = para_margins(out)
         for ind in plan["indents"]:
@@ -730,4 +832,49 @@ def check(out: Path, doc: dict) -> List[str]:
             problems.append(f"{kind} {'없음' if hf else '계획에 없는데 있음'}")
         if hf and PAGE_TOKEN in hf["text"] and 'numType="PAGE"' not in xml:
             problems.append(f"{kind} 쪽 번호 없음")
+    return problems + problems_toc
+
+
+def toc_pages_shown(out: Path, doc: dict) -> Optional[Dict[int, int]]:
+    """산출물 목차 줄에 적힌 쪽 번호(제목 블록 순번 → 쪽). 목차가 없으면 None."""
+    if not any(b.get("type") == "toc" for b in doc.get("blocks", [])):
+        return None
+    texts = [p["text"] for p in top_paragraphs(out)]
+    shown = {}
+    for e in toc_entries(doc, _toc_levels(doc)):
+        prefix = f"{e['number']} {e['text']}\t"
+        line = next((t for t in texts if t.startswith(prefix)), None)
+        if line is not None and line[len(prefix):].isdigit():
+            shown[e["heading"]] = int(line[len(prefix):])
+    return shown
+
+
+def _check_toc(out: Path, doc: dict, rhwp: Optional[str]) -> List[str]:
+    """목차 줄이 있고 오른쪽 탭이 걸렸는지, rhwp 가 있으면 쪽 번호가 실제 제목 쪽과 같은지."""
+    paras = top_paragraphs(out)
+    texts = [p["text"] for p in paras]
+    with zipfile.ZipFile(out) as z:
+        head = ET.fromstring(z.read("Contents/header.xml"))
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    tab_right = {pp.get("id") for pp in head.iter(f"{{{HH}}}paraPr")
+                 if any(t.get("autoTabRight") == "1" for t in head.iter(f"{{{HH}}}tabPr")
+                        if t.get("id") == pp.get("tabPrIDRef"))}
+    pp_ids = [p.get("paraPrIDRef") for p in root.findall(f"{{{HP}}}p")]
+    actual = heading_pages(out, rhwp, doc) if rhwp else None
+    problems = []
+    for e in toc_entries(doc, _toc_levels(doc)):
+        prefix = f"{e['number']} {e['text']}"
+        idx = next((i for i, t in enumerate(texts) if t.startswith(prefix)), None)
+        if idx is None:
+            problems.append(f"목차 줄 없음: {prefix}")
+            continue
+        if pp_ids[idx] not in tab_right:
+            problems.append(f"목차 줄 오른쪽 탭 없음: {prefix}")
+        shown = texts[idx][len(prefix):].strip()
+        if actual is not None and shown != str(actual.get(e["heading"])):
+            problems.append(f"목차 쪽 번호 {shown} ≠ 실제 {actual.get(e['heading'])}: {prefix}")
     return problems
+
+
+def _toc_levels(doc: dict) -> int:
+    return next((b.get("levels", TOC_LEVELS) for b in doc.get("blocks", []) if b.get("type") == "toc"), TOC_LEVELS)
