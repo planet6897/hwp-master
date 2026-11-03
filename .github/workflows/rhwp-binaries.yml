@@ -58,12 +58,30 @@ jobs:
             exit 1
           fi
 
+      # rhwp 작업 트리(샘플·문서 포함 약 0.6GB)와 native-skia release 빌드가 Linux 러너 기본 여유 공간을
+      # 넘긴다(첫 실행에서 checkout 중 No space left on device). 쓰지 않는 도구를 지워 공간을 만든다.
+      - name: Free disk space (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/boost
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          df -h /
+
       - name: Checkout rhwp
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edwardkim/rhwp
           ref: ${{ inputs.rhwp_ref }}
           persist-credentials: false
+          fetch-depth: 1
+          lfs: false
+
+      - name: Disk after checkout
+        shell: bash
+        run: df -h . || true
 
       - name: Read version
         id: meta
