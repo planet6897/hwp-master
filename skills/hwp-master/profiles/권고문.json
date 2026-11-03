@@ -1,0 +1,78 @@
+{
+ "version": "1",
+ "documents": 300,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 12.0,
+   "title_pt": 20.0,
+   "heading_pt": 12.0
+  },
+  "marker_system": [
+   "1.",
+   "가.",
+   "1)"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.38,
+  "font": 0.81,
+  "body_pt": 0.58,
+  "title_pt": 0.52,
+  "heading_pt": 0.56,
+  "table_pt": 0.49,
+  "line_spacing": 0.46,
+  "marker_system": 0.32,
+  "pagenum": 0.85,
+  "ending": 0.71
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 7.0,
+  "table_text_share_median": 0.18,
+  "header_pct": 0.02,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.88,
+  "endings": {
+   "noun": 13626,
+   "narrative": 5964,
+   "nominal": 966
+  },
+  "marker_docs": {
+   "1.": 264,
+   "가.": 199,
+   "○": 179,
+   "-": 163,
+   "1)": 133,
+   "(가)": 12,
+   "제N조": 191,
+   "①": 195,
+   "가)": 33,
+   "Ⅰ.": 117,
+   "□": 130,
+   "▶": 17,
+   "ㆍ": 24,
+   "(1)": 26,
+   "㉮": 1,
+   "제N장": 11,
+   "I.": 9,
+   "◇": 6
+  }
+ },
+ "name": "권고문",
+ "corpus": {
+  "by": "type",
+  "documents": 300,
+  "collected": "2026-07",
+  "note": "공공기관 공개 문서 300건의 관측 통계(2026-07 수집) — 공식 서식 기준이 아님"
+ }
+}
