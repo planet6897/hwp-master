@@ -18,6 +18,7 @@ metadata:
 |---|---|
 | `scripts/rhwp_locate.py` | rhwp 위치·버전 확인 (최소 0.9.0) |
 | `scripts/install_rhwp.py` | 이 저장소 Release 의 rhwp 바이너리 설치 (`rhwp_release.json` 의 SHA-256 대조) |
+| `scripts/install_skill.py` | `~/.claude/skills/hwp-master` 에 이 스킬 링크 (어느 폴더에서나 자동 로딩, `--remove` 로 해제) |
 | `scripts/project_manager.py` | `init` · `import-sources` · `validate --stage early/final` · `status` |
 | `scripts/hds_lint.py` | HDS 문서 또는 프로젝트 검사 (오류 차단, 경고 비차단) |
 | `scripts/build.py` | 조립 → 검사 → `rhwp scaffold` + 편집 후처리(`native.py`) → 영수증 → verify·개요 대조·조판 이상·쪽수 한도 → 미리보기 → `validation/report.json` |
