@@ -1,0 +1,67 @@
+{
+ "version": "1",
+ "documents": 37,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 14.0
+  },
+  "marker_system": [
+   "□"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.49,
+  "font": 0.46,
+  "body_pt": 0.35,
+  "title_pt": 0.62,
+  "heading_pt": 0.7,
+  "table_pt": 0.3,
+  "line_spacing": 0.41,
+  "marker_system": 0.19,
+  "pagenum": 1.0,
+  "ending": 0.55
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 14,
+  "table_text_share_median": 0.37,
+  "header_pct": 0.35,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.14,
+  "endings": {
+   "noun": 719,
+   "narrative": 701,
+   "nominal": 133
+  },
+  "marker_docs": {
+   "□": 32,
+   "○": 22,
+   "1)": 8,
+   "-": 14,
+   "◇": 8,
+   "1.": 15,
+   "(1)": 1,
+   "①": 4,
+   "가.": 5,
+   "ㆍ": 2,
+   "가)": 1
+  }
+ },
+ "name": "보도자료-질병관리청",
+ "corpus": {
+  "by": "agency",
+  "documents": 37,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 37건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

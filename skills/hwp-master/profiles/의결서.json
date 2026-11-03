@@ -1,0 +1,74 @@
+{
+ "version": "1",
+ "documents": 24,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "Ⅰ.",
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.25,
+  "font": 0.79,
+  "body_pt": 0.46,
+  "title_pt": 0.42,
+  "heading_pt": 0.21,
+  "table_pt": 0.26,
+  "line_spacing": 0.62,
+  "marker_system": 0.25,
+  "pagenum": 0.67,
+  "ending": 0.77
+ },
+ "unsupported": [
+  "제목 번호 Ⅰ. 형식 — hwp-master 개요 번호는 아직 1. 1.1. 만 씁니다"
+ ],
+ "stats": {
+  "tables_median": 8.0,
+  "table_text_share_median": 0.33,
+  "header_pct": 0.04,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.71,
+  "endings": {
+   "noun": 1626,
+   "narrative": 524,
+   "nominal": 117
+  },
+  "marker_docs": {
+   "1.": 13,
+   "Ⅰ.": 14,
+   "○": 15,
+   "-": 15,
+   "□": 15,
+   "가.": 7,
+   "◇": 3,
+   "▶": 3,
+   "1)": 6,
+   "ㆍ": 3,
+   "제N조": 4,
+   "①": 5,
+   "제N장": 2,
+   "(1)": 2
+  }
+ },
+ "name": "의결서",
+ "corpus": {
+  "by": "type",
+  "documents": 24,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 24건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

@@ -295,5 +295,73 @@ class ProfileRoundTripTest(unittest.TestCase):
         self.assertIn("본문: 15.0pt", proc.stdout)
 
 
+class BuiltinProfilesTest(unittest.TestCase):
+    """스킬에 함께 배포하는 기본 프로필 — 형식·출처·lock 가능 여부와 사용자 프로필 우선순위."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = os.environ.get("HWP_MASTER_HOME")
+        os.environ["HWP_MASTER_HOME"] = str(Path(self.tmp.name) / "home")
+        self.files = sorted(style_profile.BUILTIN_DIR.glob("*.json"))
+
+    def tearDown(self):
+        if self.home is None:
+            os.environ.pop("HWP_MASTER_HOME", None)
+        else:
+            os.environ["HWP_MASTER_HOME"] = self.home
+        self.tmp.cleanup()
+
+    def test_files_are_well_formed_and_carry_provenance(self):
+        self.assertGreaterEqual(len(self.files), 8)
+        for f in self.files:
+            with self.subTest(profile=f.stem):
+                text = f.read_text(encoding="utf-8")
+                prof = json.loads(text)
+                style_profile.check_name(f.stem)
+                self.assertEqual(prof["name"], f.stem)
+                self.assertEqual(prof["version"], style_profile.PROFILE_VERSION)
+                self.assertNotIn("sources", prof, "개별 문서 목록을 배포하지 않는다")
+                self.assertRegex(text, r"\A[^\\]*\Z", "로컬 경로(역슬래시)가 없어야 한다")
+                self.assertNotRegex(text, r"[A-Za-z]:/")
+                self.assertIn("공식 서식 기준이 아님", prof["corpus"]["note"])
+                self.assertEqual(prof["corpus"]["documents"], prof["documents"])
+
+    def test_every_builtin_locks_into_a_valid_spec(self):
+        for f in self.files:
+            with self.subTest(profile=f.stem):
+                project = Path(self.tmp.name) / f"p_{f.stem}"
+                project.mkdir()
+                res = style_profile.lock(f.stem, project, force=False)  # 내부에서 E1xx 검사
+                spec = json.loads((project / "spec_lock.json").read_text(encoding="utf-8"))
+                self.assertEqual(spec["profile"]["origin"], "builtin")
+                self.assertTrue(res["set"])
+
+    def test_user_profile_shadows_builtin_and_list_marks_origin(self):
+        name = self.files[0].stem
+        self.assertEqual(style_profile.find(name)[1], "builtin")
+        prof = json.loads(self.files[0].read_text(encoding="utf-8"))
+        style_profile.register(dict(prof, documents=1), name, force=False)
+        self.assertEqual(style_profile.find(name)[1], "user")
+        rows = {r["name"]: r for r in style_profile.list_profiles()}
+        self.assertEqual(rows[name]["origin"], "user")
+        self.assertEqual(rows[name]["documents"], 1)
+        self.assertEqual(len(rows), len(self.files))
+
+    def test_list_search_and_cli(self):
+        rows = style_profile.list_profiles("보도자료")
+        self.assertTrue(rows)
+        self.assertTrue(all("보도자료" in r["name"] for r in rows))
+        proc = subprocess.run([sys.executable, str(SCRIPTS / "style_profile.py"), "list", "--search", "보도자료"],
+                              capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        lines = proc.stdout.splitlines()
+        self.assertTrue(lines[0].startswith("이름"))
+        self.assertEqual(len(lines), len(rows) + 1)
+        self.assertIn("기본", lines[1])
+        proc = subprocess.run([sys.executable, str(SCRIPTS / "style_profile.py"), "list", "--json",
+                               "--search", "없는이름xyz"], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(json.loads(proc.stdout), [])
+
+
 if __name__ == "__main__":
     unittest.main()

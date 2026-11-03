@@ -1,0 +1,75 @@
+{
+ "version": "1",
+ "documents": 77,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "□",
+   "○",
+   "-"
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.66,
+  "font": 0.74,
+  "body_pt": 0.74,
+  "title_pt": 1.0,
+  "heading_pt": 0.35,
+  "table_pt": 0.26,
+  "line_spacing": 0.82,
+  "marker_system": 0.13,
+  "pagenum": 0.68,
+  "ending": 0.56
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 7,
+  "table_text_share_median": 0.24,
+  "header_pct": 0.01,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.0,
+  "endings": {
+   "narrative": 750,
+   "noun": 834,
+   "nominal": 128
+  },
+  "marker_docs": {
+   "□": 41,
+   "○": 53,
+   "-": 31,
+   "1.": 15,
+   "①": 4,
+   "ㆍ": 1,
+   "▶": 2,
+   "◇": 2,
+   "Ⅰ.": 1,
+   "1)": 2
+  }
+ },
+ "name": "보도자료-농촌진흥청",
+ "corpus": {
+  "by": "agency",
+  "documents": 77,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 77건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

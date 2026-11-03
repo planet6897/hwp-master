@@ -1,0 +1,74 @@
+{
+ "version": "1",
+ "documents": 133,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0
+  },
+  "marker_system": [
+   "1."
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.71,
+  "font": 0.68,
+  "body_pt": 0.74,
+  "title_pt": 0.94,
+  "heading_pt": 0.17,
+  "table_pt": 0.35,
+  "line_spacing": 0.26,
+  "marker_system": 0.07,
+  "pagenum": 0.8,
+  "ending": 0.55
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6,
+  "table_text_share_median": 0.2,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.02,
+  "endings": {
+   "narrative": 1000,
+   "noun": 800,
+   "nominal": 34
+  },
+  "marker_docs": {
+   "□": 35,
+   "○": 38,
+   "1.": 24,
+   "①": 6,
+   "-": 18,
+   "1)": 2,
+   "▶": 1,
+   "제N조": 1,
+   "◇": 5
+  }
+ },
+ "name": "보도자료-농림축산식품부",
+ "corpus": {
+  "by": "agency",
+  "documents": 133,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 133건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

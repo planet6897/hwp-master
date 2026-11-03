@@ -1,0 +1,66 @@
+{
+ "version": "1",
+ "documents": 257,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 15,
+   "header": 15,
+   "left": 20,
+   "right": 20,
+   "top": 20
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "1."
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.99,
+  "font": 1.0,
+  "body_pt": 1.0,
+  "title_pt": 0.48,
+  "heading_pt": 0.35,
+  "line_spacing": 1.0,
+  "marker_system": 0.35,
+  "pagenum": 0.96,
+  "ending": 0.93
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 0,
+  "table_text_share_median": 0.0,
+  "header_pct": 0.99,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.01,
+  "endings": {
+   "noun": 873,
+   "narrative": 12101,
+   "nominal": 1
+  },
+  "marker_docs": {
+   "1.": 90,
+   "제N장": 1
+  }
+ },
+ "name": "속기자료-정책브리핑",
+ "corpus": {
+  "by": "agency",
+  "documents": 257,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 257건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

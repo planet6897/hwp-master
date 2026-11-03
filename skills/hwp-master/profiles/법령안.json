@@ -1,0 +1,84 @@
+{
+ "version": "1",
+ "documents": 317,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 16,
+   "footer": 13,
+   "header": 13,
+   "left": 25,
+   "right": 25,
+   "top": 16
+  },
+  "font": "한양신명조",
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 15.0,
+   "table_pt": 14.0
+  },
+  "marker_system": [
+   "1.",
+   "가.",
+   "1)"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 0.99,
+  "margins_mm": 0.59,
+  "font": 0.6,
+  "body_pt": 0.38,
+  "title_pt": 0.54,
+  "heading_pt": 0.7,
+  "table_pt": 0.53,
+  "line_spacing": 0.45,
+  "marker_system": 0.38,
+  "pagenum": 0.68,
+  "ending": 0.54
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6,
+  "table_text_share_median": 0.35,
+  "header_pct": 0.03,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.8,
+  "endings": {
+   "noun": 5385,
+   "nominal": 1488,
+   "narrative": 5939
+  },
+  "marker_docs": {
+   "1.": 245,
+   "○": 50,
+   "가.": 205,
+   "(1)": 9,
+   "제N조": 216,
+   "①": 140,
+   "제N장": 25,
+   "□": 66,
+   "1)": 148,
+   "-": 96,
+   "Ⅰ.": 10,
+   "ㆍ": 3,
+   "가)": 7,
+   "(가)": 11,
+   "◇": 1,
+   "I.": 1
+  }
+ },
+ "name": "법령안",
+ "corpus": {
+  "by": "type",
+  "documents": 317,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 317건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

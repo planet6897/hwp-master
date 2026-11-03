@@ -1,0 +1,76 @@
+{
+ "version": "1",
+ "documents": 189,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "한양신명조",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 16.0,
+   "heading_pt": 14.0,
+   "table_pt": 16.0
+  },
+  "marker_system": [
+   "1.",
+   "가.",
+   "○"
+  ],
+  "convention": "gongmun",
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.38,
+  "font": 0.61,
+  "body_pt": 0.67,
+  "title_pt": 0.78,
+  "heading_pt": 0.63,
+  "table_pt": 0.55,
+  "line_spacing": 0.36,
+  "marker_system": 0.61,
+  "pagenum": 0.5,
+  "ending": 0.94
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 1,
+  "table_text_share_median": 0.04,
+  "header_pct": 0.01,
+  "title_align": "LEFT",
+  "title_bold_pct": 0.92,
+  "endings": {
+   "nominal": 1724,
+   "noun": 3776,
+   "narrative": 358
+  },
+  "marker_docs": {
+   "◇": 4,
+   "가.": 164,
+   "○": 176,
+   "-": 84,
+   "1.": 164,
+   "□": 32,
+   "①": 42,
+   "Ⅰ.": 42,
+   "1)": 6,
+   "ㆍ": 10,
+   "제N조": 11,
+   "가)": 1,
+   "▶": 1,
+   "(1)": 1
+  }
+ },
+ "name": "제개정이유서",
+ "corpus": {
+  "by": "type",
+  "documents": 189,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 189건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

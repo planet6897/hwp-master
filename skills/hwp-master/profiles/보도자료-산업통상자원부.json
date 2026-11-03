@@ -1,0 +1,72 @@
+{
+ "version": "1",
+ "documents": 75,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 15.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.57,
+  "font": 0.36,
+  "body_pt": 0.43,
+  "title_pt": 0.91,
+  "heading_pt": 0.72,
+  "table_pt": 0.35,
+  "line_spacing": 0.41,
+  "marker_system": 0.25,
+  "pagenum": 0.61,
+  "ending": 0.66
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6,
+  "table_text_share_median": 0.23,
+  "header_pct": 0.01,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.04,
+  "endings": {
+   "nominal": 72,
+   "noun": 898,
+   "narrative": 500
+  },
+  "marker_docs": {
+   "□": 57,
+   "○": 54,
+   "-": 26,
+   "◇": 4,
+   "①": 9,
+   "I.": 2,
+   "가.": 1,
+   "1.": 12,
+   "ㆍ": 1,
+   "▶": 1
+  }
+ },
+ "name": "보도자료-산업통상자원부",
+ "corpus": {
+  "by": "agency",
+  "documents": 75,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 75건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

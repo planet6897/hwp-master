@@ -1,0 +1,80 @@
+{
+ "version": "1",
+ "documents": 1507,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 0,
+   "header": 0,
+   "left": 20,
+   "right": 15,
+   "top": 20
+  },
+  "font": "굴림체",
+  "style": {
+   "body_pt": 12.0,
+   "heading_pt": 12.0,
+   "table_pt": 12.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "1."
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.79,
+  "font": 0.77,
+  "body_pt": 0.83,
+  "title_pt": 0.64,
+  "heading_pt": 0.68,
+  "table_pt": 0.76,
+  "line_spacing": 0.77,
+  "marker_system": 0.24,
+  "pagenum": 0.98,
+  "ending": 0.72
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4,
+  "table_text_share_median": 0.46,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.08,
+  "endings": {
+   "noun": 5185,
+   "narrative": 2054,
+   "nominal": 215
+  },
+  "marker_docs": {
+   "1.": 912,
+   "가.": 548,
+   "□": 150,
+   "○": 197,
+   "-": 272,
+   "①": 17,
+   "Ⅰ.": 12,
+   "◇": 4,
+   "ㆍ": 22,
+   "1)": 71,
+   "▶": 9,
+   "가)": 4,
+   "(1)": 2,
+   "제N장": 2,
+   "제N조": 3,
+   "(가)": 1
+  }
+ },
+ "name": "공문",
+ "corpus": {
+  "by": "type",
+  "documents": 1507,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 1507건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
