@@ -50,6 +50,8 @@ IMAGE_MARK_RE = re.compile(r"\[\[hwp-master:image:\d+\]\]")
 HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 HH = "http://www.hancom.co.kr/hwpml/2011/head"
 PAGE_TOKEN = "{page}"
+# 가운데 정렬하는 머리말/꼬리말. 쪽 번호 꼬리말은 가운데가 관행이고, 머리말은 rhwp 기본(왼쪽)을 둔다.
+HF_CENTER = ("footer",)
 CAPTION_TOKEN = "{n}"
 TOC_TITLE = "목차"
 TOC_TITLE_PT = 14
@@ -443,6 +445,20 @@ def para_aligns(hwpx: Path) -> Dict[str, str]:
     return out
 
 
+def hf_aligns(hwpx: Path) -> Dict[str, Optional[str]]:
+    """구역 0 머리말/꼬리말 첫 문단의 가로 정렬 ({"header": "CENTER", ...})."""
+    aligns = para_aligns(hwpx)
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    out = {}
+    for kind in ("header", "footer"):
+        el = root.find(f".//{{{HP}}}{kind}")
+        p = el.find(f".//{{{HP}}}p") if el is not None else None
+        if p is not None:
+            out[kind] = aligns.get(p.get("paraPrIDRef"))
+    return out
+
+
 def page_def(hwpx: Path) -> dict:
     """구역 0 용지: set-page-def props 와 같은 키 (HWPUNIT)."""
     with zipfile.ZipFile(hwpx) as z:
@@ -568,6 +584,12 @@ def _hf(rhwp: str, kind: str, text: str, src: Path, work: Path, n: int, log: Lis
         nxt = work / f"e{n:02d}c.hwpx"
         if not _edit(rhwp, ["insert-field-in-hf", str(cur), flag, "--field-type", "1",
                             "--offset", str(len(before)), "-o", str(nxt)], log):
+            return None
+        cur = nxt
+    if kind in HF_CENTER:
+        nxt = work / f"e{n:02d}d.hwpx"
+        if not _edit(rhwp, ["apply-para-format-in-hf", str(cur), flag,
+                            "--props", '{"alignment":"center"}', "-o", str(nxt)], log):
             return None
         cur = nxt
     return cur
@@ -850,6 +872,8 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
             problems.append(f"{kind} {'없음' if hf else '계획에 없는데 있음'}")
         if hf and PAGE_TOKEN in hf["text"] and 'numType="PAGE"' not in xml:
             problems.append(f"{kind} 쪽 번호 없음")
+        if hf and kind in HF_CENTER and hf_aligns(out).get(kind) != "CENTER":
+            problems.append(f"{kind} 가운데 정렬 미반영")
     return problems + problems_toc
 
 

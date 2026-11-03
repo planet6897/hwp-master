@@ -466,6 +466,9 @@ class ProduceTest(unittest.TestCase):
         self.assertIn("<hp:t>뒤쪽 근거</hp:t>", xml)
         # 쪽 나눔은 둘째 장 제목 문단에 걸린다
         self.assertRegex(xml, r'pageBreak="1"[^>]*><hp:run[^>]*><hp:t>둘째 장')
+        # 쪽 번호 꼬리말은 가운데, 머리말은 rhwp 기본 정렬
+        self.assertEqual(native.hf_aligns(out)["footer"], "CENTER")
+        self.assertNotEqual(native.hf_aligns(out)["header"], "CENTER")
 
     def test_check_catches_missing_edits(self):
         out = self.produce("a")

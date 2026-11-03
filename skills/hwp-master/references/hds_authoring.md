@@ -19,7 +19,7 @@ HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔
 | 필드 | 형식 | 한글 문서에서 |
 |---|---|---|
 | `header` | `{"text": "..."}` | 모든 쪽 머리말 한 줄 |
-| `footer` | `{"text": "- {page} -"}` | 모든 쪽 꼬리말 한 줄. `{page}`는 쪽 번호 (한 번만) |
+| `footer` | `{"text": "- {page} -"}` | 모든 쪽 꼬리말 한 줄, 가운데 정렬. `{page}`는 쪽 번호 (한 번만) |
 | `orientation` | `"portrait"`(기본) 또는 `"landscape"` | 용지 방향. 가로면 한글의 "가로" 용지로 저장된다 |
 | `margins_mm` | `{"left", "right", "top", "bottom", "header", "footer"}` 중 일부 (mm) | 용지 여백. 기본은 좌우 30, 위 20, 아래·머리말·꼬리말 15 |
 
