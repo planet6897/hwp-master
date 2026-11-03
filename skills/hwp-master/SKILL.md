@@ -26,6 +26,7 @@ metadata:
 | `scripts/convert.py` | Convert-in: MD·DOCX·PDF → `outline.json`·`units/` (정규화·손실 보고) |
 | `scripts/merge.py` | Mail-merge: 서식·명단 대조 → `batch fill --dry-run` → `batch fill --verify` → 행 수 보존 판정 |
 | `scripts/beautify.py` | Beautify: `propose`(손 번호 → 개요 번호 계획) · `apply`(적용 → 내용 보존·조판 판정, 문제 문단 자동 제외) |
+| `scripts/style_profile.py` | 문서 유형 프로필: `analyze`·`register`(실제 문서들의 서식 다수결 → `~/.hwp-master/profiles/`) · `list`·`show` · `lock`(spec_lock.json 에 적용) |
 | `scripts/template_fill.py` | Template Fill: `inspect`(서식 칸 조사·자료 틀) · `fill`(목록 반복 → 칸 채움 → 캡슐 사슬 → 판정) · `register`(기관 서식 등록) |
 | `scripts/edit.py` | Edit Native: `inspect`(편집 대상 조사) · `apply`(dry-run → 실행 → 작업 캡슐 → 전후 렌더 비교) |
 

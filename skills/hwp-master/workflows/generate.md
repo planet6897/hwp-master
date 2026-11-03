@@ -15,7 +15,7 @@ python3 scripts/project_manager.py init <이름>                     # projects/
 python3 scripts/project_manager.py import-sources <프로젝트> <자료...>  # sources/ 사본 + analysis/ 추출본
 ```
 
-1. `## [역할 전환: Strategist]` — `references/strategist.md`에 따라
+1. `## [역할 전환: Strategist]` — `references/strategist.md`에 따라 (문서 유형 프로필이 있으면 `style_profile.py lock`)
    `doc_spec.md`·`spec_lock.json`·`outline.json`을 쓰고 **사용자 확인**을 받는다.
 2. `## [역할 전환: Executor]` — `references/executor.md`·`references/hds_authoring.md`에 따라
    `units/U01.json`부터 쓴다. early 검사 → 나머지 → final 검사.
@@ -34,9 +34,9 @@ python3 scripts/project_manager.py import-sources <프로젝트> <자료...>  # 
 
 | 코드 | 단계 | 뜻 | 차단 |
 |---|---|---|---|
-| E0xx·E1xx | HDS 검사 | 명세 구조 오류, 제목의 수동 번호(E101), `max_pages` 형식(E008) | 예 |
+| E0xx·E1xx | HDS 검사 | 명세 구조 오류, 제목의 수동 번호(E101), `max_pages` 형식(E008), `style` 형식(E123) | 예 |
 | P001~P005 | HDS 검사 | 기획 산출물·단위 파일 누락/불일치 (final 에서 단위 누락은 P004) | 예 |
-| R106 | rhwp edit | 쪽 나눔·그림·목록·표 꾸밈·글자 강조·각주·머리말/꼬리말·용지·목차를 붙이지 못했거나 산출물에서 계획과 다름(목차 쪽 번호 ≠ 실제 제목 쪽 포함) | 예 |
+| R106 | rhwp edit | 쪽 나눔·그림·목록·표 꾸밈·글자 강조·각주·머리말/꼬리말·용지·목차·문서 서식(style)을 붙이지 못했거나 산출물에서 계획과 다름(목차 쪽 번호 ≠ 실제 제목 쪽 포함) | 예 |
 | R101 | rhwp verify | 제목 글이나 표 수가 산출물에 없음 | 예 |
 | R102 | export-structure | 명세의 제목과 산출물 개요가 다름 | 예 |
 | R103 | layout-anomaly | 넘침·겹침·화면 밖·빈 쪽 신호 | 예 |

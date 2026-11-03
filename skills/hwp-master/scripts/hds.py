@@ -6,6 +6,7 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
      "page_size": {"width_mm": num, "height_mm": num}?,
      "orientation": "portrait"|"landscape"?, "margins_mm": {left, right, top, bottom, header, footer}?,
      "header"?: {"text": str}, "footer"?: {"text": str},
+     "style"?: {"body_pt"?, "heading_pt"?, "title_pt"?, "table_pt"?: pt, "line_spacing"?: %},
      "blocks": [heading | paragraph | table | page_break | image | list]}
 
     heading    {"type": "heading", "level": 1..7, "text": str}
@@ -45,7 +46,13 @@ from typing import Iterable, List, Optional
 import conventions
 
 HDS_VERSION = "1"
-TOP_KEYS = {"version", "title", "font", "page_size", "orientation", "margins_mm", "header", "footer", "blocks"}
+TOP_KEYS = {"version", "title", "font", "page_size", "orientation", "margins_mm", "header", "footer", "style",
+            "blocks"}
+# 문서 전체 글자 크기(pt)·줄 간격(%). 없으면 scaffold 기본(본문·표 10, 개요 12, 제목 18, 줄 간격 160)
+STYLE_PT_KEYS = ("body_pt", "heading_pt", "title_pt", "table_pt")
+STYLE_KEYS = STYLE_PT_KEYS + ("line_spacing",)
+STYLE_PT_RANGE = (6, 40)
+STYLE_LS_RANGE = (80, 400)
 PAGE_KEYS = ("page_size", "orientation", "margins_mm")
 MARGIN_KEYS = ("left", "right", "top", "bottom", "header", "footer")
 # scaffold 기본 여백(mm): 좌우 30, 위 20, 아래·머리말·꼬리말 15
@@ -394,6 +401,26 @@ def validate_page_breaks(blocks, where_prefix: str = "", whole: bool = True) -> 
     return out
 
 
+def validate_style(doc: dict, where: str = "") -> List[Finding]:
+    """E123: style 은 {body_pt, heading_pt, title_pt, table_pt: 6~40 pt, line_spacing: 80~400 %} 중 일부."""
+    st = doc.get("style")
+    if st is None:
+        return []
+    msg = (f"style 은 {list(STYLE_KEYS)} 중 일부를 씁니다 — 글자 크기 {STYLE_PT_RANGE[0]}~{STYLE_PT_RANGE[1]}pt "
+           f"(0.5 단위), 줄 간격 {STYLE_LS_RANGE[0]}~{STYLE_LS_RANGE[1]}% 정수")
+    if not isinstance(st, dict) or not st or set(st) - set(STYLE_KEYS):
+        return [_err("E123", msg, where)]
+    for k, v in st.items():
+        num = isinstance(v, (int, float)) and not isinstance(v, bool)
+        if k == "line_spacing":
+            ok = num and float(v).is_integer() and STYLE_LS_RANGE[0] <= v <= STYLE_LS_RANGE[1]
+        else:
+            ok = num and STYLE_PT_RANGE[0] <= v <= STYLE_PT_RANGE[1] and float(v * 2).is_integer()
+        if not ok:
+            return [_err("E123", f"{msg} ({k}={v!r})", where)]
+    return []
+
+
 def validate_header_footer(doc: dict, where: str = "") -> List[Finding]:
     out: List[Finding] = []
     for key in HF_KEYS:
@@ -532,11 +559,19 @@ def col_ratios(b: dict, ncols: int) -> List[float]:
     return [1.0 / ncols] * ncols
 
 
-def lint_table_widths(blocks, content_mm: float, where_prefix: str = "") -> List[Finding]:
+def table_pt(spec: dict) -> float:
+    """표 글자 크기(pt): style.table_pt, 없으면 10."""
+    st = spec.get("style") if isinstance(spec, dict) else None
+    v = st.get("table_pt") if isinstance(st, dict) else None
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 else 10.0
+
+
+def lint_table_widths(blocks, content_mm: float, where_prefix: str = "", pt: float = 10.0) -> List[Finding]:
     """W201: 셀 텍스트가 열 폭(col_widths 비율, 없으면 균등) 한 줄을 넘는지 추정한다 (M0 F2 임시 경고).
 
-    content_mm 은 본문 폭(용지 폭 - 좌우 여백)이다."""
+    content_mm 은 본문 폭(용지 폭 - 좌우 여백), pt 는 표 글자 크기다."""
     out: List[Finding] = []
+    em_mm = BASE_EM_MM * pt / 10.0
     content_mm = content_mm - TABLE_OUTER_MM
     for i, b in enumerate(blocks if isinstance(blocks, list) else []):
         if not isinstance(b, dict) or b.get("type") != "table" or not isinstance(b.get("rows"), list):
@@ -551,7 +586,7 @@ def lint_table_widths(blocks, content_mm: float, where_prefix: str = "") -> List
         for r, row in enumerate(rows):
             for c, cell in enumerate(row):
                 share = sum(ratios[c:c + max(1, spans.get((r, c), 1))])
-                cap_em = (content_mm * share - CELL_PAD_MM) / BASE_EM_MM
+                cap_em = (content_mm * share - CELL_PAD_MM) / em_mm
                 if isinstance(cell, str) and text_em(cell) > cap_em:
                     out.append(_warn(
                         "W201",
@@ -582,10 +617,11 @@ def validate_document(doc) -> List[Finding]:
         if key in doc and not isinstance(doc[key], str):
             out.append(_err("E004", f"{key} 는 문자열이어야 합니다"))
     out.extend(validate_header_footer(doc))
+    out.extend(validate_style(doc))
     blocks = doc.get("blocks", [])
     out.extend(validate_blocks(blocks))
     out.extend(validate_page_breaks(blocks))
-    out.extend(lint_table_widths(blocks, width))
+    out.extend(lint_table_widths(blocks, width, pt=table_pt(doc)))
     out.extend(lint_image_widths(blocks, width))
     out.extend(lint_toc(blocks))
     return out
@@ -606,7 +642,7 @@ def assemble(project: Path) -> dict:
     """spec_lock.json + outline.json 순서의 units/*.json → HDS 문서."""
     lock = load_json(project / "spec_lock.json")
     doc = {"version": HDS_VERSION}
-    for key in ("title", "font") + PAGE_KEYS + HF_KEYS:
+    for key in ("title", "font", "style") + PAGE_KEYS + HF_KEYS:
         if lock.get(key) is not None:
             doc[key] = lock[key]
     order = _unit_order(project)
@@ -652,6 +688,7 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
         out.append(_err("E009", f"spec_lock.convention 은 {list(conventions.CONVENTIONS)} 중 하나여야 합니다",
                         "spec_lock.json"))
     out.extend(validate_header_footer(lock, "spec_lock.json:"))
+    out.extend(validate_style(lock, "spec_lock.json"))
     out.extend(validate_page(lock, "spec_lock.json"))
     width = page_geometry(lock)["content_mm"]
     all_blocks = []
@@ -674,7 +711,7 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
             out.append(_err("P005", f"unit 필드 {unit.get('unit')!r} 가 파일 이름 {uid} 와 다릅니다", prefix))
         blocks = unit.get("blocks", [])
         out.extend(validate_blocks(blocks, prefix))
-        out.extend(lint_table_widths(blocks, width, prefix))
+        out.extend(lint_table_widths(blocks, width, prefix, pt=table_pt(lock)))
         out.extend(_lint_unit_budget(u, blocks, prefix))
         out.extend(conventions.lint_convention(blocks, convention, prefix))
         out.extend(validate_page_breaks(blocks, prefix, whole=False))
