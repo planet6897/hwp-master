@@ -31,7 +31,8 @@ python3 scripts/style_profile.py lock <이름> <프로젝트>    # spec_lock.jso
   권장값에서 빠진다. 일치율이 낮으면 유형이 섞였을 수 있으니 문서를 다시 고른다.
 - `lock`은 이미 정한 값을 덮어쓰지 않는다(`--force`로 덮어씀). 결과의 `list_markers`는 Executor 가 `list.markers`로,
   `ending`(nominal = 명사형, narrative = 서술형)은 문체로 쓴다. 둘 다 `doc_spec.md`에 적는다.
-- `unsupported`(예: 제목 번호 `Ⅰ.` 형식)는 아직 만들 수 없는 서식이다. 사용자에게 알리고 `doc_spec.md`에 적는다.
+- 항목 체계가 `Ⅰ.`로 시작하면 제목 번호 모양(`outline_numbering`)도 옮긴다. 설치된 rhwp 가 지원하지 않으면 옮기지 않고
+  `unsupported`에 적는다. `unsupported`는 아직 만들 수 없는 서식이다. 사용자에게 알리고 `doc_spec.md`에 적는다.
 - 프로필 이름은 확인 게이트에서 함께 보여 준다.
 
 ## 2. 산출물

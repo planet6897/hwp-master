@@ -191,10 +191,51 @@ def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
     return spec, plan
 
 
-def toc_entries(doc: dict, levels: int) -> List[dict]:
-    """목차 항목: 제목 블록 순번(heading), 단계, 개요 번호("1.1."), 글.
+_ROMAN = ((1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+          (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"))
+_GANADA = "가나다라마바사아자차카타파하"
 
-    번호는 scaffold 개요 번호(한글 기본 1. / 1.1. / 1.1.1. …)와 같은 셈이다."""
+
+def format_number(n: int, fmt: str) -> str:
+    """번호 글자 — rhwp 조판(renderer format_number)과 같은 규칙. 범위 밖은 아라비아 숫자."""
+    if fmt in ("roman_capital", "roman_small") and 0 < n < 4000:
+        out, k = "", n
+        for v, sym in _ROMAN:
+            while k >= v:
+                out, k = out + sym, k - v
+        return out if fmt == "roman_capital" else out.lower()
+    if fmt in ("latin_capital", "latin_small") and n > 0:
+        out, k = "", n
+        while k > 0:
+            k -= 1
+            out = chr(ord("A") + k % 26) + out
+            k //= 26
+        return out if fmt == "latin_capital" else out.lower()
+    if fmt == "hangul_syllable" and 1 <= n <= len(_GANADA):
+        return _GANADA[n - 1]
+    if fmt == "circled_digit" and 1 <= n <= 20:
+        return chr(0x2460 + n - 1)
+    return str(n)
+
+
+def outline_number(doc: dict, counts: List[int], level: int) -> str:
+    """제목 번호 글자. outline_numbering 이 없으면 scaffold 기본(1. / 1.1. / 1.1.1.)."""
+    levels = doc.get("outline_numbering")
+    if not levels:
+        return ".".join(str(counts[k]) for k in range(1, level + 1)) + "."
+    text, fmt = hds.OUTLINE_DEFAULTS[level - 1]
+    if level <= len(levels):
+        text, fmt = levels[level - 1]["text"], levels[level - 1].get("num_format", "digit")
+    fmts = [(levels[k - 1].get("num_format", "digit") if k <= len(levels) else hds.OUTLINE_DEFAULTS[k - 1][1])
+            for k in range(1, 8)]
+    return re.sub(r"\^([1-7])", lambda m: format_number(counts[int(m.group(1))], fmts[int(m.group(1)) - 1]), text)
+
+
+def toc_entries(doc: dict, levels: int) -> List[dict]:
+    """목차 항목: 제목 블록 순번(heading), 단계, 개요 번호, 글.
+
+    번호는 산출물 개요 번호와 같은 셈이다 — outline_numbering 이 있으면 그 모양(Ⅰ. 가. …),
+    없으면 scaffold 기본(1. / 1.1. / 1.1.1. …)."""
     out, counts, nh = [], [0] * 8, 0
     for b in doc.get("blocks", []):
         if b.get("type") != "heading":
@@ -204,10 +245,29 @@ def toc_entries(doc: dict, levels: int) -> List[dict]:
         for k in range(level + 1, 8):
             counts[k] = 0
         if level <= levels:
-            number = ".".join(str(counts[k]) for k in range(1, level + 1)) + "."
+            number = outline_number(doc, counts, level)
             out.append({"heading": nh, "level": level, "number": number, "text": b["text"]})
         nh += 1
     return out
+
+
+_SUPPORT_CACHE: Dict[tuple, bool] = {}
+
+
+def supports_outline_numbering(rhwp: str) -> bool:
+    """이 rhwp scaffold 가 outline_numbering 을 받는가. 작은 명세로 한 번 만들어 보고 기억한다."""
+    import tempfile
+    key = ("outline_numbering", str(Path(rhwp).resolve()))
+    if key not in _SUPPORT_CACHE:
+        with tempfile.TemporaryDirectory(prefix="hwpm-probe-") as tmp:
+            spec = Path(tmp) / "probe.json"
+            spec.write_text(json.dumps({"version": "1", "outline_numbering": [{"text": "^1."}],
+                                        "blocks": [{"type": "heading", "level": 1, "text": "probe"}]}),
+                            encoding="utf-8")
+            proc = subprocess.run([rhwp, "scaffold", str(spec), "-o", str(Path(tmp) / "probe.hwpx")],
+                                  capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+            _SUPPORT_CACHE[key] = proc.returncode == 0
+    return _SUPPORT_CACHE[key]
 
 
 def heading_pages(hwpx: Path, rhwp: str, doc: dict) -> Dict[int, int]:
