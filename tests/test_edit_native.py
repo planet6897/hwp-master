@@ -53,14 +53,14 @@ class EditNativeTest(unittest.TestCase):
         path = Path(self.tmp.name) / "plan.json"
         path.write_text(json.dumps(plan, ensure_ascii=False), encoding="utf-8")
         proc = subprocess.run([sys.executable, str(SCRIPTS / "edit.py"), "apply", str(self.project), str(path),
-                               "--rhwp", self.rhwp], capture_output=True, text=True, timeout=900)
+                               "--rhwp", self.rhwp], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         summary = json.loads(proc.stdout.strip().splitlines()[-1])
         report = json.loads(Path(summary["report"]).read_text(encoding="utf-8"))
         return proc, report
 
     def test_inspect_lists_tables_and_outline(self):
         proc = subprocess.run([sys.executable, str(SCRIPTS / "edit.py"), "inspect", str(self.project),
-                               "sources/doc.hwpx", "--rhwp", self.rhwp], capture_output=True, text=True)
+                               "sources/doc.hwpx", "--rhwp", self.rhwp], capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         data = json.loads((self.project / "analysis/doc.inspect.json").read_text(encoding="utf-8"))
         self.assertEqual(len(data["tables"]), 1)
@@ -92,7 +92,7 @@ class EditNativeTest(unittest.TestCase):
         self.assertIn("2,000", text)
 
         lineage = subprocess.run([self.rhwp, "lineage", second["capsule"], "--deep", "--json"],
-                                 cwd=self.project, capture_output=True, text=True)
+                                 cwd=self.project, capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(lineage.returncode, 0, lineage.stdout + lineage.stderr)
         env = json.loads(lineage.stdout)
         self.assertEqual(env["depth"], 2)

@@ -34,7 +34,7 @@ class BeautifyTest(unittest.TestCase):
 
     def run_script(self, *args):
         proc = subprocess.run([sys.executable, str(SCRIPTS / "beautify.py"), *args, "--rhwp", self.rhwp],
-                              capture_output=True, text=True, timeout=900)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         return proc, json.loads(proc.stdout.strip().splitlines()[-1])
 
     def propose(self, name="doc.hwpx", *extra):
@@ -118,7 +118,7 @@ class BeautifyTest(unittest.TestCase):
     def test_hwp_input_is_redirected_to_hwpx(self):
         (self.project / "sources/doc.hwp").write_bytes(b"x")
         proc = subprocess.run([sys.executable, str(SCRIPTS / "beautify.py"), "propose", str(self.project),
-                               "sources/doc.hwp"], capture_output=True, text=True)
+                               "sources/doc.hwp"], capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(proc.returncode, 1)
         self.assertIn("export-hwpx", proc.stdout)
 

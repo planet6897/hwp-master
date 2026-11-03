@@ -325,7 +325,7 @@ def cmd_fill(args) -> int:
             print(f"[{'오류' if f['severity'] == 'error' else '경고'} {f['code']}] {f['message']}"
                   + (f" ({f['where']})" if f.get("where") else ""))
         print(json.dumps({"ok": report["ok"], "output": report.get("output"),
-                          "report": str(report_path.relative_to(project))}, ensure_ascii=False))
+                          "report": report_path.relative_to(project).as_posix()}, ensure_ascii=False))
         return 0 if report["ok"] else 1
 
     if args.house:  # 등록한 기관 서식을 프로젝트 sources/ 로 들여온다 (지문 잠금 파일과 함께)
@@ -342,7 +342,7 @@ def cmd_fill(args) -> int:
         lock_src = tpl.with_name(tpl.name + ".lock.json")
         if lock_src.is_file():
             shutil.copyfile(lock_src, dest.with_name(dest.name + ".lock.json"))
-        args.template = str(dest.relative_to(project))
+        args.template = dest.relative_to(project).as_posix()
     if not args.template:
         findings.append(finding("error", "T000", "서식(sources/…) 또는 --house 이름이 필요합니다"))
         return finish()
@@ -354,8 +354,8 @@ def cmd_fill(args) -> int:
     if data_path is None or not data_path.is_file():
         findings.append(finding("error", "T000", f"자료는 프로젝트 안의 JSON 파일이어야 합니다: {args.data}"))
         return finish()
-    rel_src = str(src.relative_to(project))
-    report.update({"template": rel_src, "templateSha256": sha256(src), "data": str(data_path.relative_to(project))})
+    rel_src = src.relative_to(project).as_posix()
+    report.update({"template": rel_src, "templateSha256": sha256(src), "data": data_path.relative_to(project).as_posix()})
     lock = src.with_name(src.name + ".lock.json")
     if lock.is_file():  # register 로 등록한 서식을 들여온 경우 지문을 대조한다
         want = json.loads(lock.read_text(encoding="utf-8")).get("sha256")
@@ -396,7 +396,7 @@ def cmd_fill(args) -> int:
                 "assertions": {"verify": True, "notFoundEmpty": True}, "steps": steps}
         plan_path = work / f"{k:02d}_{label}.plan.json"
         plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        rel_plan = str(plan_path.relative_to(project))
+        rel_plan = plan_path.relative_to(project).as_posix()
         stage = {"label": label, "plan": rel_plan, "input": current, "output": output}
         report["stages"].append(stage)
         dry = run_json([rhwp, "run", rel_plan, "--dry-run", "--json"], project, ok_codes=(0, 3))
@@ -421,14 +421,14 @@ def cmd_fill(args) -> int:
                                         f"{st.get('ambiguous') or st.get('confusable')}"))
         capsule = project / "capsules" / f"template_{stamp}_{k:02d}.capsule.json"
         cmd = [rhwp, "replay", rel_plan, "--expect-output-sha256", renv.get("outputSha256") or sha256(project / output),
-               "--capsule", str(capsule.relative_to(project)), "--json"]
+               "--capsule", capsule.relative_to(project).as_posix(), "--json"]
         if parent_capsule:
             cmd += ["--parent", parent_capsule]
         rep = run_json(cmd, project, ok_codes=(0, 3))
         if rep["exit"] != 0:
             findings.append(finding("error", "T215", f"{label}: 재현되지 않습니다 (replay 산출 해시 불일치)"))
             return False
-        stage["capsule"] = parent_capsule = str(capsule.relative_to(project))
+        stage["capsule"] = parent_capsule = capsule.relative_to(project).as_posix()
         current = output
         return True
 
@@ -464,9 +464,9 @@ def cmd_fill(args) -> int:
     steps = [{"action": "replace_text", "find": lit, "replace": val} for lit, (val, _) in expected.items()]
     if norm["fields"]:
         steps.append({"action": "fill_fields", "data": norm["fields"]})
-    if not run_stage("fill", steps, str(out.relative_to(project))):
+    if not run_stage("fill", steps, out.relative_to(project).as_posix()):
         return finish()
-    report["output"] = str(out.relative_to(project))
+    report["output"] = out.relative_to(project).as_posix()
     report["outputSha256"] = sha256(out)
     replaced = {st.get("find"): st.get("replacedCount")
                 for st in report["stages"][-1]["run"].get("steps") or [] if st.get("action") == "replace_text"}
@@ -480,8 +480,8 @@ def cmd_fill(args) -> int:
         left = sorted({m["literal"] for m in final["markers"]})
         findings.append(finding("error", "T201", f"채우지 못한 자리표시가 남았습니다: {left or '형식 오류 칸'}"))
     text_dir = work / "final_text"
-    proc = subprocess.run([rhwp, "export-text", report["output"], "-o", str(text_dir.relative_to(project))],
-                          cwd=project, capture_output=True, text=True)
+    proc = subprocess.run([rhwp, "export-text", report["output"], "-o", text_dir.relative_to(project).as_posix()],
+                          cwd=project, capture_output=True, text=True, encoding="utf-8", errors="replace")
     body = "".join(p.read_text(encoding="utf-8") for p in sorted(text_dir.glob("*.txt"))) if proc.returncode == 0 else ""
     squash = lambda s: re.sub(r"\s+", "", s)  # noqa: E731
     values = list(norm["scalars"].values()) + [v for rows in norm["lists"].values() for r in rows for v in r.values()]
@@ -511,11 +511,11 @@ def cmd_inspect(args) -> int:
     if src is None or not src.is_file() or src.suffix.lower() not in EDITABLE:
         print(f"프로젝트 안의 HWP/HWPX 서식이 아닙니다: {args.template}", file=sys.stderr)
         return 2
-    sc = scan(rhwp, project, str(src.relative_to(project)))
+    sc = scan(rhwp, project, src.relative_to(project).as_posix())
     inv = inventory(sc) if "markers" in sc else {}
     out = project / "analysis" / f"template_{src.stem}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    rec = {"template": str(src.relative_to(project)), "sha256": sha256(src), **inv, "findings": sc["findings"]}
+    rec = {"template": src.relative_to(project).as_posix(), "sha256": sha256(src), **inv, "findings": sc["findings"]}
     out.write_text(json.dumps(rec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     example = out.with_name(f"template_{src.stem}.data.example.json")
     if inv:
@@ -523,8 +523,8 @@ def cmd_inspect(args) -> int:
     for f in sc["findings"]:
         print(f"[{'오류' if f['severity'] == 'error' else '경고'} {f['code']}] {f['message']}")
     ok = not any(f["severity"] == "error" for f in sc["findings"])
-    print(json.dumps({"ok": ok, "inventory": inv, "analysis": str(out.relative_to(project)),
-                      "example": str(example.relative_to(project)) if inv else None}, ensure_ascii=False))
+    print(json.dumps({"ok": ok, "inventory": inv, "analysis": out.relative_to(project).as_posix(),
+                      "example": example.relative_to(project).as_posix() if inv else None}, ensure_ascii=False))
     return 0 if ok else 1
 
 
@@ -588,4 +588,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

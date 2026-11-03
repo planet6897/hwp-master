@@ -35,7 +35,7 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def rhwp_version(rhwp: str) -> str:
-    proc = subprocess.run([rhwp, "--version"], capture_output=True, text=True, timeout=60)
+    proc = subprocess.run([rhwp, "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     return proc.stdout.strip()
 
 
@@ -119,4 +119,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

@@ -73,7 +73,7 @@ def _download(lock: dict, asset: str, dest: Path) -> str:
     if shutil.which("gh"):
         proc = subprocess.run(["gh", "release", "download", lock["tag"], "--repo", lock["repo"],
                                "--pattern", asset, "--dir", str(dest.parent), "--clobber"],
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
         if proc.returncode == 0 and dest.is_file():
             return "gh"
     url = f"https://github.com/{lock['repo']}/releases/download/{lock['tag']}/{asset}"
@@ -129,7 +129,7 @@ def install(dest_dir: Optional[Path] = None) -> dict:
     if not exe.is_file():
         raise RuntimeError(f"압축을 풀었지만 바이너리가 없습니다: {exe}")
     exe.chmod(exe.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    proc = subprocess.run([str(exe), "--version"], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run([str(exe), "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     return {"ok": proc.returncode == 0, "path": str(exe), "version": (proc.stdout or proc.stderr).strip(),
             "tag": lock["tag"], "rhwpCommit": lock["rhwp_commit"], "asset": asset, "sha256": digest, "via": via}
 
@@ -154,4 +154,6 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

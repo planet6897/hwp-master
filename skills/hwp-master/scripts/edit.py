@@ -43,7 +43,7 @@ def sha256(path: Path) -> str:
 
 
 def run_json(cmd: List[str], cwd: Path, ok_codes=(0,)) -> dict:
-    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=900)
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     result = {"cmd": [Path(cmd[0]).name] + cmd[1:], "exit": proc.returncode}
     try:
         result["envelope"] = json.loads(proc.stdout) if proc.stdout.strip() else None
@@ -76,7 +76,7 @@ def cmd_inspect(args) -> int:
     if src is None or not src.is_file():
         print(f"프로젝트 안의 문서가 아닙니다: {args.document}", file=sys.stderr)
         return 2
-    rel = str(src.relative_to(project.resolve()))
+    rel = src.relative_to(project.resolve()).as_posix()
     info = run_json([rhwp, "info", rel, "--json"], project)
     fields = run_json([rhwp, "fields", rel, "--json"], project)
     tables = run_json([rhwp, "export-tables", rel, "--json"], project)
@@ -198,10 +198,10 @@ def cmd_apply(args) -> int:
     if src is None or not src.is_file() or src.suffix.lower() not in EDITABLE:
         findings.append(finding("error", "E202", f"input 은 프로젝트 안의 HWP/HWPX 파일이어야 합니다: {plan['input']}"))
         return finish()
-    rel_in = str(src.relative_to(project))
+    rel_in = src.relative_to(project).as_posix()
     if plan.get("output"):
         out = inside(project, plan["output"])
-        if out is None or not str(out.relative_to(project)).startswith("exports/"):
+        if out is None or not out.relative_to(project).as_posix().startswith("exports/"):
             findings.append(finding("error", "E203", "output 은 비워 두거나 exports/ 아래여야 합니다 (원본 무수정)"))
             return finish()
     else:
@@ -210,7 +210,7 @@ def cmd_apply(args) -> int:
     if out.exists():
         findings.append(finding("error", "E203", f"이미 있는 파일에 덮어쓰지 않습니다: {out.relative_to(project)}"))
         return finish()
-    rel_out = str(out.relative_to(project))
+    rel_out = out.relative_to(project).as_posix()
     out.parent.mkdir(parents=True, exist_ok=True)
 
     input_sha = sha256(src)
@@ -225,7 +225,7 @@ def cmd_apply(args) -> int:
     plan_path = project / "history" / f"edit_{stamp}.plan.json"
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    rel_plan = str(plan_path.relative_to(project))
+    rel_plan = plan_path.relative_to(project).as_posix()
     report.update({"input": rel_in, "inputSha256": input_sha, "output": rel_out, "plan": rel_plan})
 
     dry = run_json([rhwp, "run", rel_plan, "--dry-run", "--json"], project, ok_codes=(0, 3))
@@ -253,15 +253,15 @@ def cmd_apply(args) -> int:
     capsule.parent.mkdir(parents=True, exist_ok=True)
     parent = find_parent_capsule(project, input_sha)
     replay_cmd = [rhwp, "replay", rel_plan, "--expect-output-sha256", report["outputSha256"],
-                  "--capsule", str(capsule.relative_to(project)), "--json"]
+                  "--capsule", capsule.relative_to(project).as_posix(), "--json"]
     if parent:
-        replay_cmd += ["--parent", str(parent.relative_to(project))]
+        replay_cmd += ["--parent", parent.relative_to(project).as_posix()]
     steps["replay"] = run_json(replay_cmd, project, ok_codes=(0, 3))
     if steps["replay"]["exit"] != 0:
         findings.append(finding("error", "R214", "편집이 재현되지 않습니다 (replay 산출 해시 불일치)"))
     else:
-        report["capsule"] = str(capsule.relative_to(project))
-        report["parentCapsule"] = str(parent.relative_to(project)) if parent else None
+        report["capsule"] = capsule.relative_to(project).as_posix()
+        report["parentCapsule"] = parent.relative_to(project).as_posix() if parent else None
 
     diff = run_json([rhwp, "render-diff", rel_in, rel_out, "--max-disp", str(args.max_disp), "--json"],
                     project, ok_codes=(0, 3))
@@ -303,4 +303,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

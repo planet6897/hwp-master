@@ -205,7 +205,7 @@ def cmd_propose(args) -> int:
     if src.suffix.lower() != ".hwpx":
         print(f"[오류 B000] HWPX 만 받습니다. 먼저 `rhwp export-hwpx {args.document} sources/<이름>.hwpx` 로 바꾸세요")
         return 1
-    rel = str(src.relative_to(project))
+    rel = src.relative_to(project).as_posix()
     doc = read_hwpx(src)
     items = plan_items(doc, findings)
 
@@ -236,7 +236,7 @@ def cmd_propose(args) -> int:
     for f in findings:
         print(f"[{'오류' if f['severity'] == 'error' else '경고'} {f['code']}] {f['where']} {f['message']}".replace("  ", " "))
     ok = not any(f["severity"] == "error" for f in findings)
-    print(json.dumps({"ok": ok, "items": len(items), "plan": str(plan_path.relative_to(project))}, ensure_ascii=False))
+    print(json.dumps({"ok": ok, "items": len(items), "plan": plan_path.relative_to(project).as_posix()}, ensure_ascii=False))
     return 0 if ok else 1
 
 
@@ -244,7 +244,7 @@ def cmd_propose(args) -> int:
 
 def export_text(rhwp: str, path: Path, workdir: Path) -> Optional[str]:
     out = Path(tempfile.mkdtemp(dir=workdir))
-    proc = subprocess.run([rhwp, "export-text", str(path), "-o", str(out)], capture_output=True, text=True)
+    proc = subprocess.run([rhwp, "export-text", str(path), "-o", str(out)], capture_output=True, text=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
         return None
     text = "".join(p.read_text(encoding="utf-8") for p in sorted(out.glob("*.txt")))
@@ -278,7 +278,7 @@ def cmd_apply(args) -> int:
         for f in findings:
             print(f"[{'오류' if f['severity'] == 'error' else '경고'} {f['code']}] {f.get('where', '')} {f['message']}".strip())
         print(json.dumps({"ok": report["ok"], "output": report.get("output"), "changed": report.get("changed"),
-                          "report": str(report_path.relative_to(project))}, ensure_ascii=False))
+                          "report": report_path.relative_to(project).as_posix()}, ensure_ascii=False))
         return 0 if report["ok"] else 1
 
     if plan_path is None or not plan_path.is_file():
@@ -417,7 +417,7 @@ def cmd_apply(args) -> int:
     findings.append(finding("warning", "B150",
                             "개요 번호는 번호 뒤 간격·넘친 줄 들여쓰기가 손 번호와 달라 한글에서 줄바꿈·쪽 나눔이 "
                             "바뀔 수 있습니다 — 한글에서 열어 꽉 찬 제목 줄과 쪽 끝을 확인하세요"))
-    report.update({"output": str(out_path.relative_to(project)), "outputSha256": sha256(out_path),
+    report.update({"output": out_path.relative_to(project).as_posix(), "outputSha256": sha256(out_path),
                    "changed": len(applied), "applied": [{"section": i["section"], "para": i["para"]} for i in applied]})
     return finish()
 
@@ -441,4 +441,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

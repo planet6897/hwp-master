@@ -297,12 +297,12 @@ def docx_to_ir(path: Path, losses: Losses) -> Tuple[list, Optional[str]]:
 def pdf_to_markdown(path: Path, rhwp: str, work: Path) -> str:
     hwpx = work / f"{path.stem}.import.hwpx"
     proc = subprocess.run([rhwp, "import-pdf", str(path), str(hwpx), "--layout", "editable", "--json"],
-                          capture_output=True, text=True, timeout=900)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     if proc.returncode != 0:
         raise RuntimeError(f"import-pdf 실패 (exit {proc.returncode}): {proc.stderr.strip()[-300:]}")
     md_dir = work / "md"
     proc = subprocess.run([rhwp, "export-markdown", str(hwpx), "-o", str(md_dir)],
-                          capture_output=True, text=True, timeout=900)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     if proc.returncode != 0:
         raise RuntimeError(f"export-markdown 실패 (exit {proc.returncode}): {proc.stderr.strip()[-300:]}")
     return "\n\n".join(p.read_text(encoding="utf-8") for p in sorted(md_dir.rglob("*.md")))
@@ -443,7 +443,7 @@ def main() -> int:
         return 2
 
     losses = Losses()
-    report = {"source": str(src.relative_to(project)), "strippedHeadingNumbers": []}
+    report = {"source": src.relative_to(project).as_posix(), "strippedHeadingNumbers": []}
     suffix = src.suffix.lower()
     docx_title = None
     try:
@@ -514,4 +514,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

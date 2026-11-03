@@ -65,7 +65,7 @@ def cmd_init(args) -> int:
 
 
 def _run(cmd) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
 
 
 def _extract(rhwp: str, src: Path, analysis: Path) -> dict:
@@ -173,4 +173,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

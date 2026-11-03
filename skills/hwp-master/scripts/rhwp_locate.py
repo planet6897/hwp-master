@@ -87,7 +87,7 @@ def locate(explicit: Optional[str] = None) -> dict:
     candidate = explicit or os.environ.get("RHWP_BIN") or _installed() or shutil.which("rhwp")
     if not candidate or not os.path.isfile(candidate) or not os.access(candidate, os.X_OK):
         raise RhwpNotFound(INSTALL_HINT + (f" (확인한 경로: {candidate})" if candidate else ""))
-    proc = subprocess.run([candidate, "--version"], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run([candidate, "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     raw = (proc.stdout or proc.stderr).strip()
     version = _parse_version(raw)
     if version is None:
@@ -122,4 +122,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

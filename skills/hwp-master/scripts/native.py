@@ -205,7 +205,7 @@ def heading_pages(hwpx: Path, rhwp: str, doc: dict) -> Dict[int, int]:
     """rhwp 쪽 나눔 결과에서 제목 블록 순번 → 쪽 번호(1부터)."""
     spec, _ = split(doc)
     paras = map_blocks(top_paragraphs(hwpx), spec["blocks"], bool(spec.get("title")))
-    proc = subprocess.run([rhwp, "dump-pages", str(hwpx), "--json"], capture_output=True, text=True, timeout=600)
+    proc = subprocess.run([rhwp, "dump-pages", str(hwpx), "--json"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
     if proc.returncode != 0:
         raise RuntimeError(f"dump-pages 실패: {proc.stderr.strip()[-400:]}")
     first_page: Dict[int, int] = {}
@@ -542,7 +542,7 @@ def map_blocks(paras: List[dict], blocks: List[dict], has_title: bool) -> List[O
 
 def _edit(rhwp: str, args: List[str], log: List[dict]) -> bool:
     cmd = [rhwp, "edit"] + args + ["--json"]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
     entry = {"cmd": ["edit"] + args, "exit": proc.returncode}
     if proc.returncode != 0:
         entry["stderr"] = proc.stderr.strip()[-800:]
@@ -600,7 +600,7 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
     first = out if plan_empty(plan) else work / "scaffold.hwpx"
     out.parent.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run([rhwp, "scaffold", str(spec_path), "-o", str(first), "--json"],
-                          capture_output=True, text=True, timeout=900)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     result: dict = {"ok": False, "scaffold": {"exit": proc.returncode}, "edits": []}
     if proc.returncode != 0:
         result["scaffold"]["stderr"] = proc.stderr.strip()[-2000:]

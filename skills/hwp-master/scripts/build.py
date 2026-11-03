@@ -31,7 +31,7 @@ import rhwp_locate  # noqa: E402
 
 
 def run_json(cmd: List[str], ok_codes=(0,)) -> dict:
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     result = {"cmd": [Path(cmd[0]).name] + cmd[1:], "exit": proc.returncode}
     try:
         result["envelope"] = json.loads(proc.stdout) if proc.stdout.strip() else None
@@ -216,4 +216,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

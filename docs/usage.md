@@ -18,6 +18,8 @@ rhwp --version        # rhwp v0.9.0 이상
 python3 --version     # 3.9 이상
 ```
 
+Windows 에서 `python3` 이 Microsoft Store 를 열면 이 문서의 `python3` 을 `python`(또는 `py -3`)으로 바꿔 씁니다.
+
 Claude Code 에서 플러그인으로 설치했다면 새 세션에서 "hwp-master 로 뭘 할 수 있어?"라고 물어 스킬이
 보이는지 확인합니다. rhwp 를 찾지 못하면 Claude 가 멈추고 설치 안내를 보여 줍니다.
 

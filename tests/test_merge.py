@@ -34,7 +34,7 @@ class MergeTest(unittest.TestCase):
         (self.project / "sources/list.csv").write_text(csv_text, encoding="utf-8")
         proc = subprocess.run([sys.executable, str(SCRIPTS / "merge.py"), str(self.project),
                                "--form", "sources/form.hwpx", "--data", "sources/list.csv", "--rhwp", self.rhwp,
-                               *extra], capture_output=True, text=True, timeout=900)
+                               *extra], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         summary = json.loads(proc.stdout.strip().splitlines()[-1])
         report = json.loads(Path(summary["report"]).read_text(encoding="utf-8"))
         return proc, report
@@ -51,7 +51,7 @@ class MergeTest(unittest.TestCase):
         self.assertEqual(self.outputs(), ["김철수.hwpx", "홍길동.hwpx"])
         out = next((self.project / "exports").rglob("홍길동.hwpx"))
         fields = json.loads(subprocess.run([self.rhwp, "fields", str(out), "--json"], capture_output=True,
-                                           text=True).stdout)["fields"]
+                                           text=True, encoding="utf-8", errors="replace").stdout)["fields"]
         self.assertEqual({f["name"]: f["value"] for f in fields},
                          {"성명": "홍길동", "소속": "기획팀", "연락처": "010-1111-2222"})
         self.assertNotIn("010-", json.dumps(report, ensure_ascii=False), "요약에는 명단 값을 넣지 않는다")

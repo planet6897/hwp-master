@@ -62,7 +62,7 @@ def batch_fill(rhwp: str, project: Path, form: str, data: str, out_dir: str, nam
     if name_field:
         cmd += ["--name-field", name_field]
     cmd += ["--dry-run"] if dry else ["--verify"]
-    proc = subprocess.run(cmd, cwd=project, capture_output=True, text=True, timeout=3600)
+    proc = subprocess.run(cmd, cwd=project, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3600)
     records = []
     for line in proc.stdout.splitlines():
         if line.strip():
@@ -108,7 +108,7 @@ def main() -> int:
             findings.append(finding("error", "M000", f"{label} 파일 없음: {path.relative_to(project)}"))
             return finish()
 
-    proc = subprocess.run([rhwp, "fields", args.form, "--json"], cwd=project, capture_output=True, text=True)
+    proc = subprocess.run([rhwp, "fields", args.form, "--json"], cwd=project, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
         findings.append(finding("error", "M000", f"서식 누름틀 조사 실패: {proc.stderr.strip()[-300:]}"))
         return finish()
@@ -172,4 +172,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from console import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

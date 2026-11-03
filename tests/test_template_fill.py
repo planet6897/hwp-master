@@ -1,4 +1,5 @@
 """Template Fill 라우트 종단 테스트: python3 -m unittest tests.test_template_fill (rhwp 필요)"""
+import hashlib
 import json
 import re
 import shutil
@@ -59,7 +60,7 @@ class TemplateFillTest(unittest.TestCase):
 
     def run_script(self, *args):
         proc = subprocess.run([sys.executable, str(SCRIPTS / "template_fill.py"), *args, "--rhwp", self.rhwp],
-                              capture_output=True, text=True, timeout=900)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         return proc, json.loads(proc.stdout.strip().splitlines()[-1])
 
     def fill(self, data, template="sources/form.hwpx", *extra):
@@ -91,7 +92,7 @@ class TemplateFillTest(unittest.TestCase):
                                  "□ 셋째 과제", "  ○ 내용: 셋째 내용"])
         self.assertEqual(lines[-1], "문의: 홍길동")  # 같은 키 두 곳
         tables = json.loads(subprocess.run([self.rhwp, "export-tables", str(out), "--json"], check=True,
-                                           capture_output=True, text=True).stdout)["tables"]
+                                           capture_output=True, text=True, encoding="utf-8", errors="replace").stdout)["tables"]
         cells = sorted(((c["row"], c["col"]), c["text"]) for c in tables[0]["cells"])
         self.assertEqual([t for _, t in cells], ["항목", "금액", "인건비", "1,000", "운영비", "500", "합계", "1,500"])
         self.assertNotIn("{{", self.text(out))
@@ -99,13 +100,12 @@ class TemplateFillTest(unittest.TestCase):
         self.assertEqual([s["label"] for s in report["stages"]], ["repeat_budget", "repeat_tasks", "fill"])
         head = self.project / report["stages"][-1]["capsule"]
         lin = json.loads(subprocess.run([self.rhwp, "lineage", str(head), "--json"], cwd=self.project,
-                                        capture_output=True, text=True).stdout)
+                                        capture_output=True, text=True, encoding="utf-8", errors="replace").stdout)
         self.assertEqual((lin["depth"], lin["brokenAt"]), (3, None))
         self.assertEqual(report["layout"]["output"]["overlapCount"], 0)
         # 서식 원본은 그대로다
         self.assertEqual(report["templateSha256"],
-                         subprocess.run(["shasum", "-a", "256", str(self.project / "sources/form.hwpx")],
-                                        capture_output=True, text=True).stdout.split()[0])
+                         hashlib.sha256((self.project / "sources/form.hwpx").read_bytes()).hexdigest())
 
     def test_single_record_list_needs_no_repeat_stage(self):
         self.make_template()
@@ -158,7 +158,7 @@ class TemplateFillTest(unittest.TestCase):
         house = Path(self.tmp.name) / "house"
         proc = subprocess.run([sys.executable, str(SCRIPTS / "template_fill.py"), "register", str(src),
                                "--name", "기관보고서", "--templates-dir", str(house), "--rhwp", self.rhwp],
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         lock = json.loads((house / "기관보고서/template.hwpx.lock.json").read_text(encoding="utf-8"))
         self.assertEqual(sorted(l["name"] for l in lock["lists"]), ["budget", "tasks"])

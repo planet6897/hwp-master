@@ -155,7 +155,7 @@ class ConvertBuildTest(unittest.TestCase):
     def test_markdown_project_converts_and_builds(self):
         rhwp = rhwp_locate.locate(None)["path"]
         with tempfile.TemporaryDirectory() as t:
-            run = lambda *a: subprocess.run([sys.executable, *map(str, a)], capture_output=True, text=True,
+            run = lambda *a: subprocess.run([sys.executable, *map(str, a)], capture_output=True, text=True, encoding="utf-8", errors="replace",
                                             timeout=900)
             md = Path(t) / "plan.md"
             md.write_text(MD, encoding="utf-8")

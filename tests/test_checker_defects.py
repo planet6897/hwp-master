@@ -52,14 +52,14 @@ class CheckerDefectTest(unittest.TestCase):
 
     def build(self, project: Path):
         proc = subprocess.run([sys.executable, str(SCRIPTS / "build.py"), str(project), "--no-preview",
-                               "--rhwp", self.rhwp], capture_output=True, text=True, timeout=900)
+                               "--rhwp", self.rhwp], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         report_path = project / "validation" / "report.json"
         report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
         return proc, report
 
     def lint(self, project: Path):
         proc = subprocess.run([sys.executable, str(SCRIPTS / "project_manager.py"), "validate", str(project)],
-                              capture_output=True, text=True, timeout=300)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
         result = json.loads((project / "validation" / "hds_lint_final.json").read_text(encoding="utf-8"))
         return proc, result
 
@@ -77,7 +77,7 @@ class CheckerDefectTest(unittest.TestCase):
             receipts = sorted((project / "capsules").glob("*.receipt.json"))
             self.assertEqual(len(receipts), 1)
             verify = subprocess.run([sys.executable, str(SCRIPTS / "receipt.py"), "verify", str(receipts[0]),
-                                     "--rhwp", self.rhwp], capture_output=True, text=True, timeout=600)
+                                     "--rhwp", self.rhwp], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
             self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
             self.assertTrue(json.loads(verify.stdout)["reproduced"])
 
@@ -87,7 +87,7 @@ class CheckerDefectTest(unittest.TestCase):
             tampered = Path(t) / "tampered.receipt.json"
             write(tampered, rec)
             verify = subprocess.run([sys.executable, str(SCRIPTS / "receipt.py"), "verify", str(tampered),
-                                     "--rhwp", self.rhwp], capture_output=True, text=True, timeout=600)
+                                     "--rhwp", self.rhwp], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
             self.assertEqual(verify.returncode, 3, verify.stdout + verify.stderr)
             out = json.loads(verify.stdout)
             self.assertFalse(out["specIntact"])

@@ -13,7 +13,7 @@
 - 문서 엔진: [rhwp](https://github.com/edwardkim/rhwp) — HWP/HWPX 를 읽고 쓰는 오픈소스 엔진의 CLI 를 호출합니다.
 - hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다. 검사에서 오류가 하나라도 나오면 완료로 보고하지 않습니다.
 
-> 상태: 0.1.15 — 새 문서(Default·Quick)·형식 변환·서식 채우기·명단 문서·부분 수정·번호 정리, 시험지 위임.
+> 상태: 0.1.16 — 새 문서(Default·Quick)·형식 변환·서식 채우기·명단 문서·부분 수정·번호 정리, 시험지 위임.
 > 새 문서의 블록은 제목·문단·표·쪽 나눔·그림(캡션)·목록(□ ○ - · 단계, 내어쓰기)·목차(쪽 번호)·표 캡션·제목 행·열 폭 비율·셀 병합·셀 강조와 글자 강조(굵게·기울임·밑줄·취소선·색·형광펜·크기)·캡션 자동 번호·각주·머리말·꼬리말(쪽 번호)·용지 방향과 여백입니다. 예제 결과물은 [examples/](examples/) 에 있습니다.
 
 ## 빠른 시작
@@ -33,11 +33,14 @@ python3 skills/hwp-master/scripts/install_rhwp.py
 python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다
 ```
 
+Windows 에서는 `python3` 이 Microsoft Store 바로가기라 실행되지 않을 수 있습니다. 그때는 이 문서의
+`python3` 을 `python`(또는 `py -3`)으로 바꿔 실행합니다.
+
 | OS | 파일 | 확인 |
 |---|---|---|
 | macOS (Apple Silicon) | `rhwp-0.9.0-4e2cc6b-macos-aarch64.tar.gz` | 설치·hwp-master 전체 테스트·예제 재현 (2026-11-03) |
 | Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-4e2cc6b-linux-x86_64.tar.gz` | 빌드 runner 에서 PNG 내보내기 검증 |
-| Windows x86_64 | `rhwp-0.9.0-4e2cc6b-windows-x86_64.zip` | 빌드 runner 에서 PNG 내보내기 검증 |
+| Windows x86_64 | `rhwp-0.9.0-4e2cc6b-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-03) |
 
 - 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
 - 받기는 `gh release download` 를 먼저 씁니다. 저장소가 비공개인 동안에는 [GitHub CLI](https://cli.github.com/) 로

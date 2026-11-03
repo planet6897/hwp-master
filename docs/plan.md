@@ -301,6 +301,9 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
   `rhwp-<버전>-<커밋>` Release 에 SHA256SUMS 와 붙인다. 첫 Release `rhwp-0.9.0-4e2cc6b`(upstream devel 4e2cc6bb).
   `install_rhwp.py` 가 `rhwp_release.json` 의 SHA-256 으로 대조해 설치, `rhwp_locate` 가 찾는다.
   Linux runner 는 rhwp 작업 트리 때문에 디스크가 모자라 도구 정리 단계를 넣었다.
+- 2026-11-03: Windows 11(cp949 콘솔) 실사용 점검 — 스크립트 출력 `—` 에서 UnicodeEncodeError 로 종료,
+  rhwp 출력 cp949 디코딩, 보고서 경로 `\` 표기(edit.py 의 `exports/` 검사가 항상 거부)를 고쳤다. `console.utf8_stdio()`,
+  subprocess `encoding="utf-8"`, 상대 경로 `as_posix()`. Windows 에서 전체 테스트 111건 통과.
 
 ## 7. rhwp 코어 PR 시 지켜야 할 정본 게이트
 
