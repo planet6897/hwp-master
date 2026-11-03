@@ -11,7 +11,8 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
     paragraph  {"type": "paragraph", "text": str,
                 "footnotes"?: [{"text": str, "after"?: str}],
                 "emphasis"?: [{"text": str, "bold"?, "italic"?, "underline"?: bool, "color"?: "#RRGGBB"}]}
-    table      {"type": "table", "rows": [[str]], "cell_align"?: str | [str]}
+    table      {"type": "table", "rows": [[str]], "cell_align"?: str | [str],
+                "header_row"?: bool, "header_fill"?: "#RRGGBB", "col_widths"?: [num]}
     page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
     image      {"type": "image", "path": str, "width_mm"?: num, "caption"?: str,
                 "align"?: "left"|"center"|"right"}  # 글자처럼 취급한 그림 한 줄
@@ -43,7 +44,7 @@ TOP_KEYS = {"version", "title", "font", "page_size", "header", "footer", "blocks
 BLOCK_KEYS = {
     "heading": {"type", "level", "text"},
     "paragraph": {"type", "text", "footnotes", "emphasis"},
-    "table": {"type", "rows", "cell_align"},
+    "table": {"type", "rows", "cell_align", "header_row", "header_fill", "col_widths"},
     "page_break": {"type"},
     "image": {"type", "path", "width_mm", "caption", "align"},
     "list": {"type", "items", "markers"},
@@ -328,11 +329,33 @@ def _validate_table(b: dict, where: str) -> List[Finding]:
         items = align if isinstance(align, list) else [align]
         if not all(isinstance(a, str) and a in CELL_ALIGNS for a in items):
             out.append(_err("E005", f"cell_align 값은 {sorted(CELL_ALIGNS)} 중 하나(또는 그 목록)", where))
+    if "header_row" in b and not isinstance(b["header_row"], bool):
+        out.append(_err("E116", "header_row 는 true/false 여야 합니다", where))
+    if "header_fill" in b:
+        fill = b["header_fill"]
+        if not (isinstance(fill, str) and HEX_COLOR.match(fill)):
+            out.append(_err("E116", "header_fill 은 #RRGGBB 형식이어야 합니다", where))
+        elif b.get("header_row") is not True:
+            out.append(_err("E116", "header_fill 은 header_row: true 와 함께 씁니다", where))
+    widths = b.get("col_widths")
+    if widths is not None and (not isinstance(widths, list) or len(widths) != ncols or not all(
+            isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0 for w in widths)):
+        out.append(_err("E117", f"col_widths 는 열 수({ncols})만큼의 양수 배열이어야 합니다 (비율)", where))
     return out
 
 
+def col_ratios(b: dict, ncols: int) -> List[float]:
+    """열 폭 비율 (합 1). col_widths 가 없거나 틀리면 균등."""
+    w = b.get("col_widths")
+    if (isinstance(w, list) and len(w) == ncols and all(
+            isinstance(x, (int, float)) and not isinstance(x, bool) and x > 0 for x in w)):
+        total = float(sum(w))
+        return [x / total for x in w]
+    return [1.0 / ncols] * ncols
+
+
 def lint_table_widths(blocks, page_width_mm: float, where_prefix: str = "") -> List[Finding]:
-    """W201: 셀 텍스트가 균등 열 폭 한 줄을 넘는지 추정한다 (M0 F2 임시 경고)."""
+    """W201: 셀 텍스트가 열 폭(col_widths 비율, 없으면 균등) 한 줄을 넘는지 추정한다 (M0 F2 임시 경고)."""
     out: List[Finding] = []
     content_mm = page_width_mm - SIDE_MARGINS_MM - TABLE_OUTER_MM
     for i, b in enumerate(blocks if isinstance(blocks, list) else []):
@@ -342,9 +365,10 @@ def lint_table_widths(blocks, page_width_mm: float, where_prefix: str = "") -> L
         ncols = max((len(r) for r in rows), default=0)
         if not ncols:
             continue
-        cap_em = (content_mm / ncols - CELL_PAD_MM) / BASE_EM_MM
+        ratios = col_ratios(b, ncols)
         for r, row in enumerate(rows):
             for c, cell in enumerate(row):
+                cap_em = (content_mm * ratios[c] - CELL_PAD_MM) / BASE_EM_MM
                 if isinstance(cell, str) and text_em(cell) > cap_em:
                     out.append(_warn(
                         "W201",

@@ -9,6 +9,9 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
                                caption 은 가운데 정렬 문단
     paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·글자색)
     paragraph.footnotes      → edit insert-footnote + insert-footnote-text
+    table.header_row         → 첫 행 셀마다 edit set-cell-props {fill, isHeader} +
+                               apply-char-format-in-cell 굵게 + apply-para-format-in-cell 가운데
+    table.col_widths         → edit set-column-widths (scaffold 표 폭을 비율로 나눔)
     list 블록                → 항목마다 "글머리 + 빈칸 + 글" 문단 + apply-para-format
                                왼쪽 여백(단계)·내어쓰기(글머리 폭)
     header / footer          → edit insert-header-footer + insert-header-footer-text
@@ -46,6 +49,8 @@ LIST_STEP_HU = 1000  # 단계마다 왼쪽 여백 10pt
 SPACE_HU = 475
 MARKER_HU = {"-": 580, "·": 341, "ㆍ": 341, "*": 500, ".": 300, ")": 330, "(": 330}
 BODY_HEIGHT_HU = 1000  # scaffold 본문 글자 크기 10pt
+HEADER_FILL = "#D9D9D9"  # 머리 행 기본 배경 (회색 15%)
+TABLE_STYLE_KEYS = ("header_row", "header_fill", "col_widths")
 
 
 
@@ -54,7 +59,7 @@ def split(doc: dict) -> tuple:
     spec = {k: copy.deepcopy(v) for k, v in doc.items() if k not in ("header", "footer", "blocks")}
     blocks: List[dict] = []
     plan: Dict[str, object] = {"page_breaks": [], "footnotes": [], "emphasis": [], "images": [],
-                               "aligns": [], "indents": [], "header": doc.get("header"),
+                               "aligns": [], "indents": [], "tables": [], "header": doc.get("header"),
                                "footer": doc.get("footer")}
     pending_break = False
 
@@ -106,6 +111,16 @@ def split(doc: dict) -> tuple:
                 plan["aligns"].append({"block": len(blocks), "align": "center"})
                 blocks.append({"type": "paragraph", "text": b["caption"]})
             continue
+        if b.get("type") == "table":
+            ntab = sum(1 for x in blocks if x.get("type") == "table")
+            style = {k: b[k] for k in TABLE_STYLE_KEYS if k in b}
+            b = {k: v for k, v in b.items() if k not in TABLE_STYLE_KEYS}
+            if style.get("header_row") or style.get("col_widths"):
+                plan["tables"].append({
+                    "table": ntab, "cols": max(len(r) for r in b["rows"]),
+                    "header_fill": (style.get("header_fill") or HEADER_FILL).upper()
+                    if style.get("header_row") else None,
+                    "col_widths": style.get("col_widths")})
         add_para(b)
     spec["blocks"] = blocks
     return spec, plan
@@ -137,7 +152,7 @@ def char_props(mark: dict) -> str:
 
 def plan_empty(plan: dict) -> bool:
     return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"] or plan["images"]
-                or plan["indents"] or plan["header"] or plan["footer"])
+                or plan["indents"] or plan["tables"] or plan["header"] or plan["footer"])
 
 
 def image_size_px(path: Path) -> Optional[tuple]:
@@ -189,6 +204,69 @@ def top_paragraphs(hwpx: Path) -> List[dict]:
     for p in root.findall(f"{{{HP}}}p"):
         text = "".join(t.text or "" for run in p.findall(f"{{{HP}}}run") for t in run.findall(f"{{{HP}}}t"))
         out.append({"text": text, "table": p.find(f".//{{{HP}}}tbl") is not None})
+    return out
+
+
+def _top_tables(root) -> list:
+    """구역 최상위 문단에 직접 든 표(hp:tbl) — rhwp edit 의 --table 번호 순서."""
+    return [t for p in root.findall(f"{{{HP}}}p") for run in p.findall(f"{{{HP}}}run")
+            for t in run.findall(f"{{{HP}}}tbl")]
+
+
+def table_widths(hwpx: Path) -> List[int]:
+    """최상위 표마다 전체 폭(HWPUNIT)."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    return [int(t.find(f"{{{HP}}}sz").get("width")) for t in _top_tables(root)]
+
+
+def split_widths(total: int, ratios: List[float]) -> List[int]:
+    """total 을 비율대로 나눈 정수 폭. 반올림 나머지는 마지막 열에 준다."""
+    s = float(sum(ratios))
+    out = [round(total * r / s) for r in ratios[:-1]]
+    return out + [total - sum(out)]
+
+
+def table_cells(hwpx: Path) -> List[List[dict]]:
+    """최상위 표마다 셀 목록: row·col·header·borderFill·폭·첫 글자 charPr."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    out = []
+    for t in _top_tables(root):
+        cells = []
+        for tc in t.iter(f"{{{HP}}}tc"):
+            addr, size = tc.find(f"{{{HP}}}cellAddr"), tc.find(f"{{{HP}}}cellSz")
+            runs = [r for r in tc.iter(f"{{{HP}}}run") if r.find(f"{{{HP}}}t") is not None]
+            cells.append({"row": int(addr.get("rowAddr")), "col": int(addr.get("colAddr")),
+                          "header": tc.get("header") == "1", "border_fill": tc.get("borderFillIDRef"),
+                          "width": int(size.get("width")),
+                          "char_prs": [r.get("charPrIDRef") for r in runs],
+                          "para_pr": (tc.find(f".//{{{HP}}}p").get("paraPrIDRef")
+                                      if tc.find(f".//{{{HP}}}p") is not None else None)})
+        out.append(cells)
+    return out
+
+
+def fill_colors(hwpx: Path) -> Dict[str, Optional[str]]:
+    """header.xml borderFill id → 면 색(#RRGGBB) 또는 None."""
+    hc = "http://www.hancom.co.kr/hwpml/2011/core"
+    with zipfile.ZipFile(hwpx) as z:
+        head = ET.fromstring(z.read("Contents/header.xml"))
+    out = {}
+    for bf in head.iter(f"{{{HH}}}borderFill"):
+        brush = bf.find(f".//{{{hc}}}winBrush")
+        out[bf.get("id")] = brush.get("faceColor").upper() if brush is not None else None
+    return out
+
+
+def para_aligns(hwpx: Path) -> Dict[str, str]:
+    """header.xml paraPr id → 가로 정렬 (JUSTIFY·CENTER …)."""
+    with zipfile.ZipFile(hwpx) as z:
+        head = ET.fromstring(z.read("Contents/header.xml"))
+    out = {}
+    for pp in head.iter(f"{{{HH}}}paraPr"):
+        al = pp.find(f"{{{HH}}}align")
+        out[pp.get("id")] = al.get("horizontal") if al is not None else None
     return out
 
 
@@ -349,6 +427,24 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
                      "--props", json.dumps({"alignment": al["align"]}, separators=(",", ":"))]):
             result["error"] = "문단 정렬 실패"
             return result
+    widths = table_widths(cur) if plan["tables"] else []
+    for tb in plan["tables"]:
+        t = str(tb["table"])
+        if tb["col_widths"]:
+            cols = split_widths(widths[tb["table"]], tb["col_widths"])
+            if not step(["set-column-widths", "--table", t, "--widths", ",".join(map(str, cols))]):
+                result["error"] = "표 열 폭 설정 실패"
+                return result
+        if tb["header_fill"]:
+            props = json.dumps({"fillType": "solid", "fillColor": tb["header_fill"], "isHeader": True},
+                               separators=(",", ":"))
+            for c in range(tb["cols"]):
+                cell = ["--table", t, "--row", "0", "--col", str(c)]
+                if not (step(["set-cell-props"] + cell + ["--props", props])
+                        and step(["apply-char-format-in-cell"] + cell + ["--props", '{"bold":true}'])
+                        and step(["apply-para-format-in-cell"] + cell + ["--props", '{"alignment":"center"}'])):
+                    result["error"] = "표 머리 행 꾸밈 실패"
+                    return result
     # apply-para-format 의 여백 값은 HWPUNIT 의 2배로 받는다(4000 → 저장 2000 = 20pt).
     for ind in plan["indents"]:
         props = {"marginLeft": ind["left"] * 2, "indent": ind["indent"] * 2}
@@ -428,6 +524,28 @@ def check(out: Path, doc: dict) -> List[str]:
             if got != (ind["left"], ind["indent"]):
                 problems.append(f"목록 들여쓰기 미반영: blocks[{ind['block']}] {got} "
                                 f"(계획 {(ind['left'], ind['indent'])})")
+    if plan["tables"]:
+        tables, fills, aligns = table_cells(out), fill_colors(out), para_aligns(out)
+        shapes = char_shapes(out)
+        for tb in plan["tables"]:
+            cells = tables[tb["table"]] if tb["table"] < len(tables) else []
+            where = f"표 {tb['table']}"
+            if tb["col_widths"]:
+                total = sum(c["width"] for c in cells if c["row"] == 0)
+                want = split_widths(total, tb["col_widths"])
+                got = [c["width"] for c in sorted((c for c in cells if c["row"] == 0), key=lambda c: c["col"])]
+                if got != want:
+                    problems.append(f"{where} 열 폭 {got} (계획 {want})")
+            if tb["header_fill"]:
+                for c in cells:
+                    head = c["row"] == 0
+                    ok = (c["header"] == head
+                          and (fills.get(c["border_fill"]) == tb["header_fill"]) == head)
+                    if head:
+                        ok = ok and aligns.get(c["para_pr"]) == "CENTER" and all(
+                            shapes.get(i, {}).get("bold") for i in c["char_prs"])
+                    if not ok:
+                        problems.append(f"{where} 머리 행 꾸밈 미반영: 셀 ({c['row']},{c['col']})")
     for kind in ("header", "footer"):
         hf = plan[kind]
         has = f"<hp:{kind} " in xml

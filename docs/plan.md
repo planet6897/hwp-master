@@ -249,6 +249,9 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
   `edit apply-para-format {"marginLeft","indent"}`(값은 HWPUNIT 의 2배)로 단계별 왼쪽 여백 10pt·글머리 폭 내어쓰기.
   글머리 폭은 한컴 2024 PDF 실측(함초롬바탕 10pt). 둘째 줄 시작이 한컴에서 글머리 뒤 글자와 1pt 안쪽으로 맞고,
   rhwp 미리보기 실루엣 95.26%(남은 차이는 제목 번호 간격 #8433·대체 글꼴 줄바꿈).
+- 2026-11-03: 표 꾸밈(`header_row`·`header_fill`·`col_widths`)도 코어 확장 없이 제공 — `edit set-column-widths`
+  (scaffold 표 폭을 비율로 나눔), 첫 행 셀마다 `set-cell-props {fillType, fillColor, isHeader}`(기존 테두리 유지)
+  + `apply-char-format-in-cell` 굵게 + `apply-para-format-in-cell` 가운데. 한컴 2024 대조 실루엣 100%.
 - 각 블록은 rhwp 이슈 `task/<이슈번호>-scaffold-<블록>` 브랜치로 진행한다.
 - 완료 기준: 블록별로 rhwp 정본 게이트 통과(§7).
 

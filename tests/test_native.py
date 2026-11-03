@@ -201,6 +201,45 @@ class ListTest(unittest.TestCase):
         self.assertEqual(hds._lint_unit_budget(unit, blocks, "u"), [])
 
 
+TABLE_DOC = {"version": "1", "title": "표", "blocks": [
+    {"type": "paragraph", "text": "앞"},
+    {"type": "table", "header_row": True, "col_widths": [2, 3, 2], "cell_align": ["center", "left", "right"],
+     "rows": [["구분", "값", ""], ["가", "1", "2"]]},
+    {"type": "table", "header_row": True, "header_fill": "#dce6f2", "rows": [["a", "b"], ["c", "d"]]},
+    {"type": "table", "col_widths": [1, 4], "rows": [["x", "y"]]},
+    {"type": "table", "rows": [["plain"]]}]}
+
+
+class TableStyleTest(unittest.TestCase):
+    def test_split_strips_style(self):
+        spec, plan = native.split(TABLE_DOC)
+        self.assertTrue(all(set(b) <= {"type", "rows", "cell_align", "text"} for b in spec["blocks"]))
+        self.assertEqual(plan["tables"], [
+            {"table": 0, "cols": 3, "header_fill": "#D9D9D9", "col_widths": [2, 3, 2]},
+            {"table": 1, "cols": 2, "header_fill": "#DCE6F2", "col_widths": None},
+            {"table": 2, "cols": 2, "header_fill": None, "col_widths": [1, 4]}])
+
+    def test_split_widths(self):
+        self.assertEqual(native.split_widths(41952, [2, 3, 2]), [11986, 17979, 11987])
+        self.assertEqual(sum(native.split_widths(41953, [1, 1, 1])), 41953)
+
+    def test_validate(self):
+        self.assertEqual(codes(hds.validate_blocks(TABLE_DOC["blocks"])), [])
+        bad = [{"type": "table", "rows": [["a"]], "header_row": "yes"},
+               {"type": "table", "rows": [["a"]], "header_row": True, "header_fill": "gray"},
+               {"type": "table", "rows": [["a"]], "header_fill": "#FFFFFF"},
+               {"type": "table", "rows": [["a", "b"]], "col_widths": [1]},
+               {"type": "table", "rows": [["a", "b"]], "col_widths": [1, 0]}]
+        self.assertEqual(codes(hds.validate_blocks(bad)), ["E116"] * 3 + ["E117"] * 2)
+
+    def test_w201_uses_ratios(self):
+        cell = "가" * 14
+        even = [{"type": "table", "rows": [[cell, "b", "c"]]}]
+        wide = [{"type": "table", "rows": [[cell, "b", "c"]], "col_widths": [4, 1, 1]}]
+        self.assertEqual([f.code for f in hds.lint_table_widths(even, 210)], ["W201"])
+        self.assertEqual([f.code for f in hds.lint_table_widths(wide, 210)], [])
+
+
 class ProjectLintTest(unittest.TestCase):
     """단위 끝의 쪽 나눔은 허용하지만, 문서 끝이나 단위 경계에서 겹치면 오류."""
 
@@ -313,6 +352,24 @@ class ProduceTest(unittest.TestCase):
         self.assertEqual(margins[texts.index("목록 뒤 문단")][1], 0)
         problems = native.check(self.dir / "list" / "work" / "scaffold.hwpx", LIST_DOC)
         self.assertTrue(any("목록 들여쓰기 미반영" in p for p in problems), problems)
+
+    def test_table_style(self):
+        out = self.dir / "tbl" / "out.hwpx"
+        result = native.produce(TABLE_DOC, out, self.rhwp, self.dir / "tbl" / "work")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(native.check(out, TABLE_DOC), [])
+        tables, fills = native.table_cells(out), native.fill_colors(out)
+        widths = native.table_widths(out)
+        # 머리 행만 배경·제목 셀이고, 표 전체 폭은 그대로 열 폭만 바뀐다
+        self.assertEqual([fills[c["border_fill"]] for c in tables[0] if c["row"] == 0], ["#D9D9D9"] * 3)
+        self.assertTrue(all(fills[c["border_fill"]] is None and not c["header"]
+                            for c in tables[0] if c["row"] == 1))
+        self.assertEqual([c["width"] for c in tables[2]], native.split_widths(widths[2], [1, 4]))
+        self.assertEqual(widths, native.table_widths(self.dir / "tbl" / "work" / "scaffold.hwpx"))
+        aligns = native.para_aligns(out)
+        self.assertEqual(aligns[tables[0][5]["para_pr"]], "RIGHT")  # 데이터 행 cell_align 유지
+        problems = native.check(self.dir / "tbl" / "work" / "scaffold.hwpx", TABLE_DOC)
+        self.assertTrue(any("머리 행" in p for p in problems) and any("열 폭" in p for p in problems))
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")
