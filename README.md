@@ -18,36 +18,98 @@
 
 ## 빠른 시작
 
-### 1. 사전 준비
+### 1. 설치
 
-**필요한 것은 [Python](https://www.python.org/downloads/) 3.9 이상과 rhwp 0.9.0 이상 두 가지입니다.**
-hwp-master 스크립트는 Python 표준 라이브러리만 쓰므로 `pip install` 할 것이 없습니다.
+**필요한 것:** [Git](https://git-scm.com/downloads), [Python](https://www.python.org/downloads/) 3.9 이상,
+[Claude Code](https://claude.ai/code). hwp-master 스크립트는 Python 표준 라이브러리만 쓰므로 `pip install` 할 것이 없습니다.
 
-**rhwp 는 이 저장소의 Release 에 올린 바이너리로 설치합니다(빌드 불필요).** 공개 upstream
-[edwardkim/rhwp](https://github.com/edwardkim/rhwp) 의 고정 커밋을 GitHub Actions 에서 그대로 빌드한 것이고(MIT),
-어느 Release·커밋·SHA-256 을 쓸지는 `skills/hwp-master/rhwp_release.json` 에 고정돼 있습니다.
+설치는 두 가지 중 편한 쪽으로 합니다. 어느 쪽이든 AI 가 문서 엔진 rhwp 를 이 저장소 Release 의 바이너리로
+설치하고(빌드 불필요, SHA-256 대조), 설치한 rhwp 를 찾을 수 있는지 확인한 뒤 자동 테스트를 돌려 결과를 알려 줍니다.
+Linux 에서는 미리보기용 한글 글꼴이 있는지도 봅니다.
+
+**방법 1 — 직접 clone 하고 "설치해줘"**
+
+```bash
+git clone https://github.com/planet6897/hwp-master.git
+cd hwp-master
+claude
+```
+
+Claude Code 가 열리면 이렇게 입력합니다.
+
+```
+나: 설치해줘
+```
+
+**방법 2 — Claude Code 에 GitHub 주소를 주고 "설치해줘"**
+
+아무 폴더에서나 `claude` 를 실행하고 주소와 함께 요청합니다. 저장소를 받을 위치를 말해도 됩니다.
+
+```
+나: https://github.com/planet6897/hwp-master 설치해줘
+나: https://github.com/planet6897/hwp-master 를 ~/tools 에 설치해줘
+```
+
+AI 가 저장소를 clone 하고 방법 1 과 같은 설치를 진행한 뒤, 받은 폴더 경로를 알려 줍니다.
+**설치가 끝나면 그 폴더에서 `claude` 를 새로 실행합니다**(`cd <받은 폴더>` 후 `claude`). 그래야 에이전트가 이 저장소의
+지침(`AGENTS.md`)을 읽고 hwp-master 로 동작합니다.
+
+설치가 끝나면 `hwp-master` 폴더에서 연 Claude Code 창에서 바로 문서를 요청하면 됩니다(아래 [2. 만들기](#2-만들기)).
+
+<details>
+<summary><strong>AI 에이전트용 설치 절차</strong> — GitHub 주소와 함께 설치를 요청받았을 때</summary>
+
+1. 사용자가 위치를 말하지 않았으면 현재 폴더 아래에 `git clone https://github.com/planet6897/hwp-master.git` 한다.
+   같은 이름의 폴더가 이미 있으면 덮어쓰지 말고, 그 폴더가 이 저장소의 clone 이면 `git pull` 할지 사용자에게 묻는다.
+2. 받은 폴더(저장소 루트)에서 차례로 실행한다. Windows 에서 `python3` 이 안 되면 `python`(또는 `py -3`)을 쓴다.
+   1. `python3 skills/hwp-master/scripts/install_rhwp.py` — 지원하지 않는 플랫폼이면 아래 "소스에서 빌드"를 안내하고 멈춘다.
+   2. `python3 skills/hwp-master/scripts/rhwp_locate.py` — 경로·버전 확인 (Linux 는 한글 글꼴 경고도 전한다).
+   3. `python3 -m unittest discover -s tests` — 실패가 있으면 출력과 함께 알리고 설치 완료로 보고하지 않는다.
+3. 받은 폴더의 절대 경로와, 그 폴더에서 `claude` 를 새로 실행해 쓰라는 안내로 마친다.
+</details>
+
+> 저장소가 비공개인 동안에는 이 저장소에 접근 권한이 있는 GitHub 계정이 필요합니다. clone 과 rhwp 받기에
+> 같은 계정을 쓰므로 [GitHub CLI](https://cli.github.com/) 로 `gh auth login` 해 두세요.
+
+> Claude Code 는 터미널 CLI 대신 VS Code / JetBrains 확장으로 써도 됩니다. IDE 에서 **File → Open Folder** 로
+> `hwp-master` 폴더를 열고 Claude Code 창에 "설치해줘"라고 입력합니다. 저장소 루트의 `AGENTS.md` 를 읽는 다른
+> 에이전트(Codex CLI, Cursor, Gemini CLI 등)도 동작할 수 있으나 확인하지 않았습니다.
+
+**나중에 업데이트:** `hwp-master` 폴더에서 `git pull` 합니다. rhwp 버전이 바뀌었으면 다시 "설치해줘"라고 하면 됩니다.
+
+<details>
+<summary><strong>직접 설치하기</strong> — AI 없이 터미널에서, 또는 설치가 막혔을 때</summary>
+
+AI 가 "설치해줘"에서 하는 일은 아래 명령과 같습니다.
 
 ```bash
 python3 skills/hwp-master/scripts/install_rhwp.py
 # rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-4e2cc6b/rhwp/rhwp
-python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다
+python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다 (Linux 는 한글 글꼴도)
+python3 -m unittest discover -s tests               # 자동 테스트 (rhwp 0.9.0 에서 모두 OK)
 ```
 
-Windows 에서는 `python3` 이 Microsoft Store 바로가기라 실행되지 않을 수 있습니다. 그때는 이 문서의
-`python3` 을 `python`(또는 `py -3`)으로 바꿔 실행합니다.
+Windows 에서는 `python3` 이 Microsoft Store 바로가기라 실행되지 않을 수 있습니다. 그때는 `python3` 을
+`python`(또는 `py -3`)으로 바꿔 실행합니다.
+
+rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardkim/rhwp) 의 고정 커밋을 GitHub Actions 에서
+그대로 빌드한 것이고(MIT), 어느 Release·커밋·SHA-256 을 쓸지는 `skills/hwp-master/rhwp_release.json` 에 고정돼 있습니다.
 
 | OS | 파일 | 확인 |
 |---|---|---|
 | macOS (Apple Silicon) | `rhwp-0.9.0-4e2cc6b-macos-aarch64.tar.gz` | 설치·hwp-master 전체 테스트·예제 재현 (2026-11-03) |
-| Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-4e2cc6b-linux-x86_64.tar.gz` | 빌드 runner 에서 PNG 내보내기 검증 |
+| Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-4e2cc6b-linux-x86_64.tar.gz` | 설치·hwp-master 전체 테스트·보고서 생성 (2026-11-03) |
 | Windows x86_64 | `rhwp-0.9.0-4e2cc6b-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-03) |
 
 - 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
-- 받기는 `gh release download` 를 먼저 씁니다. 저장소가 비공개인 동안에는 [GitHub CLI](https://cli.github.com/) 로
-  `gh auth login` 한 계정에 저장소 권한이 있어야 합니다.
+- 받기는 `gh release download` 를 먼저 씁니다.
 - Linux 미리보기(PNG·PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
   HWPX 는 정상이고 미리보기 한글만 빠지며, hwp-master 가 경고(R105)를 냅니다.
 - Intel Mac·Linux ARM 은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
+
+찾는 순서는 `--rhwp` 인자 → `RHWP_BIN` 환경변수 → 설치 스크립트 바이너리 → PATH 의 `rhwp` 입니다. 직접 빌드한 rhwp 를
+쓰려면 `RHWP_BIN=/경로/rhwp` 로 지정합니다.
+</details>
 
 <details>
 <summary><strong>소스에서 빌드</strong> — Intel Mac·Linux ARM, 또는 다른 rhwp 커밋을 쓸 때</summary>
@@ -68,66 +130,30 @@ macOS 약 11분, Linux 24코어 11~20분 걸렸습니다(2026-11-02~03). Linux �
 `gh workflow run rhwp-binaries.yml -f rhwp_ref=<커밋 SHA>` 로 새 Release 를 만들 수 있습니다.
 </details>
 
-찾는 순서는 `--rhwp` 인자 → `RHWP_BIN` 환경변수 → 설치 스크립트 바이너리 → PATH 의 `rhwp` 입니다. 직접 빌드한 rhwp 를
-쓰려면 `RHWP_BIN=/경로/rhwp` 로 지정합니다.
+<details>
+<summary><strong>다른 설치 방법</strong> — ZIP 내려받기, Claude Code 플러그인</summary>
 
-### 2. 에이전트 고르기
+**ZIP 내려받기** (Git 없이): [GitHub 페이지](https://github.com/planet6897/hwp-master)에서 **Code → Download ZIP** 을
+눌러 받아 압축을 풀고, 그 폴더에서 `claude` 를 실행해 "설치해줘"라고 합니다. ZIP 에는 Git 기록이 없어 `git pull` 로
+업데이트할 수 없으니, 최신 ZIP 을 새 폴더에 풀고 이전 폴더의 `projects/` 를 옮깁니다.
 
-hwp-master 는 **파일을 읽고 쓰고 명령을 실행할 수 있는 AI 에이전트** 안에서 동작합니다. 처음 써 보는 분도
-걱정하지 않아도 됩니다. 여기서 에이전트는 "파일을 다룰 수 있는 AI 채팅 창" 역할만 합니다. 코딩은 필요 없습니다.
-
-> **권장: [Claude Code](https://claude.ai/code)** — 이 프로젝트를 만들고 시험한 환경입니다. 터미널 CLI 나
-> VS Code / JetBrains 확장으로 씁니다.
-
-| 종류 | 예 | 비고 |
-|---|---|---|
-| **CLI 에이전트** | [Claude Code](https://claude.ai/code) CLI | 확인한 환경 |
-| **IDE 확장** | Claude Code (VS Code / JetBrains 확장) | CLI 와 같은 엔진 |
-| **그 밖의 에이전트** | Codex CLI, Cursor, Gemini CLI 등 | 저장소 루트의 `AGENTS.md` 를 읽는 에이전트라면 동작할 수 있으나 확인하지 않았습니다 |
-
-### 3. 설치
-
-**방법 A — Git clone** (권장, [Git](https://git-scm.com/downloads) 필요): 언제든 최신 버전을 받을 수 있습니다.
+**Claude Code 플러그인 마켓플레이스**: 저장소에 `.claude-plugin/marketplace.json` 이 있어 Claude Code 안에서
+바로 설치할 수 있습니다.
 
 ```bash
-git clone https://github.com/planet6897/hwp-master.git
-cd hwp-master
-python3 skills/hwp-master/scripts/rhwp_locate.py    # rhwp 경로·버전 확인 (Linux 는 한글 글꼴도)
-python3 -m unittest discover -s tests               # 선택: 자동 테스트 (rhwp 0.9.0 에서 모두 OK)
+/plugin marketplace add planet6897/hwp-master
+/plugin install hwp-master@hwp-master
 ```
 
-> 저장소가 비공개인 동안에는 이 저장소에 접근 권한이 있는 GitHub 계정이 필요합니다.
+업데이트는 `/plugin marketplace update hwp-master` 뒤 `/plugin update hwp-master@hwp-master` 입니다.
+플러그인으로 설치하면 스킬 파일만 받습니다(설치 폴더는 갱신 때 바뀌는 캐시입니다). 작업 폴더 `projects/` 는
+Claude Code 를 실행한 폴더 아래에 생기고, 등록한 기관 서식은 `~/.hwp-master/templates/house/` 에 보관됩니다.
+플러그인 없이 스킬만 쓰려면 `skills/hwp-master` 폴더를 `~/.claude/skills/hwp-master` 로 복사해도 됩니다.
+</details>
 
-**방법 B — ZIP 내려받기** (Git 없이 빠르게 써 볼 때): [GitHub 페이지](https://github.com/planet6897/hwp-master)에서
-**Code → Download ZIP** 을 눌러 받아 압축을 풉니다. ZIP 에는 Git 기록이 없어 `git pull` 로 업데이트할 수 없습니다.
+### 2. 만들기
 
-#### 나중에 업데이트
-
-**Git clone 설치:**
-
-```bash
-git pull
-```
-
-**ZIP 설치:** 최신 ZIP 을 새 폴더에 풀고, 이전 폴더의 `projects/` 를 새 폴더로 옮깁니다.
-
-> **방법 C — Claude Code 플러그인 마켓플레이스**: 저장소에 `.claude-plugin/marketplace.json` 이 있어 Claude Code 안에서
-> 바로 설치할 수 있습니다.
->
-> ```bash
-> /plugin marketplace add planet6897/hwp-master
-> /plugin install hwp-master@hwp-master
-> ```
->
-> 업데이트는 `/plugin marketplace update hwp-master` 뒤 `/plugin update hwp-master@hwp-master` 입니다.
-> 플러그인으로 설치하면 스킬 파일만 받습니다(설치 폴더는 갱신 때 바뀌는 캐시입니다). 작업 폴더 `projects/` 는
-> Claude Code 를 실행한 폴더 아래에 생기고, 등록한 기관 서식은 `~/.hwp-master/templates/house/` 에 보관됩니다.
-> 플러그인 없이 스킬만 쓰려면 `skills/hwp-master` 폴더를 `~/.claude/skills/hwp-master` 로 복사해도 됩니다.
-
-### 4. 만들기
-
-**먼저 에이전트에서 프로젝트 폴더를 엽니다.** 방법 A·B 라면 `cd hwp-master` 후 `claude` 를 실행하거나, IDE 에서
-**File → Open Folder** 로 `hwp-master` 폴더를 엽니다. 이후는 모두 채팅으로 합니다.
+설치할 때처럼 `hwp-master` 폴더에서 `claude` 를 실행한 창에서 채팅으로 요청합니다.
 
 **자료를 주고 요청합니다(권장).** 파일 경로를 채팅에 붙여 넣으면 됩니다. 파일 관리자나 IDE 사이드바에서
 파일을 오른쪽 클릭 → **경로 복사** 로 얻을 수 있습니다.
