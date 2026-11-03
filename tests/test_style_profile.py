@@ -122,7 +122,8 @@ class OutlineNumberingTest(unittest.TestCase):
     def test_valid_and_invalid(self):
         self.assertEqual(codes(hds.validate_document(self.doc())), [])
         for bad in ([], [{"text": "^1"}] * 8, [{"text": " "}], [{"text": "^2."}], [{"text": "^x"}],
-                    [{"text": "^1.", "num_format": "roman"}], [{"text": "^1.", "align": "left"}], "^1."):
+                    [{"text": "^1.", "num_format": "roman"}], [{"text": "^1.", "num_format": "hangul_number"}],
+                    [{"text": "^1.", "align": "left"}], "^1."):
             with self.subTest(bad=bad):
                 self.assertIn("E124", codes(hds.validate_document(self.doc(bad))))
 

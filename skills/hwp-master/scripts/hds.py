@@ -50,9 +50,10 @@ HDS_VERSION = "1"
 TOP_KEYS = {"version", "title", "font", "page_size", "orientation", "margins_mm", "header", "footer", "style",
             "outline_numbering", "blocks"}
 # 제목(개요) 번호 모양 — rhwp scaffold 의 outline_numbering 과 같은 형식. 생략한 뒤쪽 수준은 한글 기본
-# (1. 가. 1) 가) (1) (가) ①). 숫자 모양 낱말은 OWPML numFormat 의 소문자.
+# (1. 가. 1) 가) (1) (가) ①). 숫자 모양 낱말은 OWPML numFormat 의 소문자. 일이삼·一二三은 rhwp HWPX 저장
+# 낱말을 한글이 숫자로 그려 rhwp scaffold 가 받지 않는다.
 OUTLINE_NUM_FORMATS = ("digit", "circled_digit", "roman_capital", "roman_small", "latin_capital", "latin_small",
-                       "hangul_syllable", "hangul_number", "hanja_number")
+                       "hangul_syllable")
 OUTLINE_DEFAULTS = (("^1.", "digit"), ("^2.", "hangul_syllable"), ("^3)", "digit"), ("^4)", "hangul_syllable"),
                     ("(^5)", "digit"), ("(^6)", "hangul_syllable"), ("^7", "circled_digit"))
 OUTLINE_TEXT_MAX = 32

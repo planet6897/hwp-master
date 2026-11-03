@@ -29,7 +29,7 @@ HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔
 W201·E112 검사도 그 본문 폭으로 잰다. 본문 폭이나 높이가 50mm 아래가 되는 여백은 오류(E121)다.
 
 `outline_numbering`의 `num_format`은 `digit`(기본)·`circled_digit`·`roman_capital`·`roman_small`·`latin_capital`·
-`latin_small`·`hangul_syllable`·`hangul_number`·`hanja_number`이다. 예: `[{"text": "^1.", "num_format": "roman_capital"},
+`latin_small`·`hangul_syllable`이다. 예: `[{"text": "^1.", "num_format": "roman_capital"},
 {"text": "^2."}, {"text": "^3.", "num_format": "hangul_syllable"}]` → 제목이 `I.` `1.` `가.`. 목차 번호도 같은 모양으로 매긴다.
 제목 `text`에는 여전히 번호를 쓰지 않는다(E101). 설치된 rhwp scaffold 가 이 필드를 모르면 빌드가 E124 로 멈춘다.
 
