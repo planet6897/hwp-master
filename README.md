@@ -29,15 +29,13 @@ Claude Code 를 실행하고 GitHub 주소와 함께 "설치해줘"라고 입력
 나: https://github.com/planet6897/hwp-master 설치해줘
 ```
 
-AI 가 저장소를 홈 폴더의 `~/hwp-master` 에 받고, 문서 엔진 rhwp 를 설치·확인하고, 자동 테스트까지 돌립니다.
+AI 가 저장소를 홈 폴더의 `~/hwp-master` 에 받고, 문서 엔진 rhwp 를 설치·확인하고, 자동 테스트까지 돌린 뒤
+hwp-master 스킬을 Claude Code 사용자 스킬 폴더(`~/.claude/skills/hwp-master`)에 연결합니다.
 다른 위치를 원하면 함께 말합니다("~/tools/hwp-master 에 설치해줘").
 
-**설치가 끝나면 그 폴더에서 `claude` 를 새로 실행합니다.** 그 창에서 문서를 요청하면 됩니다(아래 [2. 만들기](#2-만들기)).
-
-```bash
-cd ~/hwp-master
-claude
-```
+**설치가 끝나면 그 창에서 바로 문서를 요청하면 됩니다**(아래 [2. 만들기](#2-만들기)). 설치한 AI 가 지침을 읽어 두고,
+다음부터는 어느 폴더에서 `claude` 를 실행해도 스킬이 자동으로 로딩됩니다. 연결은 복사가 아니라 링크라서
+`git pull` 하면 스킬도 함께 갱신됩니다. 연결을 풀려면 `python3 skills/hwp-master/scripts/install_skill.py --remove` 합니다.
 
 <details>
 <summary><strong>AI 에이전트용 설치 절차</strong> — GitHub 주소와 함께 설치를 요청받았을 때</summary>
@@ -49,7 +47,12 @@ claude
    1. `python3 skills/hwp-master/scripts/install_rhwp.py` — 지원하지 않는 플랫폼이면 아래 "소스에서 빌드"를 안내하고 멈춘다.
    2. `python3 skills/hwp-master/scripts/rhwp_locate.py` — 경로·버전 확인 (Linux 는 한글 글꼴 경고도 전한다).
    3. `python3 -m unittest discover -s tests` — 실패가 있으면 출력과 함께 알리고 설치 완료로 보고하지 않는다.
-3. 받은 폴더의 절대 경로와, 그 폴더에서 `claude` 를 새로 실행해 쓰라는 안내(`cd ~/hwp-master` 후 `claude`)로 마친다.
+   4. `python3 skills/hwp-master/scripts/install_skill.py` — `~/.claude/skills/hwp-master` 에 스킬 링크를 만든다.
+      이미 다른 hwp-master(플러그인·복사본)가 있어 실패하면 그 내용을 알리고, 지우지 말고 사용자에게 묻는다.
+3. 설치한 이 세션에서 바로 문서를 만들 수 있게 받은 폴더의 `AGENTS.md` 와 `skills/hwp-master/SKILL.md` 를 읽는다.
+   이후 작업은 저장소 루트를 작업 폴더로 삼는다.
+4. 받은 폴더의 절대 경로와, 이 창에서 바로 문서를 요청해도 되고 다음부터는 어느 폴더에서 `claude` 를 실행해도
+   hwp-master 스킬이 자동으로 로딩된다는 안내로 마친다.
 </details>
 
 > 저장소가 비공개인 동안에는 이 저장소에 접근 권한이 있는 GitHub 계정이 필요합니다. clone 과 rhwp 받기에
@@ -74,6 +77,7 @@ python3 skills/hwp-master/scripts/install_rhwp.py
 # rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-4e2cc6b/rhwp/rhwp
 python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다 (Linux 는 한글 글꼴도)
 python3 -m unittest discover -s tests               # 자동 테스트 (rhwp 0.9.0 에서 모두 OK)
+python3 skills/hwp-master/scripts/install_skill.py  # ~/.claude/skills/hwp-master 에 스킬 연결 (어느 폴더에서나 자동 로딩)
 ```
 
 Windows 에서는 `python3` 이 Microsoft Store 바로가기라 실행되지 않을 수 있습니다. 그때는 `python3` 을
