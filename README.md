@@ -29,32 +29,37 @@ Claude Code 를 실행하고 GitHub 주소와 함께 "설치해줘"라고 입력
 나: https://github.com/planet6897/hwp-master 설치해줘
 ```
 
-받을 위치를 말해도 됩니다("~/tools 에 설치해줘"). 말하지 않으면 지금 폴더 아래 `hwp-master` 에 받습니다.
-AI 가 저장소를 받고, 문서 엔진 rhwp 를 설치·확인하고, 자동 테스트까지 돌린 뒤 받은 폴더 경로를 알려 줍니다.
+AI 가 저장소를 홈 폴더의 `~/hwp-master` 에 받고, 문서 엔진 rhwp 를 설치·확인하고, 자동 테스트까지 돌립니다.
+다른 위치를 원하면 함께 말합니다("~/tools/hwp-master 에 설치해줘").
 
-**설치가 끝나면 받은 폴더에서 `claude` 를 새로 실행합니다**(`cd <받은 폴더>` 후 `claude`). 그 창에서 문서를
-요청하면 됩니다(아래 [2. 만들기](#2-만들기)).
+**설치가 끝나면 그 폴더에서 `claude` 를 새로 실행합니다.** 그 창에서 문서를 요청하면 됩니다(아래 [2. 만들기](#2-만들기)).
+
+```bash
+cd ~/hwp-master
+claude
+```
 
 <details>
 <summary><strong>AI 에이전트용 설치 절차</strong> — GitHub 주소와 함께 설치를 요청받았을 때</summary>
 
-1. 사용자가 위치를 말하지 않았으면 현재 폴더 아래에 `git clone https://github.com/planet6897/hwp-master.git` 한다.
-   같은 이름의 폴더가 이미 있으면 덮어쓰지 말고, 그 폴더가 이 저장소의 clone 이면 `git pull` 할지 사용자에게 묻는다.
+1. 사용자가 위치를 말하지 않았으면 `git clone https://github.com/planet6897/hwp-master.git ~/hwp-master` 한다
+   (Windows 는 `%USERPROFILE%\hwp-master`). 그 폴더가 이미 있으면 덮어쓰지 말고, 이 저장소의 clone 이면
+   `git pull` 할지 사용자에게 묻는다.
 2. 받은 폴더(저장소 루트)에서 차례로 실행한다. Windows 에서 `python3` 이 안 되면 `python`(또는 `py -3`)을 쓴다.
    1. `python3 skills/hwp-master/scripts/install_rhwp.py` — 지원하지 않는 플랫폼이면 아래 "소스에서 빌드"를 안내하고 멈춘다.
    2. `python3 skills/hwp-master/scripts/rhwp_locate.py` — 경로·버전 확인 (Linux 는 한글 글꼴 경고도 전한다).
    3. `python3 -m unittest discover -s tests` — 실패가 있으면 출력과 함께 알리고 설치 완료로 보고하지 않는다.
-3. 받은 폴더의 절대 경로와, 그 폴더에서 `claude` 를 새로 실행해 쓰라는 안내로 마친다.
+3. 받은 폴더의 절대 경로와, 그 폴더에서 `claude` 를 새로 실행해 쓰라는 안내(`cd ~/hwp-master` 후 `claude`)로 마친다.
 </details>
 
 > 저장소가 비공개인 동안에는 이 저장소에 접근 권한이 있는 GitHub 계정이 필요합니다. clone 과 rhwp 받기에
 > 같은 계정을 쓰므로 [GitHub CLI](https://cli.github.com/) 로 `gh auth login` 해 두세요.
 
 > Claude Code 는 터미널 CLI 대신 VS Code / JetBrains 확장으로 써도 됩니다. 설치 요청은 같고, 끝난 뒤
-> **File → Open Folder** 로 받은 폴더를 엽니다. 저장소 루트의 `AGENTS.md` 를 읽는 다른
+> **File → Open Folder** 로 `~/hwp-master` 폴더를 엽니다. 저장소 루트의 `AGENTS.md` 를 읽는 다른
 > 에이전트(Codex CLI, Cursor, Gemini CLI 등)도 동작할 수 있으나 확인하지 않았습니다.
 
-**나중에 업데이트:** 받은 폴더에서 연 Claude Code 에 "업데이트해줘"라고 하거나 직접 `git pull` 합니다.
+**나중에 업데이트:** `~/hwp-master` 에서 연 Claude Code 에 "업데이트해줘"라고 하거나 직접 `git pull` 합니다.
 rhwp 버전이 바뀌었으면 다시 "설치해줘"라고 하면 됩니다.
 
 <details>
@@ -63,8 +68,8 @@ rhwp 버전이 바뀌었으면 다시 "설치해줘"라고 하면 됩니다.
 AI 가 "설치해줘"에서 하는 일은 아래 명령과 같습니다.
 
 ```bash
-git clone https://github.com/planet6897/hwp-master.git
-cd hwp-master
+git clone https://github.com/planet6897/hwp-master.git ~/hwp-master
+cd ~/hwp-master
 python3 skills/hwp-master/scripts/install_rhwp.py
 # rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-4e2cc6b/rhwp/rhwp
 python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다 (Linux 는 한글 글꼴도)
