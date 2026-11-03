@@ -533,6 +533,10 @@ class ProduceTest(unittest.TestCase):
         self.assertEqual(aligns[tables[0][5]["para_pr"]], "RIGHT")  # 데이터 행 cell_align 유지
         problems = native.check(self.dir / "tbl" / "work" / "scaffold.hwpx", TABLE_DOC)
         self.assertTrue(any("머리 행" in p for p in problems) and any("열 폭" in p for p in problems))
+        # 모든 표(꾸밈 없는 표 포함)가 쪽 영역 안으로 제한된다 — scaffold 원본은 아니다
+        self.assertEqual(native.table_flow(out), [True] * 4)
+        self.assertEqual(native.table_flow(self.dir / "tbl" / "work" / "scaffold.hwpx"), [False] * 4)
+        self.assertTrue(any("쪽 영역" in p for p in problems), problems)
 
     def test_merge_and_cell_emphasis(self):
         out = self.dir / "merge" / "out.hwpx"

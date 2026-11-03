@@ -56,9 +56,15 @@ class MarkdownTest(unittest.TestCase):
         self.assertEqual(len(report["strippedHeadingNumbers"]), 2)
 
     def test_lists_follow_the_convention(self):
-        texts = [b["text"] for b in blocks_of(MD, "gaejosik")[0] if b["type"] == "paragraph"]
-        self.assertIn("□ 연간 출력량 약 120만 쪽", texts)
-        self.assertIn("  ○ 보관 공간 3개 층", texts)
+        # 개조식은 list 블록(기본 글머리 □ ○ - ·)으로, 번호 항목도 같은 목록 단계로 옮긴다
+        lists = [b for b in blocks_of(MD, "gaejosik")[0] if b["type"] == "list"]
+        self.assertEqual(lists[0], {"type": "list", "items": [
+            "연간 출력량 약 120만 쪽", {"text": "보관 공간 3개 층", "level": 2}, "취합에 평균 2일"]})
+        self.assertEqual(lists[1]["items"], ["양식 통폐합", "전자결재 의무화"])
+        # 규약이 없으면 기호 목록만 list(- ·), 번호 목록은 번호 문단으로 둔다
+        plain = blocks_of(MD)[0]
+        self.assertEqual(next(b for b in plain if b["type"] == "list")["markers"], ["-", "·", "-", "·"])
+        self.assertIn("1. 양식 통폐합", [b.get("text") for b in plain])
         texts = [b["text"] for b in blocks_of(MD, "gongmun")[0] if b["type"] == "paragraph"]
         self.assertIn("1. 연간 출력량 약 120만 쪽", texts)
         self.assertIn("  가. 보관 공간 3개 층", texts)
@@ -72,10 +78,18 @@ class MarkdownTest(unittest.TestCase):
                           if f.severity == "error"]
                 self.assertEqual(errors, [])
 
+    def test_list_levels_never_skip(self):
+        md = "# 제목\n\n## 장\n\n    - 너무 깊게 시작\n- 첫 단계\n"
+        blocks, _, _, report = blocks_of(md, "gaejosik")
+        lst = next(b for b in blocks if b["type"] == "list")
+        self.assertEqual(hds.validate_blocks([lst]), [])
+        self.assertTrue(report.get("listLevelAdjusted"))
+
     def test_table_alignment_and_losses(self):
         blocks, _, losses, _ = blocks_of(MD)
         table = next(b for b in blocks if b["type"] == "table")
         self.assertEqual(table["cell_align"], ["center", "left", "right"])
+        self.assertTrue(table["header_row"])  # Markdown 표의 첫 행은 머리행이다
         kinds = {i["kind"] for i in losses.items}
         self.assertEqual(kinds, {"char_format", "image"})
         self.assertNotIn("조직도", json.dumps(blocks, ensure_ascii=False), "그림 대체 문구를 본문으로 만들지 않는다")
@@ -128,9 +142,12 @@ class DocxTest(unittest.TestCase):
         self.assertEqual([(b["level"], b["text"]) for b in blocks if b["type"] == "heading"],
                          [(1, "회의 개요"), (2, "세부 안건")])
         texts = [b["text"] for b in blocks if b["type"] == "paragraph"]
-        self.assertEqual(texts, ["일시: 2027. 3. 2.", "□ 참석: 6명", "  ○ 외부 2명"])
-        self.assertEqual(next(b for b in blocks if b["type"] == "table")["rows"],
-                         [["안건", "결과"], ["예산", "원안 의결"]])
+        self.assertEqual(texts, ["일시: 2027. 3. 2."])
+        self.assertEqual(next(b for b in blocks if b["type"] == "list")["items"],
+                         ["참석: 6명", {"text": "외부 2명", "level": 2}])
+        table = next(b for b in blocks if b["type"] == "table")
+        self.assertEqual(table["rows"], [["안건", "결과"], ["예산", "원안 의결"]])
+        self.assertNotIn("header_row", table)  # DOCX 표는 머리행 표시를 알 수 없어 붙이지 않는다
         self.assertIn("char_format", {i["kind"] for i in losses.items})
 
 

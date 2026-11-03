@@ -12,6 +12,7 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
     table.caption            → 표 위 가운데 문단("{n}" = 표 순번), 표와 같은 쪽에 둠(keepWithNext)
     paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·취소선·글자색·형광펜·크기)
     paragraph.footnotes      → edit insert-footnote + insert-footnote-text
+    모든 표                  → edit set-table-props {"restrictInPage":true} (쪽 영역 안으로 제한)
     table.header_row         → 첫 행 셀마다 edit set-cell-props {fill, isHeader} +
                                apply-char-format-in-cell 굵게 + apply-para-format-in-cell 가운데
     table.col_widths         → edit set-column-widths (scaffold 표 폭을 비율로 나눔)
@@ -272,8 +273,9 @@ def table_styled(tb: dict) -> bool:
 
 
 def plan_empty(plan: dict) -> bool:
+    # 표가 하나라도 있으면 "쪽 영역 안으로 제한"을 켜야 하므로 편집이 필요하다
     return not (plan["page_breaks"] or plan["footnotes"] or plan["emphasis"] or plan["images"]
-                or plan["indents"] or any(table_styled(t) for t in plan["tables"]) or plan["page"]
+                or plan["indents"] or plan["tables"] or plan["page"]
                 or plan["header"] or plan["footer"])
 
 
@@ -375,6 +377,13 @@ def covered_cells(merges: List[dict]) -> set:
     """병합으로 가려지는 셀 (row, col) — 병합 첫 셀은 빠진다."""
     return {(r, c) for m in merges for r in range(m["row"], m["row"] + m["rowspan"])
             for c in range(m["col"], m["col"] + m["colspan"])} - {(m["row"], m["col"]) for m in merges}
+
+
+def table_flow(hwpx: Path) -> List[bool]:
+    """최상위 표마다 쪽 영역 안으로 제한(flowWithText="1")인가."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    return [t.find(f"{{{HP}}}pos").get("flowWithText") == "1" for t in _top_tables(root)]
 
 
 def split_widths(total: int, ratios: List[float]) -> List[int]:
@@ -654,6 +663,11 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
     new_total = table_total_hu(doc) if plan["page"] else None
     for tb in plan["tables"]:
         t = str(tb["table"])
+        # scaffold 표는 저장 시 flowWithText="0"(쪽 영역 밖으로 나갈 수 있음)이라 한컴이 쪽 끝 표를
+        # 각주 영역 위에 겹쳐 그린다. 한글에서 만든 표처럼 쪽 영역 안으로 제한한다.
+        if not step(["set-table-props", "--table", t, "--props", '{"restrictInPage":true}']):
+            result["error"] = "표 배치 속성 설정 실패"
+            return result
         if tb["col_widths"] or new_total:
             cols = split_widths(new_total or widths[tb["table"]], tb["col_widths"] or [1] * tb["cols"])
             if not step(["set-column-widths", "--table", t, "--widths", ",".join(map(str, cols))]):
@@ -791,6 +805,10 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
             if abs(w - want_total) > len(plan["tables"][i]["col_widths"] or [0] * plan["tables"][i]["cols"]):
                 problems.append(f"표 {i} 폭 {w} (본문 폭 기준 {want_total})")
     if plan["tables"]:
+        flows = table_flow(out)
+        loose = [i for i, f in enumerate(flows) if not f]
+        if loose:
+            problems.append(f"쪽 영역 안으로 제한되지 않은 표: {loose}")
         tables, fills, aligns = table_cells(out), fill_colors(out), para_aligns(out)
         shapes = char_shapes(out)
         for tb in plan["tables"]:

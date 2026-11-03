@@ -1,0 +1,12 @@
+{
+  "units": [
+    {"id": "U01", "title": "2021년 평가", "target_chars": 900,
+     "purpose": "성과와 한계를 개조식으로 대비", "sources": ["sources/2022년 국립국어원 업무계획.hwp"]},
+    {"id": "U02", "title": "2022년 정책 방향", "target_chars": 700,
+     "purpose": "정책 환경과 비전·수치 목표", "sources": ["sources/2022년 국립국어원 업무계획.hwp"]},
+    {"id": "U03", "title": "7대 추진 과제와 예산", "target_chars": 1100,
+     "purpose": "전략·과제·예산 표와 전략별 대표 사업", "sources": ["sources/2022년 국립국어원 업무계획.hwp"]},
+    {"id": "U04", "title": "역점 추진 과제", "target_chars": 500,
+     "purpose": "핵심 성과 과제와 현안 과제 요약", "sources": ["sources/2022년 국립국어원 업무계획.hwp"]}
+  ]
+}

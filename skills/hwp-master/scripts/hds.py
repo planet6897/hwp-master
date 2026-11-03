@@ -86,7 +86,7 @@ MANUAL_NUMBER = re.compile(
 A4_WIDTH_MM = 210.0
 SIDE_MARGINS_MM = 60.0
 TABLE_OUTER_MM = 2.0
-CELL_PAD_MM = 1.0
+CELL_PAD_MM = 2 * 510 * 25.4 / 7200  # scaffold 셀 안쪽 여백 좌우 510 HU (약 1.8mm) 씩
 BASE_EM_MM = 10.0 * 25.4 / 72.0  # 10pt
 
 

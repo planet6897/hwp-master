@@ -25,6 +25,14 @@
 ```json
 {"unit": "U01", "blocks": [
   {"type": "heading", "level": 1, "text": "추진 배경"},
-  {"type": "paragraph", "text": "□ 종이 문서 중심의 결재·보관 체계로 검색과 재활용이 어려움"}
+  {"type": "list", "items": [
+    "종이 문서 중심의 결재·보관 체계로 검색과 재활용이 어려움",
+    {"text": "연간 출력량 약 120만 쪽", "level": 2, "emphasis": [{"text": "120만 쪽", "bold": true}]}]}
 ]}
 ```
+
+- 개조식 항목은 기호를 문단에 직접 쓰지 말고 `list` 블록으로 쓴다(둘째 줄 내어쓰기가 맞는다).
+- 수치 비교는 표로 쓴다. 표마다 `caption`(`"<표 {n}> …"`)과 `header_row`를 붙이고, 셀 글이 한 줄을 넘는다는
+  W201 경고가 나오면 `col_widths`로 긴 열을 넓힌다. 같은 값이 세로로 반복되는 칸은 `merges`로 합친다.
+- 차트·그림은 자료의 수치로 그린 파일만 `image` 블록으로 넣고 `caption`을 붙인다.
+- 목차(`toc`)는 Strategist 가 계획했을 때만 U01 맨 앞에 `toc` + `page_break`로 둔다.

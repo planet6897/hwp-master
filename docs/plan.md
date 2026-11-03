@@ -263,6 +263,11 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
 - 2026-11-03: 목차(`toc`) — 제목마다 "번호 제목<탭>쪽" 문단 + `tabAutoRight`(오른쪽 끝 자동 탭). 쪽 번호는 한 번
   만든 결과의 `rhwp dump-pages --json`(paraIndex → 쪽)에서 읽어 다시 만든다. 7쪽 시험 문서에서 9개 항목 쪽 번호가
   한컴 2024 PDF 의 실제 제목 쪽과 모두 같고, 실루엣 98.69~100%. 점선 채움(tab leader)은 편집 명령이 탭 정의를 받지 않아 없음.
+- 2026-11-03: 새 블록 전체를 쓴 실사용 시험(공공 업무계획 35쪽 → 4쪽 요약, `examples/plan_summary/`). 찾은 것:
+  (1) rhwp scaffold 표가 `table.attr` bit13 은 켜고 `common.flow_with_text` 는 false 라 HWPX 에 flowWithText="0" 으로
+  저장 → 한컴이 쪽 끝 표를 각주 영역에 겹쳐 그림. 빌드가 모든 표에 `set-table-props {"restrictInPage":true}` 로 우회
+  (rhwp 쪽 수정은 별도 이슈 후보). (2) W201 셀 안쪽 여백을 1mm 로 잡아 넘침을 놓침 → scaffold 값 1.8mm×2.
+  (3) 작성 안내에 목록·표 캡션·목차 사용 시점이 없었음 → executor·strategist·generate 보강, Convert-in 도 list·header_row 로.
 - 각 블록은 rhwp 이슈 `task/<이슈번호>-scaffold-<블록>` 브랜치로 진행한다.
 - 완료 기준: 블록별로 rhwp 정본 게이트 통과(§7).
 

@@ -25,8 +25,10 @@ python3 scripts/convert.py <프로젝트> sources/<자료> [--convention gaejosi
 
 - 제목에 직접 쓴 번호("1. 개요")는 떼고 `strippedHeadingNumbers`에 기록한다 (개요 자동 번호와 이중 번호 방지).
 - 가장 높은 제목 수준이 1이 되게 당긴다. 다른 제목 출처가 없으면 맨 앞의 유일한 최상위 제목을 문서 제목으로 쓴다.
-- 목록은 규약의 항목 기호로 바꾼다: gaejosik `□ ○ - ㆍ`, gongmun `1. 가. 1) 가) …`(제목마다 다시 셈),
-  규약 없음은 `-`/`1.` 유지. 하위 단계는 두 칸 들여 쓴다.
+- 목록: gaejosik 은 `list` 블록(기본 글머리 `□ ○ - ·`, 단계별 여백·내어쓰기)으로, 규약 없는 기호 목록은
+  `list` 블록(`- ·`)으로 옮긴다. 단계를 건너뛴 항목은 한 단계씩 당기고 `listLevelAdjusted`에 남긴다.
+  번호가 매겨져야 하는 gongmun `1. 가. 1) 가) …`(제목마다 다시 셈)과 규약 없는 순서 목록(`1.`)은 문단으로 둔다.
+- Markdown 표는 첫 행이 머리행이므로 `header_row: true`를 붙인다. DOCX 표는 알 수 없어 붙이지 않는다.
 
 손실(`losses`) 종류: `image`(그림 — 본문에 넣지 않음), `char_format`(굵게·기울임 등), `link`(주소),
 `footnote`, `blockquote`, `code_block`, `cell_merge`(DOCX 병합 셀), `pdf_layout`, `pdf_structure`.

@@ -37,7 +37,8 @@ import conventions  # noqa: E402
 import hds  # noqa: E402
 
 # ------------------------------------------------------------------ 중간 표현
-# ("heading", level, text) / ("para", text) / ("item", depth, ordered, text) / ("table", rows, aligns)
+# ("heading", level, text) / ("para", text) / ("item", depth, ordered, text)
+# ("table", rows, aligns[, header]) — header 는 첫 행이 머리행으로 표시된 표(Markdown 표)
 
 
 class Losses:
@@ -143,7 +144,7 @@ def md_to_ir(text: str, losses: Losses, line_mode: bool = False) -> list:
             while i < len(lines) and "|" in lines[i] and lines[i].strip():
                 rows.append([inline(c, losses) for c in _split_row(lines[i])])
                 i += 1
-            ir.append(("table", rows, aligns))
+            ir.append(("table", rows, aligns, True))
             continue
         if re.match(r"^\s*([-*_])(\s*\1){2,}\s*$", line):
             flush()
@@ -310,6 +311,7 @@ def pdf_to_markdown(path: Path, rhwp: str, work: Path) -> str:
 # ------------------------------------------------------------------ IR → HDS
 
 GAEJOSIK = ["□", "○", "-", "ㆍ"]
+PLAIN_BULLETS = ["-", "·", "-", "·"]  # 규약이 없을 때 기호 목록
 
 
 def _gongmun_marker(depth: int, n: int) -> str:
@@ -332,8 +334,11 @@ def ir_to_blocks(ir: list, convention: Optional[str], report: dict,
         report["titleFromHeading"] = title
     blocks = []
     counters: dict = {}
+    current_list: Optional[dict] = None  # 이어 붙이는 중인 list 블록
     for b in ir:
         kind = b[0]
+        if kind != "item":
+            current_list = None
         if kind == "heading":
             level = max(1, min(7, b[1] - top + 1))
             text = b[2]
@@ -351,6 +356,21 @@ def ir_to_blocks(ir: list, convention: Optional[str], report: dict,
             depth, ordered, text = b[1], b[2], b[3]
             counters = {k: v for k, v in counters.items() if k <= depth}
             counters[depth] = counters.get(depth, 0) + 1
+            # 개조식과 규약 없는 기호 목록은 list 블록(단계별 여백·내어쓰기)으로 옮긴다.
+            # 번호 항목(gongmun, 규약 없는 순서 목록)은 번호가 매겨져야 하므로 문단으로 둔다.
+            if convention == "gaejosik" or (convention is None and not ordered):
+                markers = GAEJOSIK if convention == "gaejosik" else PLAIN_BULLETS
+                if current_list is None or current_list["markers"] != markers:
+                    current_list = {"type": "list", "markers": markers, "items": []}
+                    blocks.append(current_list)
+                prev = current_list["items"][-1]["level"] if current_list["items"] else 0
+                level = min(depth + 1, prev + 1, len(markers))
+                if level != depth + 1:
+                    report.setdefault("listLevelAdjusted", []).append(
+                        {"text": text, "from": depth + 1, "to": level})
+                current_list["items"].append({"text": text, "level": level})
+                continue
+            current_list = None
             indent = "  " * depth
             if convention == "gaejosik":
                 marker = GAEJOSIK[min(depth, 3)]
@@ -364,9 +384,16 @@ def ir_to_blocks(ir: list, convention: Optional[str], report: dict,
             ncols = max(len(r) for r in rows)
             rows = [r + [""] * (ncols - len(r)) for r in rows]
             block = {"type": "table", "rows": rows}
+            if len(b) > 3 and b[3] and len(rows) > 1:
+                block["header_row"] = True
             if any(aligns):
                 block["cell_align"] = [a or "justify" for a in (aligns + [None] * ncols)[:ncols]]
             blocks.append(block)
+    for blk in blocks:
+        if blk["type"] == "list":
+            blk["items"] = [it["text"] if it["level"] == 1 else it for it in blk["items"]]
+            if blk["markers"] == GAEJOSIK:
+                blk.pop("markers")  # list 기본 글머리(□ ○ - ·)를 쓴다
     return blocks, title
 
 
