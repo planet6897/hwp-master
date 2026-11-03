@@ -127,8 +127,14 @@ def _head(z: zipfile.ZipFile):
     for p in h.iter("{%s}paraPr" % NS["hh"]):
         al = p.find("hh:align", NS)
         ls = p.find(".//hh:lineSpacing", NS)
+        # 문단 위·아래 간격: 첫 margin 갈래(HwpUnitChar)의 prev·next, HWPUNIT(1pt = 100)
+        mg = p.find(".//hh:margin", NS)
+        prev = mg.find("hc:prev", NS) if mg is not None else None
+        nxt = mg.find("hc:next", NS) if mg is not None else None
         paras[p.get("id")] = {"align": al.get("horizontal") if al is not None else None,
-                              "ls": (ls.get("type"), int(ls.get("value"))) if ls is not None else None}
+                              "ls": (ls.get("type"), int(ls.get("value"))) if ls is not None else None,
+                              "before": int(prev.get("value")) / 100 if prev is not None else None,
+                              "after": int(nxt.get("value")) / 100 if nxt is not None else None}
     return chars, paras
 
 
@@ -181,9 +187,26 @@ def read_features(hwpx: Path) -> dict:
     body_chars, table_chars, body_pp = Counter(), Counter(), Counter()
     markers, order, ends, top_pt = Counter(), [], Counter(), []
     texts = []
+    # 보이는 문단 간격 = 문단 위·아래 간격 + 앞뒤의 빈 줄 높이. 실제 문서는 간격 대신 빈 줄로 띄우는
+    # 경우가 많아(보도자료 대부분 간격 0) 간격 값만 세면 빽빽한 서식을 권하게 된다.
+    blank, last = 0.0, None
     for p in out["paras"]:
         text = "".join(t for _, t in p["runs"])
         n = len(text.strip())
+        if not p["table"]:
+            pp = paras.get(p["pp"], {})
+            if not n and not text:
+                cid = next((c for c, _ in p["runs"] if c in chars), None)
+                pt = chars[cid]["pt"] if cid else 10.0
+                ls = pp.get("ls")
+                blank += pt * (ls[1] / 100 if ls and ls[0] == "PERCENT" else 1.6)
+                if last is not None:
+                    last["gap_after"] += pt * (ls[1] / 100 if ls and ls[0] == "PERCENT" else 1.6)
+                continue
+            if n:
+                p["gap_before"] = (pp.get("before") or 0) + blank
+                p["gap_after"] = pp.get("after") or 0
+                blank, last = 0.0, p
         if not n:
             continue
         for cid, t in p["runs"]:
@@ -200,13 +223,16 @@ def read_features(hwpx: Path) -> dict:
         e = ending_of(text)
         if e and n > 15:
             ends[e] += 1
-    # 최상위 항목(첫 기호) 문단의 글자 크기 = 개요 글자 크기 후보
+    # 최상위 항목(첫 기호) 문단의 글자 크기·글꼴·문단 간격 = 개요 서식 후보
+    top_font, top_gap = Counter(), Counter()
     if order:
         for p, text in texts:
             if marker_of(text) == order[0]:
                 cid = next((c for c, t in p["runs"] if t.strip()), None)
                 if cid in chars:
                     top_pt.append(chars[cid]["pt"])
+                    top_font[chars[cid]["font"]] += 1
+                top_gap[(p.get("gap_before"), p.get("gap_after"))] += 1
 
     def main_char(cnt: Counter) -> Optional[dict]:
         if not cnt:
@@ -219,15 +245,27 @@ def read_features(hwpx: Path) -> dict:
         for cid, t in p["runs"]:
             c = chars.get(cid)
             if c and t.strip() and (title is None or c["pt"] > title["pt"]):
-                title = {"pt": c["pt"], "bold": c["bold"], "align": paras.get(p["pp"], {}).get("align")}
+                pp = paras.get(p["pp"], {})
+                title = {"pt": c["pt"], "bold": c["bold"], "align": pp.get("align"), "font": c.get("font"),
+                         "before": p.get("gap_before"), "after": p.get("gap_after")}
     body_pp_main = paras.get(body_pp.most_common(1)[0][0], {}) if body_pp else {}
+    heading_gap = top_gap.most_common(1)[0][0] if top_gap else (None, None)
+    # 본문 간격: 개요(첫 기호) 문단을 뺀 본문 문단에서 글자 수로 가중한 최빈값
+    body_gap = Counter()
+    for p, text in texts:
+        if not (order and marker_of(text) == order[0]):
+            body_gap[(p.get("gap_before"), p.get("gap_after"))] += len(text.strip())
+    body_gap_main = body_gap.most_common(1)[0][0] if body_gap else (None, None)
     return {
         "page": page, "tables": out["tables"],
         "header": out["header"], "footer": out["footer"], "pagenum": out["pagenum"],
         "body_chars": sum(body_chars.values()), "table_chars": sum(table_chars.values()),
         "body": main_char(body_chars), "table_text": main_char(table_chars),
         "line_spacing": body_pp_main.get("ls"), "body_align": body_pp_main.get("align"),
+        "body_space": body_gap_main,
         "title": title, "top_marker_pt": statistics.median(top_pt) if top_pt else None,
+        "top_marker_font": top_font.most_common(1)[0][0] if top_font else None,
+        "heading_space": heading_gap,
         "markers": dict(markers), "marker_order": order[:6], "endings": dict(ends),
     }
 
@@ -280,6 +318,21 @@ def _vote(values: List, n: int, key=lambda v: v):
     k, c = cnt.most_common(1)[0]
     rep = next(v for v in vals if key(v) == k)
     return rep, round(c / n, 2)
+
+
+GAP_BAND_PT = 5
+
+
+def _gap_vote(values: List[Optional[float]], n: int):
+    """문단 간격(빈 줄 포함, pt): 중앙값을 0.5pt 로 반올림하고, 그 ±GAP_BAND_PT 안의 문서 비율을 일치율로 낸다.
+
+    간격은 빈 줄 수·글자 크기에 따라 연속으로 흩어져 최빈값이 대표하지 못한다. 0pt 도 유효한 관측값이다."""
+    vals = sorted(v for v in values if v is not None)
+    if not vals:
+        return None, 0
+    med = round(statistics.median(vals) * 2) / 2
+    near = sum(1 for v in vals if abs(v - med) <= GAP_BAND_PT)
+    return min(med, hds.STYLE_SPACE_RANGE[1]), round(near / max(n, 1), 2)
 
 
 def _pt_vote(values: List[Optional[float]], n: int):
@@ -369,6 +422,35 @@ def summarize(features: List[dict], sources: List[dict]) -> dict:
                 style["line_spacing"] = value
             else:
                 unsupported.append(f"줄 간격 {kind} {value} — hwp-master style.line_spacing 은 퍼센트만 씁니다")
+    # 역할별 글꼴: 문서 전체 글꼴(font)과 다를 때만 권장한다 (같으면 font 하나로 충분)
+    body_font = rec.get("font")
+    for key, values, denom in (
+            ("title_font", [(f.get("title") or {}).get("font") for f in features], n),
+            ("heading_font", [f.get("top_marker_font") for f in features if f.get("top_marker_pt")],
+             max(1, sum(1 for f in features if f.get("top_marker_pt")))),
+            ("table_font", [(f.get("table_text") or {}).get("font") for f in features if f.get("table_chars")],
+             max(1, sum(1 for f in features if f.get("table_chars"))))):
+        face, a = _vote(values, denom)
+        if face:
+            agree[key] = a
+            if a >= MIN_AGREE and face != body_font:
+                style[key] = face
+    # 역할별 문단 위·아래 간격(pt)
+    heading_docs = max(1, sum(1 for f in features if f.get("top_marker_pt")))
+    for role, denom in (("title", n), ("heading", heading_docs), ("body", n)):
+        for i, side in enumerate(("before", "after")):
+            if role == "title":
+                vals = [(f.get("title") or {}).get(side) for f in features]
+            elif role == "heading":
+                vals = [(f.get("heading_space") or (None, None))[i] for f in features if f.get("top_marker_pt")]
+            else:
+                vals = [(f.get("body_space") or (None, None))[i] for f in features]
+            gap, a = _gap_vote(vals, denom)
+            if gap is not None:
+                key = f"{role}_space_{side}"
+                agree[key] = a
+                if a >= MIN_AGREE:
+                    style[key] = gap
     for k in list(style):
         bad = hds.validate_style({"style": {k: style[k]}})
         if bad:
@@ -550,7 +632,8 @@ LOCK_KEYS = ("font", "page_size", "orientation", "margins_mm", "style", "convent
 def lock(name: str, project: Path, force: bool, rhwp: Optional[str] = None) -> dict:
     """프로필 권장값 → spec_lock.json. 반환: {"set": [...], "kept": [...]}.
 
-    rhwp 가 제목 번호 모양(outline_numbering)을 지원하지 않으면 그 값은 옮기지 않고 unsupported 에 적는다."""
+    rhwp 가 제목 번호 모양(outline_numbering)이나 글꼴 이름(역할별 *_font)을 지원하지 않으면 그 값은 옮기지 않고
+    unsupported 에 적는다."""
     found = find(name)
     if not found:
         raise SystemExit(f"프로필 {name!r} 이 없습니다 — `style_profile.py list` 로 목록을 확인하세요")
@@ -564,6 +647,16 @@ def lock(name: str, project: Path, force: bool, rhwp: Optional[str] = None) -> d
         if not rhwp or not native.supports_outline_numbering(rhwp):
             skip.add("outline_numbering")
             unsupported.append("제목 번호 모양(outline_numbering) — 설치된 rhwp 가 지원하지 않아 적용하지 않음")
+    style = prof["recommend"].get("style") or {}
+    fonts = [k for k in hds.STYLE_FONT_KEYS if k in style]
+    if fonts:
+        import native
+        if not rhwp or not native.supports_font_name(rhwp):
+            prof["recommend"]["style"] = {k: v for k, v in style.items() if k not in fonts}
+            if not prof["recommend"]["style"]:
+                skip.add("style")
+            unsupported.append(f"역할별 글꼴({', '.join(fonts)}) — 설치된 rhwp 가 글꼴 이름(fontName)을 지원하지 않아 "
+                               "적용하지 않음 (문서 전체 글꼴 font 는 적용)")
     lock_path = project / "spec_lock.json"
     spec = json.loads(lock_path.read_text(encoding="utf-8")) if lock_path.exists() else {}
     changed, kept = [], []
@@ -600,10 +693,19 @@ def describe(prof: dict) -> str:
     for label, val, k in (("글꼴", r.get("font"), "font"), ("본문", st.get("body_pt"), "body_pt"),
                           ("개요", st.get("heading_pt"), "heading_pt"), ("제목", st.get("title_pt"), "title_pt"),
                           ("표 글자", st.get("table_pt"), "table_pt"),
-                          ("줄 간격", st.get("line_spacing"), "line_spacing")):
+                          ("줄 간격", st.get("line_spacing"), "line_spacing"),
+                          ("제목 글꼴", st.get("title_font"), "title_font"),
+                          ("개요 글꼴", st.get("heading_font"), "heading_font"),
+                          ("본문 글꼴", st.get("body_font"), "body_font"),
+                          ("표 글꼴", st.get("table_font"), "table_font")):
         if val is not None:
             unit = "%" if k == "line_spacing" else ("pt" if k.endswith("_pt") else "")
             lines.append(f"  {label}: {val}{unit}{pct(k)}")
+    gaps = [f"{label} 위{st[f'{role}_space_before']}·아래{st[f'{role}_space_after']}"
+            for label, role in (("제목", "title"), ("개요", "heading"), ("본문", "body"))
+            if f"{role}_space_before" in st and f"{role}_space_after" in st]
+    if gaps:
+        lines.append(f"  문단 간격(pt): {', '.join(gaps)}")
     if r.get("marker_system") and a.get("marker_system", 0) >= MIN_AGREE:
         lines.append(f"  항목 체계: {' → '.join(r['marker_system'])}{pct('marker_system')}"
                      + (f" → 규약 {r['convention']}" if r.get("convention") else ""))

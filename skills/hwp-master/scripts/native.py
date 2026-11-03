@@ -22,9 +22,10 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
                                왼쪽 여백(단계)·내어쓰기(글머리 폭)
     header / footer          → edit insert-header-footer + insert-header-footer-text
                                (+ "{page}" 자리에 insert-field-in-hf 쪽 번호)
-    style                    → 문단마다 edit apply-char-format fontSize(제목·개요·본문) +
-                               apply-para-format lineSpacing, 표 셀마다 apply-char-format-in-cell
-                               fontSize(table_pt). 강조보다 먼저 적용해 강조 크기가 이긴다.
+    style                    → 문단마다 edit apply-char-format fontSize·fontName(제목·개요·본문) +
+                               apply-para-format lineSpacing·spacingBefore·spacingAfter, 표 셀마다
+                               apply-char-format-in-cell fontSize(table_pt)·fontName(table_font).
+                               강조보다 먼저 적용해 강조 크기가 이긴다.
                                목록 들여쓰기·글머리 폭은 본문 크기에 비례해 키운다.
 
 블록 → 문단 위치는 산술로 셈하지 않고 scaffold 산출물의 최상위 문단을 읽어 찾는다
@@ -183,6 +184,7 @@ def split(doc: dict, toc_pages: Optional[Dict[int, int]] = None) -> tuple:
             plan["tables"].append({
                 "table": ntab, "cols": max(len(r) for r in b["rows"]), "rows": len(b["rows"]),
                 "pt": (doc.get("style") or {}).get("table_pt"),
+                "font": (doc.get("style") or {}).get("table_font"),
                 "header_fill": (style.get("header_fill") or HEADER_FILL).upper()
                 if style.get("header_row") else None,
                 "col_widths": style.get("col_widths"), "merges": merges, "cell_emphasis": cell_marks})
@@ -270,6 +272,30 @@ def supports_outline_numbering(rhwp: str) -> bool:
     return _SUPPORT_CACHE[key]
 
 
+def supports_font_name(rhwp: str) -> bool:
+    """이 rhwp 의 apply-char-format 이 fontName(글꼴 이름)을 받는가.
+
+    모르는 props 키는 rhwp 가 조용히 무시하므로 종료 코드가 아니라 저장본의 글꼴로 판정한다."""
+    import tempfile
+    key = ("font_name", str(Path(rhwp).resolve()))
+    if key not in _SUPPORT_CACHE:
+        face = "hwpm-probe-font"
+        with tempfile.TemporaryDirectory(prefix="hwpm-probe-") as tmp:
+            spec, base, out = Path(tmp) / "probe.json", Path(tmp) / "probe.hwpx", Path(tmp) / "out.hwpx"
+            spec.write_text(json.dumps({"version": "1", "blocks": [{"type": "paragraph", "text": "probe"}]}),
+                            encoding="utf-8")
+            ok = False
+            run = dict(capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+            if subprocess.run([rhwp, "scaffold", str(spec), "-o", str(base)], **run).returncode == 0:
+                proc = subprocess.run([rhwp, "edit", "apply-char-format", str(base), "--para", "0", "--props",
+                                       json.dumps({"fontName": face}, separators=(",", ":")), "-o", str(out)], **run)
+                if proc.returncode == 0 and out.exists():
+                    shapes = char_shapes(out)
+                    ok = any(shapes.get(cid, {}).get("font") == face for cid in char_styles(out)[0])
+            _SUPPORT_CACHE[key] = ok
+    return _SUPPORT_CACHE[key]
+
+
 def heading_pages(hwpx: Path, rhwp: str, doc: dict) -> Dict[int, int]:
     """rhwp 쪽 나눔 결과에서 제목 블록 순번 → 쪽 번호(1부터)."""
     spec, _ = split(doc)
@@ -318,23 +344,56 @@ def list_indent(level: int, marker: str, scale: float = 1.0) -> tuple:
 
 
 def style_targets(spec: dict, plan: dict) -> List[tuple]:
-    """style 을 받을 scaffold 문단: (블록 순번 또는 "title", 글자 크기 pt 또는 None).
+    """style 을 받을 scaffold 문단: (블록 순번 또는 "title", 역할 "title"·"heading"·"body").
 
-    제목은 title_pt, 개요는 heading_pt, 본문 문단은 body_pt. 그림 문단은 글자가 없어 뺀다.
-    줄 간격은 이 문단 모두에 준다."""
+    제목은 title_*, 개요는 heading_*, 본문 문단(목록 항목·캡션 포함)은 body_* 를 받는다.
+    그림 문단은 글자가 없어 뺀다. 줄 간격은 이 문단 모두에 준다."""
     st = plan.get("style") or {}
     if not st:
         return []
     images = {img["block"] for img in plan["images"]}
     out: List[tuple] = []
     if spec.get("title"):
-        out.append(("title", st.get("title_pt")))
+        out.append(("title", "title"))
     for bi, b in enumerate(spec["blocks"]):
         if b.get("type") == "heading":
-            out.append((bi, st.get("heading_pt")))
+            out.append((bi, "heading"))
         elif b.get("type") == "paragraph" and bi not in images:
-            out.append((bi, st.get("body_pt")))
+            out.append((bi, "body"))
     return out
+
+
+# 문단 간격: apply-para-format 은 HWPUNIT 의 2배로 받는다(1pt = 100 HWPUNIT → 200, 여백과 같음)
+SPACE_PROP_PER_PT = 200
+SPACE_HU_PER_PT = 100
+
+
+def role_char_props(st: dict, role: str) -> Optional[str]:
+    """역할의 글자 크기·글꼴 → apply-char-format props (없으면 None)."""
+    props: Dict[str, object] = {}
+    if st.get(f"{role}_pt") is not None:
+        props["fontSize"] = int(round(st[f"{role}_pt"] * 100))
+    if st.get(f"{role}_font"):
+        props["fontName"] = st[f"{role}_font"]
+    return json.dumps(props, ensure_ascii=False, separators=(",", ":")) if props else None
+
+
+def role_para_props(st: dict, role: str) -> Optional[str]:
+    """줄 간격·역할의 문단 위·아래 간격 → apply-para-format props (없으면 None)."""
+    props: Dict[str, object] = {}
+    if st.get("line_spacing") is not None:
+        props.update({"lineSpacing": int(st["line_spacing"]), "lineSpacingType": "Percent"})
+    for side, key in (("before", "spacingBefore"), ("after", "spacingAfter")):
+        v = st.get(f"{role}_space_{side}")
+        if v is not None:
+            props[key] = int(round(v * SPACE_PROP_PER_PT))
+    return json.dumps(props, separators=(",", ":")) if props else None
+
+
+def style_fonts(doc: dict) -> List[str]:
+    """style 에 쓴 역할별 글꼴 이름들."""
+    st = doc.get("style") or {}
+    return [st[k] for k in ("title_font", "heading_font", "body_font", "table_font") if st.get(k)]
 
 
 def para_line_spacings(hwpx: Path) -> List[Optional[tuple]]:
@@ -347,6 +406,23 @@ def para_line_spacings(hwpx: Path) -> List[Optional[tuple]]:
         ls = pp.find(f".//{{{HH}}}lineSpacing")
         if ls is not None:
             shapes[pp.get("id")] = (ls.get("type"), int(ls.get("value")))
+    return [shapes.get(p.get("paraPrIDRef")) for p in root.findall(f"{{{HP}}}p")]
+
+
+def para_spacings(hwpx: Path) -> List[Optional[tuple]]:
+    """최상위 문단마다 (위 간격, 아래 간격) HWPUNIT. paraPr 의 첫 margin 갈래(HwpUnitChar)."""
+    hc = "http://www.hancom.co.kr/hwpml/2011/core"
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+        head = ET.fromstring(z.read("Contents/header.xml"))
+    shapes = {}
+    for pp in head.iter(f"{{{HH}}}paraPr"):
+        margin = pp.find(f".//{{{HH}}}margin")
+        if margin is None:
+            continue
+        prev, nxt = margin.find(f"{{{hc}}}prev"), margin.find(f"{{{hc}}}next")
+        shapes[pp.get("id")] = (int(prev.get("value")) if prev is not None else 0,
+                                int(nxt.get("value")) if nxt is not None else 0)
     return [shapes.get(p.get("paraPrIDRef")) for p in root.findall(f"{{{HP}}}p")]
 
 
@@ -621,11 +697,16 @@ def char_styles(hwpx: Path) -> List[List[str]]:
 
 
 def char_shapes(hwpx: Path) -> Dict[str, dict]:
-    """header.xml charPr id → {bold, italic, underline, strike, color, shade, height}."""
+    """header.xml charPr id → {bold, italic, underline, strike, color, shade, height, font(한글 글꼴)}."""
     with zipfile.ZipFile(hwpx) as z:
         root = ET.fromstring(z.read("Contents/header.xml"))
+    hangul = {}
+    for ff in root.iter(f"{{{HH}}}fontface"):
+        if ff.get("lang") == "HANGUL":
+            hangul = {f.get("id"): f.get("face") for f in ff.findall(f"{{{HH}}}font")}
     out = {}
     for cp in root.iter(f"{{{HH}}}charPr"):
+        ref = cp.find(f"{{{HH}}}fontRef")
         ul = cp.find(f"{{{HH}}}underline")
         so = cp.find(f"{{{HH}}}strikeout")
         out[cp.get("id")] = {"bold": cp.find(f"{{{HH}}}bold") is not None,
@@ -634,7 +715,8 @@ def char_shapes(hwpx: Path) -> Dict[str, dict]:
                              "strike": so is not None and so.get("shape", "NONE") != "NONE",
                              "color": (cp.get("textColor") or "").upper(),
                              "shade": (cp.get("shadeColor") or "").upper(),
-                             "height": int(cp.get("height") or 0)}
+                             "height": int(cp.get("height") or 0),
+                             "font": hangul.get(ref.get("hangul")) if ref is not None else None}
     return out
 
 
@@ -807,13 +889,15 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
                 result["error"] = "표 셀 병합 실패"
                 return result
         hidden = covered_cells(tb["merges"])
-        if tb.get("pt") is not None:
-            props = json.dumps({"fontSize": int(round(tb["pt"] * 100))}, separators=(",", ":"))
+        if tb.get("pt") is not None or tb.get("font"):
+            props = json.dumps({**({"fontSize": int(round(tb["pt"] * 100))} if tb.get("pt") is not None else {}),
+                                **({"fontName": tb["font"]} if tb.get("font") else {})},
+                               ensure_ascii=False, separators=(",", ":"))
             for r in range(tb["rows"]):
                 for c in range(tb["cols"]):
                     if (r, c) not in hidden and not step(["apply-char-format-in-cell", "--table", t, "--row", str(r),
                                                           "--col", str(c), "--props", props]):
-                        result["error"] = "표 글자 크기 적용 실패"
+                        result["error"] = "표 글자 크기·글꼴 적용 실패"
                         return result
         if tb["header_fill"]:
             props = json.dumps({"fillType": "solid", "fillColor": tb["header_fill"], "isHeader": True},
@@ -843,17 +927,15 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
             result["error"] = "목록 들여쓰기 실패"
             return result
     # 문서 글자 크기·줄 간격은 강조보다 먼저: 강조의 size 가 문서 크기를 덮어쓴다.
-    ls = (plan.get("style") or {}).get("line_spacing")
-    for target, pt in targets:
+    st = plan.get("style") or {}
+    for target, role in targets:
         para = "0" if target == "title" else str(paras[target])
-        if pt is not None and not step(["apply-char-format", "--para", para, "--props",
-                                        json.dumps({"fontSize": int(round(pt * 100))}, separators=(",", ":"))]):
-            result["error"] = "문서 글자 크기 적용 실패"
+        cprops, pprops = role_char_props(st, role), role_para_props(st, role)
+        if cprops and not step(["apply-char-format", "--para", para, "--props", cprops]):
+            result["error"] = "문서 글자 크기·글꼴 적용 실패"
             return result
-        if ls is not None and not step(["apply-para-format", "--para", para, "--props",
-                                        json.dumps({"lineSpacing": int(ls), "lineSpacingType": "Percent"},
-                                                   separators=(",", ":"))]):
-            result["error"] = "문서 줄 간격 적용 실패"
+        if pprops and not step(["apply-para-format", "--para", para, "--props", pprops]):
+            result["error"] = "문서 줄 간격·문단 간격 적용 실패"
             return result
     # 강조는 각주보다 먼저: 각주 컨트롤이 들어가기 전이라 오프셋이 HDS 글자 위치 그대로다.
     for em in plan["emphasis"]:
@@ -989,6 +1071,10 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
                     if any(shapes.get(cid, {}).get("height") != want
                            for k, cid in enumerate(c["chars"]) if k not in skip):
                         problems.append(f"{where} 표 글자 크기 미반영: 셀 ({c['row']},{c['col']}) (계획 {want})")
+            if tb.get("font"):
+                for c in cells:
+                    if any(shapes.get(cid, {}).get("font") != tb["font"] for cid in c["chars"]):
+                        problems.append(f"{where} 표 글꼴 미반영: 셀 ({c['row']},{c['col']}) (계획 {tb['font']})")
             for em in tb["cell_emphasis"]:
                 want = json.loads(em["props"])
                 ids = by_addr.get((em["row"], em["col"]), {}).get("chars", [])[em["start"]:em["start"] + em["count"]]
@@ -1018,22 +1104,25 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
 
 
 def _check_style(out: Path, doc: dict, shown, plan: dict) -> List[str]:
-    """style 의 글자 크기·줄 간격이 대상 문단에 들어갔는가. 크기를 준 강조 범위는 강조 크기를 따른다."""
+    """style 의 글자 크기·글꼴·줄 간격·문단 간격이 대상 문단에 들어갔는가. 크기를 준 강조 범위는 강조 크기를 따른다."""
     spec, _ = split(doc, shown)
     paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
     styles, shapes, spacings = char_styles(out), char_shapes(out), para_line_spacings(out)
+    gaps = para_spacings(out)
     sized = {}
     for em in plan["emphasis"]:
         if "fontSize" in json.loads(em["props"]):
             sized.setdefault(em["block"], set()).update(range(em["offset"], em["offset"] + em["count"]))
-    ls = plan["style"].get("line_spacing")
+    st = plan["style"]
+    ls = st.get("line_spacing")
     problems = []
-    for target, pt in style_targets(spec, plan):
+    for target, role in style_targets(spec, plan):
         pi = 0 if target == "title" else paras[target]
         where = "제목" if target == "title" else f"blocks[{target}]"
         if pi is None:
             problems.append(f"문서 서식 대상 문단 없음: {where}")
             continue
+        pt = st.get(f"{role}_pt")
         if pt is not None:
             want = int(round(pt * 100))
             skip = sized.get(target, set())
@@ -1041,8 +1130,21 @@ def _check_style(out: Path, doc: dict, shown, plan: dict) -> List[str]:
                    if k not in skip and shapes.get(cid, {}).get("height") != want]
             if bad:
                 problems.append(f"문서 글자 크기 미반영: {where} {sorted(set(bad))} (계획 {want})")
+        font = st.get(f"{role}_font")
+        if font:
+            bad = sorted({str(shapes.get(cid, {}).get("font")) for cid in styles[pi]} - {font})
+            if bad:
+                problems.append(f"문서 글꼴 미반영: {where} {bad} (계획 {font})")
         if ls is not None and spacings[pi] != ("PERCENT", int(ls)):
             problems.append(f"문서 줄 간격 미반영: {where} {spacings[pi]} (계획 {int(ls)}%)")
+        for k, side in enumerate(("before", "after")):
+            v = st.get(f"{role}_space_{side}")
+            if v is not None:
+                want = int(round(v * SPACE_HU_PER_PT))
+                got = gaps[pi][k] if gaps[pi] else None
+                if got != want:
+                    problems.append(f"문단 {'위' if side == 'before' else '아래'} 간격 미반영: {where} {got} "
+                                    f"(계획 {want})")
     return problems
 
 
