@@ -1,0 +1,72 @@
+{
+ "version": "1",
+ "documents": 48,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 15.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "□",
+   "○",
+   "1."
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.67,
+  "font": 0.54,
+  "body_pt": 0.38,
+  "title_pt": 0.85,
+  "heading_pt": 0.81,
+  "table_pt": 0.44,
+  "line_spacing": 0.6,
+  "marker_system": 0.19,
+  "pagenum": 0.56,
+  "ending": 0.52
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 8.5,
+  "table_text_share_median": 0.25,
+  "header_pct": 0.02,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.1,
+  "endings": {
+   "noun": 452,
+   "narrative": 477,
+   "nominal": 63
+  },
+  "marker_docs": {
+   "□": 40,
+   "○": 36,
+   "-": 20,
+   "1.": 26,
+   "①": 7,
+   "◇": 1,
+   "ㆍ": 1,
+   "1)": 1
+  }
+ },
+ "name": "보도자료-환경부",
+ "corpus": {
+  "by": "agency",
+  "documents": 48,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 48건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

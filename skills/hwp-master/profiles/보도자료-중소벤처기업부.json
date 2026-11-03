@@ -1,0 +1,62 @@
+{
+ "version": "1",
+ "documents": 31,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "heading_pt": 15.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.48,
+  "font": 0.39,
+  "body_pt": 0.42,
+  "title_pt": 0.77,
+  "heading_pt": 0.55,
+  "table_pt": 0.45,
+  "line_spacing": 0.39,
+  "marker_system": 0.32,
+  "pagenum": 0.87,
+  "ending": 0.59
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 7,
+  "table_text_share_median": 0.25,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.0,
+  "endings": {
+   "narrative": 371,
+   "noun": 256,
+   "nominal": 3
+  },
+  "marker_docs": {
+   "□": 19,
+   "○": 17,
+   "-": 3,
+   "①": 5,
+   "1.": 2,
+   "제N조": 1
+  }
+ },
+ "name": "보도자료-중소벤처기업부",
+ "corpus": {
+  "by": "agency",
+  "documents": 31,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 31건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

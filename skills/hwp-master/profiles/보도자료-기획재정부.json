@@ -1,0 +1,75 @@
+{
+ "version": "1",
+ "documents": 46,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "style": {
+   "title_pt": 15.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.61,
+  "font": 0.33,
+  "body_pt": 0.28,
+  "title_pt": 0.59,
+  "heading_pt": 0.24,
+  "table_pt": 0.43,
+  "line_spacing": 0.35,
+  "marker_system": 0.2,
+  "pagenum": 0.7,
+  "ending": 0.78
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6.0,
+  "table_text_share_median": 0.24,
+  "header_pct": 0.02,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.24,
+  "endings": {
+   "noun": 1779,
+   "nominal": 69,
+   "narrative": 511
+  },
+  "marker_docs": {
+   "1.": 7,
+   "□": 27,
+   "○": 26,
+   "1)": 3,
+   "-": 14,
+   "①": 5,
+   "◇": 6,
+   "(가)": 1,
+   "Ⅰ.": 4,
+   "▶": 2,
+   "(1)": 1
+  }
+ },
+ "name": "보도자료-기획재정부",
+ "corpus": {
+  "by": "agency",
+  "documents": 46,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 46건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

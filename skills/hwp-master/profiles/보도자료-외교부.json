@@ -1,0 +1,58 @@
+{
+ "version": "1",
+ "documents": 62,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "□"
+  ],
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 0.98,
+  "margins_mm": 0.45,
+  "font": 0.45,
+  "body_pt": 0.61,
+  "title_pt": 0.71,
+  "heading_pt": 0.26,
+  "table_pt": 0.4,
+  "line_spacing": 0.61,
+  "marker_system": 0.1,
+  "pagenum": 0.84,
+  "ending": 0.62
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4.0,
+  "table_text_share_median": 0.15,
+  "header_pct": 0.11,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.1,
+  "endings": {
+   "noun": 204,
+   "narrative": 335,
+   "nominal": 1
+  },
+  "marker_docs": {
+   "□": 18,
+   "○": 13,
+   "-": 9,
+   "1.": 6
+  }
+ },
+ "name": "보도자료-외교부",
+ "corpus": {
+  "by": "agency",
+  "documents": 62,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 62건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

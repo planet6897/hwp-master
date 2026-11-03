@@ -1,0 +1,74 @@
+{
+ "version": "1",
+ "documents": 126,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 15.0
+  },
+  "marker_system": [
+   "□",
+   "○",
+   "-"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 0.99,
+  "margins_mm": 0.13,
+  "font": 0.52,
+  "body_pt": 0.41,
+  "title_pt": 0.29,
+  "heading_pt": 0.56,
+  "table_pt": 0.22,
+  "line_spacing": 0.44,
+  "marker_system": 0.15,
+  "pagenum": 0.72,
+  "ending": 0.68
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5.5,
+  "table_text_share_median": 0.22,
+  "header_pct": 0.08,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.43,
+  "endings": {
+   "noun": 3447,
+   "nominal": 469,
+   "narrative": 1820
+  },
+  "marker_docs": {
+   "1.": 46,
+   "○": 75,
+   "1)": 13,
+   "-": 69,
+   "Ⅰ.": 23,
+   "제N조": 7,
+   "①": 23,
+   "가.": 21,
+   "(1)": 6,
+   "□": 69,
+   "가)": 4,
+   "ㆍ": 3,
+   "◇": 9,
+   "▶": 3,
+   "I.": 2,
+   "㉮": 1
+  }
+ },
+ "name": "기타",
+ "corpus": {
+  "by": "type",
+  "documents": 126,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 126건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

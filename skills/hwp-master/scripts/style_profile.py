@@ -29,6 +29,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -447,8 +448,77 @@ def profiles_dir() -> Path:
     return home / "profiles"
 
 
+# 스킬에 함께 배포하는 기본(예제) 프로필 — 공공기관 공개 문서 코퍼스의 관측 통계. 읽기 전용이며,
+# 같은 이름의 사용자 프로필(profiles_dir)이 있으면 그것이 우선한다.
+BUILTIN_DIR = Path(__file__).resolve().parent.parent / "profiles"
+
+
 def profile_path(name: str) -> Path:
+    """사용자 프로필 경로(등록 위치)."""
     return profiles_dir() / name / "profile.json"
+
+
+def find(name: str) -> Optional[tuple]:
+    """(경로, 출처) — 사용자 프로필 우선, 없으면 기본 프로필. 둘 다 없으면 None."""
+    check_name(name)
+    for path, origin in ((profile_path(name), "user"), (BUILTIN_DIR / f"{name}.json", "builtin")):
+        if path.exists():
+            return path, origin
+    return None
+
+
+def catalog() -> List[tuple]:
+    """(이름, 출처, 경로) — 같은 이름이면 사용자 프로필이 기본 프로필을 가린다."""
+    seen: Dict[str, tuple] = {}
+    if BUILTIN_DIR.exists():
+        for f in BUILTIN_DIR.glob("*.json"):
+            seen[f.stem] = (f.stem, "builtin", f)
+    root = profiles_dir()
+    if root.exists():
+        for f in root.glob("*/profile.json"):
+            seen[f.parent.name] = (f.parent.name, "user", f)
+    return [seen[k] for k in sorted(seen)]
+
+
+def summary_row(name: str, origin: str, prof: dict) -> dict:
+    """목록 한 줄 — 고를 때 보는 핵심 서식."""
+    r = prof.get("recommend", {})
+    st = r.get("style", {})
+    corpus = prof.get("corpus") or {}
+    return {"name": name, "origin": origin, "documents": prof.get("documents"),
+            "font": r.get("font"), "body_pt": st.get("body_pt"), "title_pt": st.get("title_pt"),
+            "line_spacing": st.get("line_spacing"), "markers": r.get("list_markers") or None,
+            "convention": r.get("convention"), "page_number": bool(r.get("footer")),
+            "outline_numbering": [native_number(lv) for lv in r.get("outline_numbering") or []] or None,
+            "when": prof.get("created") or corpus.get("collected")}
+
+
+def list_profiles(search: Optional[str] = None) -> List[dict]:
+    rows = []
+    for name, origin, path in catalog():
+        if search and search not in name:
+            continue
+        rows.append(summary_row(name, origin, json.loads(path.read_text(encoding="utf-8"))))
+    return rows
+
+
+def format_table(rows: List[dict]) -> str:
+    def cell(v, unit=""):
+        return "-" if v is None else f"{v:g}{unit}" if isinstance(v, float) else f"{v}{unit}"
+    head = ("이름", "구분", "문서", "글꼴", "본문", "제목", "줄간격", "항목", "쪽번호")
+    body = [(r["name"], "기본" if r["origin"] == "builtin" else "내 프로필", cell(r["documents"], "건"),
+             cell(r["font"]), cell(r["body_pt"], "pt"), cell(r["title_pt"], "pt"), cell(r["line_spacing"], "%"),
+             " ".join(r["markers"]) if r["markers"] else (" ".join(r["outline_numbering"]) if r["outline_numbering"]
+                                                          else "-"),
+             "넣음" if r["page_number"] else "-") for r in rows]
+    table = [head, *body]
+    widths = [max(_width(row[i]) for row in table) for i in range(len(head))]
+    return "\n".join("  ".join(c + " " * (w - _width(c)) for c, w in zip(row, widths)).rstrip() for row in table)
+
+
+def _width(text: str) -> int:
+    """터미널 표시 폭 — 한글·전각 문자는 2칸."""
+    return sum(2 if unicodedata.east_asian_width(ch) in "WF" else 1 for ch in text)
 
 
 def check_name(name: str) -> None:
@@ -468,11 +538,10 @@ def register(prof: dict, name: str, force: bool) -> Path:
 
 
 def load(name: str) -> dict:
-    check_name(name)
-    path = profile_path(name)
-    if not path.exists():
-        raise SystemExit(f"프로필 {name!r} 이 없습니다 ({path})")
-    return json.loads(path.read_text(encoding="utf-8"))
+    found = find(name)
+    if not found:
+        raise SystemExit(f"프로필 {name!r} 이 없습니다 — `style_profile.py list` 로 목록을 확인하세요")
+    return json.loads(found[0].read_text(encoding="utf-8"))
 
 
 LOCK_KEYS = ("font", "page_size", "orientation", "margins_mm", "style", "convention", "footer", "outline_numbering")
@@ -482,7 +551,12 @@ def lock(name: str, project: Path, force: bool, rhwp: Optional[str] = None) -> d
     """프로필 권장값 → spec_lock.json. 반환: {"set": [...], "kept": [...]}.
 
     rhwp 가 제목 번호 모양(outline_numbering)을 지원하지 않으면 그 값은 옮기지 않고 unsupported 에 적는다."""
-    prof = load(name)
+    found = find(name)
+    if not found:
+        raise SystemExit(f"프로필 {name!r} 이 없습니다 — `style_profile.py list` 로 목록을 확인하세요")
+    path, origin = found
+    raw = path.read_bytes()
+    prof = json.loads(raw.decode("utf-8"))
     unsupported = list(prof.get("unsupported", []))
     skip = set()
     if prof["recommend"].get("outline_numbering"):
@@ -501,8 +575,7 @@ def lock(name: str, project: Path, force: bool, rhwp: Optional[str] = None) -> d
             continue
         spec[k] = prof["recommend"][k]
         changed.append(k)
-    raw = profile_path(name).read_bytes()
-    spec["profile"] = {"name": name, "sha256": hashlib.sha256(raw).hexdigest()}
+    spec["profile"] = {"name": name, "origin": origin, "sha256": hashlib.sha256(raw).hexdigest()}
     problems = (hds.validate_page(spec, "spec_lock.json") + hds.validate_style(spec, "spec_lock.json")
                 + hds.validate_outline_numbering(spec, "spec_lock.json:"))
     if problems:
@@ -547,6 +620,9 @@ def describe(prof: dict) -> str:
         lines.append(f"  일치율이 낮아 권장값에서 뺀 항목: {', '.join(low)}")
     for u in prof.get("unsupported", []):
         lines.append(f"  적용 불가: {u}")
+    corpus = prof.get("corpus")
+    if corpus and corpus.get("note"):
+        lines.append(f"  출처: {corpus['note']}")
     return "\n".join(lines)
 
 
@@ -567,7 +643,9 @@ def main() -> int:
     p.add_argument("paths", nargs="+", type=Path)
     p.add_argument("--name", required=True)
     p.add_argument("--force", action="store_true")
-    sub.add_parser("list")
+    p = sub.add_parser("list", help="기본·내 프로필 목록 (핵심 서식 포함)")
+    p.add_argument("--search", help="이름에 이 글자가 든 프로필만 (예: 보도자료, 행정안전부)")
+    p.add_argument("--json", action="store_true")
     p = sub.add_parser("show")
     p.add_argument("name")
     p = sub.add_parser("lock")
@@ -588,10 +666,13 @@ def main() -> int:
             print(describe(dict(prof, name=args.name)))
             print(json.dumps({"ok": True, "profile": str(path)}, ensure_ascii=False))
     elif args.cmd == "list":
-        root = profiles_dir()
-        for d in sorted(root.glob("*/profile.json")) if root.exists() else []:
-            prof = json.loads(d.read_text(encoding="utf-8"))
-            print(f"{d.parent.name}\t문서 {prof['documents']}건\t{prof.get('created', '')}")
+        rows = list_profiles(args.search)
+        if args.json:
+            print(json.dumps(rows, ensure_ascii=False, indent=1))
+        elif rows:
+            print(format_table(rows))
+        else:
+            print("프로필이 없습니다" + (f" ('{args.search}' 검색)" if args.search else ""))
     elif args.cmd == "show":
         print(describe(load(args.name)))
     elif args.cmd == "lock":

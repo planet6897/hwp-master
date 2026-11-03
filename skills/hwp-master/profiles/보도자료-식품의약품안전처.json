@@ -1,0 +1,75 @@
+{
+ "version": "1",
+ "documents": 52,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 15.0
+  },
+  "marker_system": [
+   "□",
+   "○",
+   "-"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.75,
+  "font": 0.5,
+  "body_pt": 0.33,
+  "title_pt": 0.98,
+  "heading_pt": 0.54,
+  "table_pt": 0.37,
+  "line_spacing": 0.44,
+  "marker_system": 0.37,
+  "pagenum": 0.9,
+  "ending": 0.6
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6.5,
+  "table_text_share_median": 0.24,
+  "header_pct": 0.04,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.0,
+  "endings": {
+   "noun": 298,
+   "narrative": 517,
+   "nominal": 45
+  },
+  "marker_docs": {
+   "□": 31,
+   "○": 32,
+   "-": 21,
+   "1.": 11,
+   "가.": 2,
+   "◇": 5,
+   "(1)": 1,
+   "①": 3,
+   "제N조": 1
+  }
+ },
+ "name": "보도자료-식품의약품안전처",
+ "corpus": {
+  "by": "agency",
+  "documents": 52,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 52건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

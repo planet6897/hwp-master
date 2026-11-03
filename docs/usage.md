@@ -168,6 +168,24 @@ python3 $HM/scripts/template_fill.py fill $P --house 기관보고서 --data sour
 **문서 유형 프로필** — 서식 파일 대신 *실제로 작성된 문서들*이 있으면, 그 문서들의 서식을 뽑아 등록하고
 새 문서를 같은 서식으로 만들 수 있습니다.
 
+기본 프로필 30종이 함께 들어 있습니다 — 문서 유형별 8종(공문·보도자료·법령안·연구용역 등)과 부처 보도자료 등
+기관별 22종입니다. 공공기관 공개 문서 약 1만 건(2026-11 수집)의 관측 통계로 만든 *예시*이며 공식 서식 기준은
+아닙니다. 목록과 핵심 서식은 `list` 로 봅니다.
+
+```bash
+python3 $HM/scripts/style_profile.py list --search 보도자료
+```
+
+```
+이름                 구분  문서    글꼴  본문  제목  줄간격  항목  쪽번호
+보도자료             기본  1722건  -     14pt  15pt  -       -     넣음
+보도자료-행정안전부  기본  60건    바탕  14pt  15pt  -       □ ○   넣음
+...
+```
+
+"보도자료-행정안전부 프로필로 만들어 줘"처럼 이름을 말하면 됩니다. `--json` 은 기계용 출력입니다.
+내 문서로 만든 프로필이 같은 이름이면 그것이 우선합니다.
+
 ```bash
 python3 $HM/scripts/style_profile.py register ~/받은문서/의결서/ --name 권익위_의결서
 python3 $HM/scripts/style_profile.py show 권익위_의결서
@@ -182,7 +200,8 @@ python3 $HM/scripts/style_profile.py show 권익위_의결서
 ```
 
 Claude 에게 "권익위_의결서 프로필로 만들어 줘"라고 하면 기획 단계에서 프로필을 적용합니다(`lock`).
-같은 유형 문서를 5건 이상 주세요. 일치율이 50% 아래인 값은 적용하지 않습니다. 등록 위치는 `~/.hwp-master/profiles/` 입니다.
+같은 유형 문서를 5건 이상 주세요. 일치율이 50% 아래인 값은 적용하지 않습니다. 등록 위치는 `~/.hwp-master/profiles/` 이고,
+기본 프로필은 `skills/hwp-master/profiles/` 에 있습니다(읽기 전용).
 
 ### 4.5 여러 명분 만들기 (Mail-merge)
 

@@ -1,0 +1,74 @@
+{
+ "version": "1",
+ "documents": 60,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 14.5
+  },
+  "marker_system": [
+   "-",
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.28,
+  "font": 0.52,
+  "body_pt": 0.3,
+  "title_pt": 0.4,
+  "heading_pt": 0.72,
+  "table_pt": 0.3,
+  "line_spacing": 0.48,
+  "marker_system": 0.13,
+  "pagenum": 0.9,
+  "ending": 0.66
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 17.0,
+  "table_text_share_median": 0.26,
+  "header_pct": 0.17,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.13,
+  "endings": {
+   "narrative": 1348,
+   "noun": 2063,
+   "nominal": 528
+  },
+  "marker_docs": {
+   "□": 44,
+   "-": 44,
+   "○": 42,
+   "1.": 32,
+   "가)": 4,
+   "Ⅰ.": 5,
+   "①": 15,
+   "가.": 14,
+   "(가)": 1,
+   "(1)": 6,
+   "◇": 5,
+   "I.": 2,
+   "ㆍ": 4,
+   "1)": 7,
+   "▶": 2,
+   "제N조": 3
+  }
+ },
+ "name": "보도자료-정책브리핑",
+ "corpus": {
+  "by": "agency",
+  "documents": 60,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 60건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

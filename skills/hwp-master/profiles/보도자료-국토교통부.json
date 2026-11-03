@@ -1,0 +1,77 @@
+{
+ "version": "1",
+ "documents": 45,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 10,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 10
+  },
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.64,
+  "font": 0.44,
+  "body_pt": 0.42,
+  "title_pt": 0.58,
+  "heading_pt": 0.8,
+  "table_pt": 0.24,
+  "line_spacing": 0.51,
+  "marker_system": 0.4,
+  "pagenum": 0.87,
+  "ending": 0.55
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 7,
+  "table_text_share_median": 0.24,
+  "header_pct": 0.02,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.09,
+  "endings": {
+   "noun": 530,
+   "narrative": 470,
+   "nominal": 49
+  },
+  "marker_docs": {
+   "□": 43,
+   "○": 41,
+   "-": 23,
+   "1.": 9,
+   "◇": 1,
+   "①": 5,
+   "(가)": 1,
+   "가.": 1,
+   "▶": 1,
+   "Ⅰ.": 2,
+   "1)": 1
+  }
+ },
+ "name": "보도자료-국토교통부",
+ "corpus": {
+  "by": "agency",
+  "documents": 45,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 45건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

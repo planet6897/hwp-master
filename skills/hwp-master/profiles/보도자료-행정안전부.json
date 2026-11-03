@@ -1,0 +1,78 @@
+{
+ "version": "1",
+ "documents": 60,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "heading_pt": 14.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "convention": "gaejosik",
+  "list_markers": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.83,
+  "font": 0.55,
+  "body_pt": 0.6,
+  "title_pt": 0.98,
+  "heading_pt": 0.82,
+  "table_pt": 0.32,
+  "line_spacing": 0.3,
+  "marker_system": 0.58,
+  "pagenum": 0.63,
+  "ending": 0.66
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6.0,
+  "table_text_share_median": 0.22,
+  "header_pct": 0.07,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.02,
+  "endings": {
+   "narrative": 605,
+   "noun": 299,
+   "nominal": 13
+  },
+  "marker_docs": {
+   "□": 57,
+   "○": 57,
+   "1.": 2,
+   "-": 21,
+   "▶": 1,
+   "①": 2
+  }
+ },
+ "name": "보도자료-행정안전부",
+ "corpus": {
+  "by": "agency",
+  "documents": 60,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 60건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

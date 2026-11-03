@@ -1,0 +1,82 @@
+{
+ "version": "1",
+ "documents": 50,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 10,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 10
+  },
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "table_pt": 12.0,
+   "line_spacing": 160
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "convention": "gaejosik",
+  "list_markers": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.54,
+  "font": 0.46,
+  "body_pt": 0.54,
+  "title_pt": 0.7,
+  "heading_pt": 0.88,
+  "table_pt": 0.5,
+  "line_spacing": 0.5,
+  "marker_system": 0.62,
+  "pagenum": 0.66,
+  "ending": 0.62
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4.0,
+  "table_text_share_median": 0.17,
+  "header_pct": 0.14,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.1,
+  "endings": {
+   "narrative": 568,
+   "noun": 340,
+   "nominal": 9
+  },
+  "marker_docs": {
+   "□": 46,
+   "○": 44,
+   "-": 16,
+   "1.": 3,
+   "가.": 1,
+   "ㆍ": 1,
+   "①": 3,
+   "Ⅰ.": 1,
+   "◇": 1
+  }
+ },
+ "name": "보도자료-국무조정실",
+ "corpus": {
+  "by": "agency",
+  "documents": 50,
+  "collected": "2026-11",
+  "note": "공공기관 공개 문서 50건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
