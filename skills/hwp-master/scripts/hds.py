@@ -7,6 +7,7 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
      "orientation": "portrait"|"landscape"?, "margins_mm": {left, right, top, bottom, header, footer}?,
      "header"?: {"text": str}, "footer"?: {"text": str},
      "style"?: {"body_pt"?, "heading_pt"?, "title_pt"?, "table_pt"?: pt, "line_spacing"?: %},
+     "outline_numbering"?: [{"text": "^1.", "num_format"?: "roman_capital" | ...}],  # 제목 번호 모양
      "blocks": [heading | paragraph | table | page_break | image | list]}
 
     heading    {"type": "heading", "level": 1..7, "text": str}
@@ -47,7 +48,14 @@ import conventions
 
 HDS_VERSION = "1"
 TOP_KEYS = {"version", "title", "font", "page_size", "orientation", "margins_mm", "header", "footer", "style",
-            "blocks"}
+            "outline_numbering", "blocks"}
+# 제목(개요) 번호 모양 — rhwp scaffold 의 outline_numbering 과 같은 형식. 생략한 뒤쪽 수준은 한글 기본
+# (1. 가. 1) 가) (1) (가) ①). 숫자 모양 낱말은 OWPML numFormat 의 소문자.
+OUTLINE_NUM_FORMATS = ("digit", "circled_digit", "roman_capital", "roman_small", "latin_capital", "latin_small",
+                       "hangul_syllable", "hangul_number", "hanja_number")
+OUTLINE_DEFAULTS = (("^1.", "digit"), ("^2.", "hangul_syllable"), ("^3)", "digit"), ("^4)", "hangul_syllable"),
+                    ("(^5)", "digit"), ("(^6)", "hangul_syllable"), ("^7", "circled_digit"))
+OUTLINE_TEXT_MAX = 32
 # 문서 전체 글자 크기(pt)·줄 간격(%). 없으면 scaffold 기본(본문·표 10, 개요 12, 제목 18, 줄 간격 160)
 STYLE_PT_KEYS = ("body_pt", "heading_pt", "title_pt", "table_pt")
 STYLE_KEYS = STYLE_PT_KEYS + ("line_spacing",)
@@ -421,6 +429,28 @@ def validate_style(doc: dict, where: str = "") -> List[Finding]:
     return []
 
 
+def validate_outline_numbering(doc: dict, where: str = "") -> List[Finding]:
+    """E124: outline_numbering 은 수준 1 부터 1~7개의 {text, num_format?}. text 의 ^N 은 자기 수준 이하."""
+    levels = doc.get("outline_numbering")
+    if levels is None:
+        return []
+    if not isinstance(levels, list) or not 1 <= len(levels) <= 7:
+        return [_err("E124", "outline_numbering 은 수준 1 부터 1~7개의 목록이어야 합니다", where)]
+    for i, lv in enumerate(levels):
+        at = f"{where}outline_numbering[{i}]"
+        if not isinstance(lv, dict) or set(lv) - {"text", "num_format"} or not isinstance(lv.get("text"), str):
+            return [_err("E124", "항목은 {text, num_format?} 객체여야 합니다", at)]
+        text = lv["text"]
+        if not text.strip() or len(text) > OUTLINE_TEXT_MAX:
+            return [_err("E124", f"text 는 1~{OUTLINE_TEXT_MAX}자여야 합니다 (예: \"^{i + 1}.\")", at)]
+        refs = re.findall(r"\^(.?)", text)
+        if any(not (r.isdigit() and 1 <= int(r) <= i + 1) for r in refs):
+            return [_err("E124", f"'^' 뒤에는 1~{i + 1} 의 수준 번호가 와야 합니다 ({text!r})", at)]
+        if lv.get("num_format", "digit") not in OUTLINE_NUM_FORMATS:
+            return [_err("E124", f"num_format 은 {list(OUTLINE_NUM_FORMATS)} 중 하나입니다", at)]
+    return []
+
+
 def validate_header_footer(doc: dict, where: str = "") -> List[Finding]:
     out: List[Finding] = []
     for key in HF_KEYS:
@@ -618,6 +648,7 @@ def validate_document(doc) -> List[Finding]:
             out.append(_err("E004", f"{key} 는 문자열이어야 합니다"))
     out.extend(validate_header_footer(doc))
     out.extend(validate_style(doc))
+    out.extend(validate_outline_numbering(doc))
     blocks = doc.get("blocks", [])
     out.extend(validate_blocks(blocks))
     out.extend(validate_page_breaks(blocks))
@@ -642,7 +673,7 @@ def assemble(project: Path) -> dict:
     """spec_lock.json + outline.json 순서의 units/*.json → HDS 문서."""
     lock = load_json(project / "spec_lock.json")
     doc = {"version": HDS_VERSION}
-    for key in ("title", "font", "style") + PAGE_KEYS + HF_KEYS:
+    for key in ("title", "font", "style", "outline_numbering") + PAGE_KEYS + HF_KEYS:
         if lock.get(key) is not None:
             doc[key] = lock[key]
     order = _unit_order(project)
@@ -689,6 +720,7 @@ def lint_project(project: Path, stage: str = "final") -> List[Finding]:
                         "spec_lock.json"))
     out.extend(validate_header_footer(lock, "spec_lock.json:"))
     out.extend(validate_style(lock, "spec_lock.json"))
+    out.extend(validate_outline_numbering(lock, "spec_lock.json:"))
     out.extend(validate_page(lock, "spec_lock.json"))
     width = page_geometry(lock)["content_mm"]
     all_blocks = []

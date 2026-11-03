@@ -22,10 +22,16 @@ HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔
 | `footer` | `{"text": "- {page} -"}` | 모든 쪽 꼬리말 한 줄, 가운데 정렬. `{page}`는 쪽 번호 (한 번만) |
 | `orientation` | `"portrait"`(기본) 또는 `"landscape"` | 용지 방향. 가로면 한글의 "가로" 용지로 저장된다 |
 | `margins_mm` | `{"left", "right", "top", "bottom", "header", "footer"}` 중 일부 (mm) | 용지 여백. 기본은 좌우 30, 위 20, 아래·머리말·꼬리말 15 |
+| `outline_numbering` | 수준 1 부터 1~7개의 `{"text": "^1.", "num_format": "roman_capital"}` | 제목(개요) 번호 모양. `^N`이 그 수준 번호가 되고, 생략한 뒤쪽 수준은 한글 기본(`1.` `가.` `1)` …). rhwp 가 지원해야 한다(아래) |
 | `style` | `{"body_pt", "heading_pt", "title_pt", "table_pt", "line_spacing"}` 중 일부 | 문서 전체 글자 크기(pt, 6~40, 0.5 단위)와 줄 간격(%, 80~400 정수). 기본은 본문·표 10, 개요 12, 제목 18, 줄 간격 160 |
 
 용지 방향이나 여백을 바꾸면 모든 표가 새 본문 폭으로 넓어지거나 좁아지고(열 비율은 유지), 그림의 최대 폭과
 W201·E112 검사도 그 본문 폭으로 잰다. 본문 폭이나 높이가 50mm 아래가 되는 여백은 오류(E121)다.
+
+`outline_numbering`의 `num_format`은 `digit`(기본)·`circled_digit`·`roman_capital`·`roman_small`·`latin_capital`·
+`latin_small`·`hangul_syllable`·`hangul_number`·`hanja_number`이다. 예: `[{"text": "^1.", "num_format": "roman_capital"},
+{"text": "^2."}, {"text": "^3.", "num_format": "hangul_syllable"}]` → 제목이 `I.` `1.` `가.`. 목차 번호도 같은 모양으로 매긴다.
+제목 `text`에는 여전히 번호를 쓰지 않는다(E101). 설치된 rhwp scaffold 가 이 필드를 모르면 빌드가 E124 로 멈춘다.
 
 `style`은 기관 문서 관행(예: 본문 휴먼명조 15pt, 줄 간격 160%)을 맞출 때 쓴다. 보통 Strategist 가 문서 유형
 프로필(`style_profile.py lock`)로 `spec_lock.json`에 넣는다. 본문 크기를 바꾸면 목록 들여쓰기·글머리 폭도 같은
@@ -168,6 +174,7 @@ W201·E112 검사도 그 본문 폭으로 잰다. 본문 폭이나 높이가 50m
 | E120 | `caption`이 비었거나 `{n}`을 두 번 이상 씀 |
 | E121 | `orientation` 값이 틀리거나 `margins_mm` 형식이 틀리거나 본문 폭·높이가 50mm 아래 |
 | E122 | `toc`가 두 개 이상이거나 `title`·`levels` 형식이 틀림 |
+| E124 | `outline_numbering` 형식이 틀리거나(1~7개, `text` 1~32자, `^N`은 자기 수준 이하, `num_format` 값) 설치된 rhwp 가 지원하지 않음 |
 | E123 | `style`이 빈 객체이거나 모르는 키가 있거나 글자 크기(6~40pt, 0.5 단위)·줄 간격(80~400% 정수) 범위 밖 |
 | E005 | `cell_align`이 `justify`/`left`/`center`/`right`(또는 열별 목록)가 아님 |
 

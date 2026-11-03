@@ -99,15 +99,82 @@ class SummarizeTest(unittest.TestCase):
         self.assertNotIn("convention", prof["recommend"])
         self.assertNotIn("list_markers", prof["recommend"])
 
-    def test_unsupported_numbering(self):
-        prof = style_profile.summarize([feature(order=("Ⅰ.", "□", "○"))] * 3, [])
-        self.assertTrue(any("Ⅰ." in u for u in prof["unsupported"]))
-        self.assertEqual(prof["recommend"]["convention"], "gaejosik")
 
     def test_non_percent_line_spacing_unsupported(self):
         prof = style_profile.summarize([feature(ls=("FIXED", 2000))] * 2, [])
         self.assertNotIn("line_spacing", prof["recommend"]["style"])
         self.assertTrue(any("FIXED" in u for u in prof["unsupported"]))
+
+
+OUTLINE = [{"text": "^1.", "num_format": "roman_capital"}, {"text": "^2."},
+           {"text": "^3.", "num_format": "hangul_syllable"}]
+
+
+class OutlineNumberingTest(unittest.TestCase):
+    """제목 번호 모양(outline_numbering): 검사·목차 번호·프로필 매핑 (rhwp 없이)."""
+
+    def doc(self, outline=OUTLINE):
+        return {"version": "1", "outline_numbering": outline, "blocks": [
+            {"type": "heading", "level": 1, "text": "가"}, {"type": "heading", "level": 2, "text": "나"},
+            {"type": "heading", "level": 3, "text": "다"}, {"type": "heading", "level": 3, "text": "라"},
+            {"type": "heading", "level": 1, "text": "마"}, {"type": "heading", "level": 4, "text": "바"}]}
+
+    def test_valid_and_invalid(self):
+        self.assertEqual(codes(hds.validate_document(self.doc())), [])
+        for bad in ([], [{"text": "^1"}] * 8, [{"text": " "}], [{"text": "^2."}], [{"text": "^x"}],
+                    [{"text": "^1.", "num_format": "roman"}], [{"text": "^1.", "align": "left"}], "^1."):
+            with self.subTest(bad=bad):
+                self.assertIn("E124", codes(hds.validate_document(self.doc(bad))))
+
+    def test_toc_numbers_follow_outline(self):
+        nums = [e["number"] for e in native.toc_entries(self.doc(), 7)]
+        self.assertEqual(nums, ["I.", "1.", "가.", "나.", "II.", "가)"])  # 4수준은 한글 기본 ^4)
+        plain = {k: v for k, v in self.doc().items() if k != "outline_numbering"}
+        self.assertEqual([e["number"] for e in native.toc_entries(plain, 7)][:3], ["1.", "1.1.", "1.1.1."])
+
+    def test_format_number_matches_rhwp(self):
+        self.assertEqual([native.format_number(n, "roman_capital") for n in (1, 4, 9, 14)], ["I", "IV", "IX", "XIV"])
+        self.assertEqual(native.format_number(27, "latin_capital"), "AA")
+        self.assertEqual(native.format_number(15, "hangul_syllable"), "15")
+        self.assertEqual(native.format_number(3, "circled_digit"), "③")
+
+    def test_profile_maps_roman_headings(self):
+        prof = style_profile.summarize([feature(order=("Ⅰ.", "1.", "□", "○"))] * 3, [])
+        r = prof["recommend"]
+        self.assertEqual(r["outline_numbering"], [{"text": "^1.", "num_format": "roman_capital"},
+                                                  {"text": "^2.", "num_format": "digit"}])
+        self.assertEqual(r["list_markers"], ["□"])  # 항목 체계는 앞 3단계까지 본다
+        self.assertEqual(r["convention"], "gaejosik")
+        r = style_profile.summarize([feature(order=("Ⅰ.", "□", "○"))] * 3, [])["recommend"]
+        self.assertEqual(r["outline_numbering"], [{"text": "^1.", "num_format": "roman_capital"}])
+        self.assertEqual(r["list_markers"], ["□", "○"])
+        # 1. 가. 로 시작하면 공문서 본문 항목으로 보고 제목 번호로 옮기지 않는다
+        self.assertNotIn("outline_numbering",
+                         style_profile.summarize([feature(order=("1.", "가."))] * 3, [])["recommend"])
+
+    def test_lock_skips_outline_when_rhwp_lacks_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = os.environ.get("HWP_MASTER_HOME")
+            os.environ["HWP_MASTER_HOME"] = tmp
+            try:
+                prof = style_profile.summarize([feature(order=("Ⅰ.", "□"))] * 3, [])
+                style_profile.register(prof, "로마", force=False)
+                proj = Path(tmp) / "p"
+                proj.mkdir()
+                old = native.supports_outline_numbering
+                native.supports_outline_numbering = lambda rhwp: False
+                try:
+                    res = style_profile.lock("로마", proj, force=False, rhwp="rhwp")
+                finally:
+                    native.supports_outline_numbering = old
+                spec = json.loads((proj / "spec_lock.json").read_text(encoding="utf-8"))
+                self.assertNotIn("outline_numbering", spec)
+                self.assertTrue(any("outline_numbering" in u for u in res["unsupported"]))
+            finally:
+                if home is None:
+                    os.environ.pop("HWP_MASTER_HOME", None)
+                else:
+                    os.environ["HWP_MASTER_HOME"] = home
 
 
 class StyleBuildTest(unittest.TestCase):

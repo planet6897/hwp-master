@@ -68,6 +68,14 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
         report["stoppedAt"] = "hds_lint"
         return report
 
+    if doc.get("outline_numbering") and not native.supports_outline_numbering(rhwp):
+        report["findings"].append(hds.Finding(
+            "error", "E124", "이 rhwp 는 제목 번호 모양(outline_numbering)을 지원하지 않습니다 — "
+            "rhwp 를 업데이트하거나 outline_numbering 을 빼세요").to_dict())
+        report["ok"] = False
+        report["stoppedAt"] = "hds_lint"
+        return report
+
     spec_path = workdir / "document.hds.json"
     spec_path.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     produced = native.produce(doc, out_hwpx, rhwp, workdir / "native")

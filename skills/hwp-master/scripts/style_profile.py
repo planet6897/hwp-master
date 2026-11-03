@@ -64,6 +64,26 @@ NOTE_MARKERS = {"※", "*"}  # 주석 기호는 항목 체계에서 뺀다
 GAEJOSIK = {"□", "○", "-", "ㆍ"}
 GONGMUN = ["1.", "가.", "1)", "가)", "(1)", "(가)", "①", "㉮"]
 LIST_MARKER_CHAR = {"□": "□", "○": "○", "-": "-", "ㆍ": "ㆍ", "▶": "▶", "◇": "◇"}
+# 제목 번호로 옮길 수 있는 기호 → (형식 문자열 틀, num_format). "{L}" 은 수준 번호.
+HEADING_NUMBER = {"Ⅰ.": ("^{L}.", "roman_capital"), "I.": ("^{L}.", "roman_capital"),
+                  "1.": ("^{L}.", "digit"), "가.": ("^{L}.", "hangul_syllable"),
+                  "1)": ("^{L})", "digit"), "가)": ("^{L})", "hangul_syllable"),
+                  "(1)": ("(^{L})", "digit"), "(가)": ("(^{L})", "hangul_syllable"), "①": ("^{L}", "circled_digit")}
+
+
+def outline_of(system: List[str]) -> Optional[List[dict]]:
+    """항목 체계가 로마 숫자 제목(Ⅰ.)으로 시작하면, 앞쪽 번호 기호들을 제목 번호(outline_numbering)로.
+
+    1. 가. 로 시작하는 체계는 공문서 항목(본문 기호)으로 보고 제목 번호로 옮기지 않는다."""
+    if not system or system[0] not in ("Ⅰ.", "I."):
+        return None
+    out = []
+    for m in system:
+        if m not in HEADING_NUMBER:
+            break
+        text, fmt = HEADING_NUMBER[m]
+        out.append({"text": text.replace("{L}", str(len(out) + 1)), "num_format": fmt})
+    return out
 
 
 # ---------------------------------------------------------------- 문서 한 건 읽기
@@ -245,9 +265,14 @@ def sha256(path: Path) -> str:
 
 # ---------------------------------------------------------------- 다수결
 
+def _freeze(v):
+    """JSON 에서 다시 읽은 특징(리스트)도 튜플처럼 셀 수 있게 한다."""
+    return tuple(_freeze(x) for x in v) if isinstance(v, (list, tuple)) else v
+
+
 def _vote(values: List, n: int, key=lambda v: v):
     """(최빈값, 일치율). 값이 없으면 (None, 0)."""
-    vals = [v for v in values if v is not None]
+    vals = [_freeze(v) for v in values if v is not None]
     if not vals:
         return None, 0.0
     cnt = Counter(key(v) for v in vals)
@@ -361,10 +386,14 @@ def summarize(features: List[dict], sources: List[dict]) -> dict:
                 rec["convention"] = conv
             if markers and system[0] in LIST_MARKER_CHAR:
                 rec["list_markers"] = markers
-        if system[0] in ("Ⅰ.", "I.", "가."):
-            unsupported.append(f"제목 번호 {system[0]} 형식 — hwp-master 개요 번호는 아직 1. 1.1. 만 씁니다")
+        outline = outline_of(system) if a >= MIN_AGREE else None
+        if outline:
+            rec["outline_numbering"] = outline
+            if system[len(outline):] and system[len(outline)] in LIST_MARKER_CHAR:
+                rec["list_markers"] = [LIST_MARKER_CHAR[m] for m in system[len(outline):] if m in LIST_MARKER_CHAR]
+                rec["convention"] = convention_of(system[len(outline):]) or rec.get("convention")
     pagenum = sum(1 for f in features if f["pagenum"]) / n
-    agree["pagenum"] = round(pagenum, 2)
+    agree["pagenum"] = round(max(pagenum, 1 - pagenum), 2)  # 넣는 쪽이든 안 넣는 쪽이든 다수결 비율
     if pagenum >= MIN_AGREE:
         rec["footer"] = dict(PAGE_FOOTER)
     ends = Counter()
@@ -446,17 +475,26 @@ def load(name: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-LOCK_KEYS = ("font", "page_size", "orientation", "margins_mm", "style", "convention", "footer")
+LOCK_KEYS = ("font", "page_size", "orientation", "margins_mm", "style", "convention", "footer", "outline_numbering")
 
 
-def lock(name: str, project: Path, force: bool) -> dict:
-    """프로필 권장값 → spec_lock.json. 반환: {"set": [...], "kept": [...]}."""
+def lock(name: str, project: Path, force: bool, rhwp: Optional[str] = None) -> dict:
+    """프로필 권장값 → spec_lock.json. 반환: {"set": [...], "kept": [...]}.
+
+    rhwp 가 제목 번호 모양(outline_numbering)을 지원하지 않으면 그 값은 옮기지 않고 unsupported 에 적는다."""
     prof = load(name)
+    unsupported = list(prof.get("unsupported", []))
+    skip = set()
+    if prof["recommend"].get("outline_numbering"):
+        import native
+        if not rhwp or not native.supports_outline_numbering(rhwp):
+            skip.add("outline_numbering")
+            unsupported.append("제목 번호 모양(outline_numbering) — 설치된 rhwp 가 지원하지 않아 적용하지 않음")
     lock_path = project / "spec_lock.json"
     spec = json.loads(lock_path.read_text(encoding="utf-8")) if lock_path.exists() else {}
     changed, kept = [], []
     for k in LOCK_KEYS:
-        if k not in prof["recommend"]:
+        if k not in prof["recommend"] or k in skip:
             continue
         if k in spec and spec[k] != prof["recommend"][k] and not force:
             kept.append(k)
@@ -465,13 +503,14 @@ def lock(name: str, project: Path, force: bool) -> dict:
         changed.append(k)
     raw = profile_path(name).read_bytes()
     spec["profile"] = {"name": name, "sha256": hashlib.sha256(raw).hexdigest()}
-    problems = hds.validate_page(spec, "spec_lock.json") + hds.validate_style(spec, "spec_lock.json")
+    problems = (hds.validate_page(spec, "spec_lock.json") + hds.validate_style(spec, "spec_lock.json")
+                + hds.validate_outline_numbering(spec, "spec_lock.json:"))
     if problems:
         raise SystemExit("; ".join(f"[{f.code}] {f.message}" for f in problems))
     lock_path.write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     return {"set": changed, "kept": kept, "spec_lock": str(lock_path),
             "list_markers": prof["recommend"].get("list_markers"), "ending": prof["recommend"].get("ending"),
-            "unsupported": prof.get("unsupported", [])}
+            "unsupported": unsupported}
 
 
 def describe(prof: dict) -> str:
@@ -492,18 +531,29 @@ def describe(prof: dict) -> str:
         if val is not None:
             unit = "%" if k == "line_spacing" else ("pt" if k.endswith("_pt") else "")
             lines.append(f"  {label}: {val}{unit}{pct(k)}")
-    if r.get("marker_system"):
+    if r.get("marker_system") and a.get("marker_system", 0) >= MIN_AGREE:
         lines.append(f"  항목 체계: {' → '.join(r['marker_system'])}{pct('marker_system')}"
                      + (f" → 규약 {r['convention']}" if r.get("convention") else ""))
+    if r.get("outline_numbering"):
+        lines.append("  제목 번호: " + " → ".join(
+            native_number(lv) for lv in r["outline_numbering"]))
     if r.get("ending"):
         lines.append(f"  문장 종결: {'명사형(~함·~임)' if r['ending'] == 'nominal' else '서술형(~다)'}{pct('ending')}")
     lines.append(f"  쪽 번호: {'넣음' if r.get('footer') else '넣지 않음'}{pct('pagenum')}")
     low = [k for k, v in a.items() if v < MIN_AGREE]
+    if r.get("marker_system") and a.get("marker_system", 0) < MIN_AGREE:
+        lines.append(f"  가장 많은 항목 체계(참고): {' → '.join(r['marker_system'])}{pct('marker_system')}")
     if low:
         lines.append(f"  일치율이 낮아 권장값에서 뺀 항목: {', '.join(low)}")
     for u in prof.get("unsupported", []):
         lines.append(f"  적용 불가: {u}")
     return "\n".join(lines)
+
+
+def native_number(lv: dict) -> str:
+    """제목 번호 한 수준의 첫 번호 모양 (예: {"text": "^1.", "num_format": "roman_capital"} → "I.")."""
+    import native
+    return re.sub(r"\^([1-7])", lambda m: native.format_number(1, lv.get("num_format", "digit")), lv["text"])
 
 
 def main() -> int:
@@ -545,7 +595,8 @@ def main() -> int:
     elif args.cmd == "show":
         print(describe(load(args.name)))
     elif args.cmd == "lock":
-        print(json.dumps(lock(args.name, args.project, args.force), ensure_ascii=False, indent=1))
+        rhwp = rhwp_locate.locate(args.rhwp)["path"]
+        print(json.dumps(lock(args.name, args.project, args.force, rhwp), ensure_ascii=False, indent=1))
     return 0
 
 
