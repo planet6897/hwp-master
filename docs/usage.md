@@ -11,9 +11,9 @@ hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다.
 
 ## 1. 처음 한 번 — 설치와 확인
 
-설치는 [README](../README.md#1-설치)를 따릅니다. 저장소를 clone 한 폴더에서 `claude` 를 실행하고 "설치해줘"라고
-하거나, 아무 폴더의 Claude Code 에 "https://github.com/planet6897/hwp-master 설치해줘"라고 하면 AI 가 clone·rhwp 0.9.0
-설치·확인·자동 테스트까지 합니다. 두 번째 방법은 끝난 뒤 받은 폴더에서 `claude` 를 새로 실행합니다. 직접 확인하려면:
+설치는 [README](../README.md#1-설치)를 따릅니다. Claude Code 에 "https://github.com/planet6897/hwp-master 설치해줘"라고
+하면 AI 가 저장소 받기·rhwp 0.9.0 설치·확인·자동 테스트까지 합니다. 끝나면 받은 폴더에서 `claude` 를 새로 실행합니다.
+직접 확인하려면:
 
 ```bash
 rhwp --version        # rhwp v0.9.0 이상
