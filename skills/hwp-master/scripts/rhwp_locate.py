@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """rhwp 바이너리 위치·버전 확인.
 
-탐색 순서: --rhwp 인자 → 환경변수 RHWP_BIN → PATH 의 `rhwp`.
+탐색 순서: --rhwp 인자 → 환경변수 RHWP_BIN → install_rhwp.py 가 설치한 고정 Release 바이너리 → PATH 의 `rhwp`.
 최소 버전 미만이거나 찾지 못하면 exit 2 와 설치 안내를 낸다.
 Linux 에서 한글 글꼴 파일이 보이지 않으면 경고한다(미리보기 PNG·PDF 의 한글이 빠짐). 경고는 exit 0.
 
@@ -21,8 +21,9 @@ from typing import Iterable, List, Optional
 
 MIN_VERSION = (0, 9, 0)
 INSTALL_HINT = (
-    "rhwp 바이너리를 찾지 못했습니다. https://github.com/edwardkim/rhwp 에서 빌드하거나 "
-    "설치한 뒤 PATH 에 두거나 RHWP_BIN 환경변수로 경로를 지정하세요."
+    "rhwp 바이너리를 찾지 못했습니다. `python3 skills/hwp-master/scripts/install_rhwp.py` 로 "
+    "hwp-master Release 의 바이너리를 설치하거나, https://github.com/edwardkim/rhwp 에서 빌드해 "
+    "PATH 에 두거나 RHWP_BIN 환경변수로 경로를 지정하세요."
 )
 
 
@@ -69,9 +70,21 @@ def _parse_version(text: str) -> Optional[tuple]:
     return tuple(int(x) for x in m.groups()) if m else None
 
 
+def _installed() -> Optional[str]:
+    """install_rhwp.py 가 기본 위치에 설치한 고정 Release 바이너리."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("install_rhwp", Path(__file__).with_name("install_rhwp.py"))
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    path = module.installed_binary()
+    return str(path) if path else None
+
+
 def locate(explicit: Optional[str] = None) -> dict:
     """rhwp 경로와 버전을 dict 로 돌려준다. 실패하면 RhwpNotFound."""
-    candidate = explicit or os.environ.get("RHWP_BIN") or shutil.which("rhwp")
+    candidate = explicit or os.environ.get("RHWP_BIN") or _installed() or shutil.which("rhwp")
     if not candidate or not os.path.isfile(candidate) or not os.access(candidate, os.X_OK):
         raise RhwpNotFound(INSTALL_HINT + (f" (확인한 경로: {candidate})" if candidate else ""))
     proc = subprocess.run([candidate, "--version"], capture_output=True, text=True, timeout=30)

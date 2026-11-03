@@ -1,0 +1,169 @@
+name: rhwp binaries
+
+# hwp-master 가 쓰는 rhwp CLI 를 공개 upstream(edwardkim/rhwp) 의 고정 커밋에서 빌드해
+# 이 저장소의 Release 에 붙인다. 빌드 방식은 upstream release-binary.yml 과 같다
+# (native-skia, --locked, 패키지 후 PNG 내보내기 검증).
+#
+#   gh workflow run rhwp-binaries.yml -f rhwp_ref=<40자 커밋 SHA>
+#
+# Release 태그는 rhwp-<rhwp 버전>-<커밋 7자리> 이다. hwp-master 자체 버전 태그(v*)와 섞지 않는다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      rhwp_ref:
+        description: 'edwardkim/rhwp 커밋 SHA (40자)'
+        required: true
+      publish:
+        description: 'Release 를 만들어 붙인다 (false 면 artifact 만)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.suffix }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+            suffix: macos-aarch64
+            archive: tar.gz
+            binary: rhwp
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+            suffix: linux-x86_64
+            archive: tar.gz
+            binary: rhwp
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+            suffix: windows-x86_64
+            archive: zip
+            binary: rhwp.exe
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      short: ${{ steps.meta.outputs.short }}
+
+    steps:
+      - name: Check ref format
+        shell: bash
+        run: |
+          if [[ ! "${{ inputs.rhwp_ref }}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "rhwp_ref 는 40자 커밋 SHA 여야 합니다: ${{ inputs.rhwp_ref }}" >&2
+            exit 1
+          fi
+
+      - name: Checkout rhwp
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: edwardkim/rhwp
+          ref: ${{ inputs.rhwp_ref }}
+          persist-credentials: false
+
+      - name: Read version
+        id: meta
+        shell: bash
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          short=$(git rev-parse --short=7 HEAD)
+          test "$(git rev-parse HEAD)" = "${{ inputs.rhwp_ref }}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "short=$short" >> "$GITHUB_OUTPUT"
+          echo "ARCHIVE=rhwp-$version-$short-${{ matrix.suffix }}.${{ matrix.archive }}" >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable (2026-08-01)
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install native Skia dependencies (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 \
+            install -y --no-install-recommends fonts-dejavu-core libfontconfig1-dev libfreetype6-dev
+
+      - name: Build
+        shell: bash
+        run: cargo build --locked --release --bin rhwp --features native-skia --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist/rhwp
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" dist/rhwp/
+          cp LICENSE dist/rhwp/LICENSE
+          cat > dist/rhwp/BUILD_INFO.txt <<EOF
+          rhwp ${{ steps.meta.outputs.version }}
+          source: https://github.com/edwardkim/rhwp/commit/${{ inputs.rhwp_ref }}
+          license: MIT (LICENSE)
+          build: cargo build --locked --release --bin rhwp --features native-skia --target ${{ matrix.target }}
+          runner: ${{ matrix.runner }}
+          workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            (cd dist && 7z a -tzip "../$ARCHIVE" rhwp >/dev/null)
+          else
+            (cd dist && tar -czf "../$ARCHIVE" rhwp)
+          fi
+          ls -la "$ARCHIVE"
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Verify packaged binary (PNG export)
+        shell: bash
+        run: |
+          python scripts/verify_release_binary.py --archive "$ARCHIVE" \
+            --sample samples/issue2527_empty_linesegs.hwpx
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARCHIVE }}
+          path: ${{ env.ARCHIVE }}
+          retention-days: 7
+
+  release:
+    name: Publish release
+    needs: build
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: rhwp-${{ needs.build.outputs.version }}-${{ needs.build.outputs.short }}
+        run: |
+          cat > notes.md <<EOF
+          hwp-master 용 rhwp CLI 바이너리 (MIT, upstream 그대로 빌드).
+
+          - 원본: https://github.com/edwardkim/rhwp/commit/${{ inputs.rhwp_ref }}
+          - 기능: native-skia (PNG·PDF 미리보기)
+          - 빌드: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - 설치: \`python3 skills/hwp-master/scripts/install_rhwp.py\` (SHA256SUMS.txt 로 검증)
+          EOF
+          gh release create "$TAG" dist/* --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" --title "$TAG" --notes-file notes.md --latest=false
