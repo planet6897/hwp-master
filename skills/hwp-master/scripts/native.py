@@ -6,8 +6,9 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
     page_break 블록          → edit insert-page-break (다음 블록 문단 앞에서 쪽 나눔)
     image 블록               → 표시 글자 문단 → edit delete-text + insert-picture
                                + set-picture {"treatAsChar":true} + apply-para-format 정렬,
-                               caption 은 가운데 정렬 문단
-    paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·글자색)
+                               caption 은 가운데 정렬 문단("{n}" = 그림 순번), 그림 문단은 다음 문단과 같이
+    table.caption            → 표 위 가운데 문단("{n}" = 표 순번), 표와 같은 쪽에 둠(keepWithNext)
+    paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·취소선·글자색·형광펜·크기)
     paragraph.footnotes      → edit insert-footnote + insert-footnote-text
     table.header_row         → 첫 행 셀마다 edit set-cell-props {fill, isHeader} +
                                apply-char-format-in-cell 굵게 + apply-para-format-in-cell 가운데
@@ -41,9 +42,11 @@ HU_PER_PX = 75  # 96dpi 픽셀 1개 (rhwp insert-picture 의 원본 크기 환�
 A4_WIDTH_MM = 210.0
 SIDE_MARGINS_MM = 60.0  # scaffold 기본 좌우 여백 30mm × 2
 IMAGE_MARK = "[[hwp-master:image:{n}]]"
+IMAGE_MARK_RE = re.compile(r"\[\[hwp-master:image:\d+\]\]")
 HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 HH = "http://www.hancom.co.kr/hwpml/2011/head"
 PAGE_TOKEN = "{page}"
+CAPTION_TOKEN = "{n}"
 LIST_MARKERS = ("□", "○", "-", "·")
 LIST_STEP_HU = 1000  # 단계마다 왼쪽 여백 10pt
 # 글머리 + 빈칸 한 개의 폭(본문 10pt 기준 HWPUNIT). 한컴 2024 가 함초롬바탕 10pt 를 그린 PDF 의
@@ -64,6 +67,7 @@ def split(doc: dict) -> tuple:
                                "aligns": [], "indents": [], "tables": [], "header": doc.get("header"),
                                "footer": doc.get("footer")}
     pending_break = False
+    counters = {"image": 0, "table": 0}
 
     def add_para(b: dict, prefix: str = "") -> None:
         nonlocal pending_break
@@ -107,12 +111,21 @@ def split(doc: dict) -> tuple:
             mark = IMAGE_MARK.format(n=len(plan["images"]))
             plan["images"].append({"block": len(blocks), "mark": mark, "path": b["path"],
                                    "width_mm": b.get("width_mm")})
-            plan["aligns"].append({"block": len(blocks), "align": b.get("align", "center")})
+            # 캡션이 있으면 그림 문단을 캡션과 같은 쪽에 묶는다
+            plan["aligns"].append({"block": len(blocks), "align": b.get("align", "center"),
+                                   "keep": bool(b.get("caption"))})
             blocks.append({"type": "paragraph", "text": mark})
             if b.get("caption"):
-                plan["aligns"].append({"block": len(blocks), "align": "center"})
-                blocks.append({"type": "paragraph", "text": b["caption"]})
+                counters["image"] += 1
+                plan["aligns"].append({"block": len(blocks), "align": "center", "keep": False})
+                blocks.append({"type": "paragraph", "text": number_caption(b["caption"], counters["image"])})
             continue
+        if b.get("type") == "table" and b.get("caption"):
+            # 표 캡션은 표 위 가운데 문단, 표와 같은 쪽에 묶는다
+            counters["table"] += 1
+            plan["aligns"].append({"block": len(blocks), "align": "center", "keep": True})
+            add_para({"type": "paragraph", "text": number_caption(b["caption"], counters["table"])})
+            b = {k: v for k, v in b.items() if k != "caption"}
         if b.get("type") == "table":
             ntab = sum(1 for x in blocks if x.get("type") == "table")
             style = {k: b[k] for k in TABLE_STYLE_KEYS if k in b}
@@ -137,6 +150,11 @@ def split(doc: dict) -> tuple:
     return spec, plan
 
 
+def number_caption(caption: str, n: int) -> str:
+    """캡션의 "{n}" 을 그 종류(그림·표)의 순번으로 바꾼다."""
+    return caption.replace(CAPTION_TOKEN, str(n))
+
+
 def marker_hu(marker: str) -> int:
     """글머리 글자들의 폭(HWPUNIT, 본문 10pt). 표에 없는 글자는 전각 1em, 반각 0.55em 으로 본다."""
     total = 0
@@ -156,9 +174,25 @@ def list_indent(level: int, marker: str) -> tuple:
 def char_props(mark: dict) -> str:
     """강조 → apply-char-format --props. 공백 없는 JSON 으로 넘긴다(rhwp #8439: "key": 공백이면 무시됨)."""
     props = {k: True for k in ("bold", "italic", "underline") if mark.get(k)}
+    if mark.get("strike"):
+        props["strikethrough"] = True
     if mark.get("color"):
         props["textColor"] = mark["color"].upper()
+    if mark.get("highlight"):
+        props["shadeColor"] = mark["highlight"].upper()
+    if mark.get("size"):
+        props["fontSize"] = int(round(mark["size"] * 100))
     return json.dumps(props, separators=(",", ":"))
+
+
+def props_match(shape: dict, want: dict) -> bool:
+    """char_shapes 한 항목이 apply-char-format props 를 모두 만족하는가."""
+    for k, v in want.items():
+        got = {"textColor": shape.get("color"), "shadeColor": shape.get("shade"),
+               "fontSize": shape.get("height"), "strikethrough": shape.get("strike")}.get(k, shape.get(k))
+        if (got != v) if k in ("textColor", "shadeColor", "fontSize") else not got:
+            return False
+    return True
 
 
 def plan_empty(plan: dict) -> bool:
@@ -214,7 +248,8 @@ def top_paragraphs(hwpx: Path) -> List[dict]:
     out = []
     for p in root.findall(f"{{{HP}}}p"):
         text = "".join(t.text or "" for run in p.findall(f"{{{HP}}}run") for t in run.findall(f"{{{HP}}}t"))
-        out.append({"text": text, "table": p.find(f".//{{{HP}}}tbl") is not None})
+        out.append({"text": text, "table": p.find(f".//{{{HP}}}tbl") is not None,
+                    "pic": p.find(f".//{{{HP}}}pic") is not None})
     return out
 
 
@@ -294,6 +329,19 @@ def para_aligns(hwpx: Path) -> Dict[str, str]:
     return out
 
 
+def para_layout(hwpx: Path) -> List[Optional[tuple]]:
+    """최상위 문단마다 (가로 정렬, 다음 문단과 함께)."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+        head = ET.fromstring(z.read("Contents/header.xml"))
+    shapes = {}
+    for pp in head.iter(f"{{{HH}}}paraPr"):
+        al, br = pp.find(f"{{{HH}}}align"), pp.find(f"{{{HH}}}breakSetting")
+        shapes[pp.get("id")] = (al.get("horizontal") if al is not None else None,
+                                br is not None and br.get("keepWithNext") == "1")
+    return [shapes.get(p.get("paraPrIDRef")) for p in root.findall(f"{{{HP}}}p")]
+
+
 def para_margins(hwpx: Path) -> List[Optional[tuple]]:
     """최상위 문단마다 (왼쪽 여백, 들여쓰기) HWPUNIT. paraPr 의 HwpUnitChar 갈래(한컴 2024 가 쓰는 값)."""
     with zipfile.ZipFile(hwpx) as z:
@@ -326,16 +374,20 @@ def char_styles(hwpx: Path) -> List[List[str]]:
 
 
 def char_shapes(hwpx: Path) -> Dict[str, dict]:
-    """header.xml charPr id → {bold, italic, underline, color}."""
+    """header.xml charPr id → {bold, italic, underline, strike, color, shade, height}."""
     with zipfile.ZipFile(hwpx) as z:
         root = ET.fromstring(z.read("Contents/header.xml"))
     out = {}
     for cp in root.iter(f"{{{HH}}}charPr"):
         ul = cp.find(f"{{{HH}}}underline")
+        so = cp.find(f"{{{HH}}}strikeout")
         out[cp.get("id")] = {"bold": cp.find(f"{{{HH}}}bold") is not None,
                              "italic": cp.find(f"{{{HH}}}italic") is not None,
                              "underline": ul is not None and ul.get("type", "NONE") != "NONE",
-                             "color": (cp.get("textColor") or "").upper()}
+                             "strike": so is not None and so.get("shape", "NONE") != "NONE",
+                             "color": (cp.get("textColor") or "").upper(),
+                             "shade": (cp.get("shadeColor") or "").upper(),
+                             "height": int(cp.get("height") or 0)}
     return out
 
 
@@ -347,8 +399,12 @@ def map_blocks(paras: List[dict], blocks: List[dict], has_title: bool) -> List[O
         found = None
         for j in range(i, len(paras)):
             p = paras[j]
+            text = b.get("text") or ""
+            # 그림 표시 글자는 산출물에서 지워지고 그 문단에 그림이 들어간다
+            image = IMAGE_MARK_RE.fullmatch(text) is not None
             if (b.get("type") == "table" and p["table"]) or (
-                    b.get("type") != "table" and not p["table"] and p["text"] == b.get("text")):
+                    b.get("type") != "table" and not p["table"]
+                    and (p["text"] == text or (image and p.get("pic") and not p["text"]))):
                 found = j
                 break
         out.append(found)
@@ -447,8 +503,11 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
             result["error"] = "그림 삽입 실패"
             return result
     for al in plan["aligns"]:
+        props = {"alignment": al["align"]}
+        if al.get("keep"):
+            props["keepWithNext"] = True
         if not step(["apply-para-format", "--para", str(paras[al["block"]]),
-                     "--props", json.dumps({"alignment": al["align"]}, separators=(",", ":"))]):
+                     "--props", json.dumps(props, separators=(",", ":"))]):
             result["error"] = "문단 정렬 실패"
             return result
     widths = table_widths(cur) if plan["tables"] else []
@@ -548,11 +607,19 @@ def check(out: Path, doc: dict) -> List[str]:
             want = json.loads(em["props"])
             pi = paras[em["block"]]
             ids = styles[pi][em["offset"]:em["offset"] + em["count"]] if pi is not None else []
-            bad = len(ids) != em["count"] or any(
-                not shapes.get(i, {}).get(k) if k != "textColor" else shapes.get(i, {}).get("color") != v
-                for i in ids for k, v in want.items())
+            bad = len(ids) != em["count"] or any(not props_match(shapes.get(i, {}), want) for i in ids)
             if bad:
                 problems.append(f"강조 미반영: blocks[{em['block']}] {em['offset']}+{em['count']} {em['props']}")
+    if plan["aligns"]:
+        spec, _ = split(doc)
+        paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
+        layout = para_layout(out)
+        for al in plan["aligns"]:
+            pi = paras[al["block"]]
+            want = (al["align"].upper(), bool(al.get("keep")))
+            got = layout[pi] if pi is not None else None
+            if got is None or got[0] != want[0] or (want[1] and not got[1]):
+                problems.append(f"문단 정렬·묶음 미반영: blocks[{al['block']}] {got} (계획 {want})")
     if plan["indents"]:
         spec, _ = split(doc)
         paras = map_blocks(top_paragraphs(out), spec["blocks"], bool(spec.get("title")))
@@ -585,9 +652,7 @@ def check(out: Path, doc: dict) -> List[str]:
             for em in tb["cell_emphasis"]:
                 want = json.loads(em["props"])
                 ids = by_addr.get((em["row"], em["col"]), {}).get("chars", [])[em["start"]:em["start"] + em["count"]]
-                bad = len(ids) != em["count"] or any(
-                    not shapes.get(i, {}).get(k) if k != "textColor" else shapes.get(i, {}).get("color") != v
-                    for i in ids for k, v in want.items())
+                bad = len(ids) != em["count"] or any(not props_match(shapes.get(i, {}), want) for i in ids)
                 if bad:
                     problems.append(f"{where} 셀 강조 미반영: ({em['row']},{em['col']}) {em['props']}")
             if tb["header_fill"]:

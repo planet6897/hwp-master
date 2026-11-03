@@ -93,7 +93,7 @@ class ValidateTest(unittest.TestCase):
 
     def test_emphasis_errors(self):
         cases = {"E109": [[], [{"text": "본문"}], [{"text": "본문", "color": "red"}], [{"text": "본문", "bold": 1}],
-                          [{"text": "본문", "size": 12}]],
+                          [{"text": "본문", "font": "굴림"}]],
                  "E110": [[{"text": "없는 말", "bold": True}]]}
         for code, items in cases.items():
             for marks in items:
@@ -120,7 +120,8 @@ class ImageTest(unittest.TestCase):
         self.assertEqual([b.get("text") for b in spec["blocks"]],
                          [None, native.IMAGE_MARK.format(n=0), "<그림 1> 가", "끝"])
         self.assertEqual(plan["images"][0]["block"], 1)
-        self.assertEqual(plan["aligns"], [{"block": 1, "align": "center"}, {"block": 2, "align": "center"}])
+        self.assertEqual(plan["aligns"], [{"block": 1, "align": "center", "keep": True},
+                                          {"block": 2, "align": "center", "keep": False}])
 
     def test_image_size_and_width(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -141,10 +142,12 @@ class ImageTest(unittest.TestCase):
 
     def test_validate_image(self):
         bad = [{"path": ""}, {"path": "a.gif"}, {"path": "a.png", "width_mm": 0},
-               {"path": "a.png", "caption": ""}, {"path": "a.png", "align": "justify"}]
+               {"path": "a.png", "align": "justify"}]
         for b in bad:
             doc = {"version": "1", "blocks": [dict(b, type="image")]}
             self.assertIn("E111", codes(hds.validate_document(doc)), b)
+        doc = {"version": "1", "blocks": [{"type": "image", "path": "a.png", "caption": ""}]}
+        self.assertIn("E120", codes(hds.validate_document(doc)))
         doc = {"version": "1", "blocks": [{"type": "image", "path": "a.png", "width_mm": 200}]}
         self.assertIn("E112", codes(hds.validate_document(doc)))
         self.assertIn("E113", codes(hds.lint_image_files(doc["blocks"], Path("/nonexistent"))))
@@ -283,6 +286,48 @@ class MergeTest(unittest.TestCase):
                          ["W201"])
         merged = {"type": "table", "rows": rows, "merges": [{"row": 0, "col": 0, "colspan": 2}]}
         self.assertEqual(hds.lint_table_widths([merged], 210), [])
+
+
+class CaptionEmphasisTest(unittest.TestCase):
+    def test_char_props_extended(self):
+        self.assertEqual(native.char_props({"text": "x", "size": 14, "highlight": "#ffff00", "strike": True}),
+                         '{"strikethrough":true,"shadeColor":"#FFFF00","fontSize":1400}')
+        shape = {"bold": False, "strike": True, "shade": "#FFFF00", "height": 1400, "color": "#000000"}
+        self.assertTrue(native.props_match(shape, {"strikethrough": True, "shadeColor": "#FFFF00", "fontSize": 1400}))
+        self.assertFalse(native.props_match(shape, {"fontSize": 1200}))
+        self.assertFalse(native.props_match(shape, {"bold": True}))
+
+    def test_validate_extended_emphasis(self):
+        ok = {"type": "paragraph", "text": "가나다", "emphasis": [{"text": "가", "size": 12.5, "highlight": "#FFFF00"}]}
+        self.assertEqual(codes(hds.validate_blocks([ok])), [])
+        bad = {"type": "paragraph", "text": "가나다", "emphasis": [
+            {"text": "가", "size": 100}, {"text": "나", "highlight": "yellow"}, {"text": "다", "strike": 1}]}
+        self.assertEqual(codes(hds.validate_blocks([bad])), ["E109"] * 3)
+
+    def test_caption_numbering(self):
+        doc = {"version": "1", "blocks": [
+            {"type": "paragraph", "text": "a"}, {"type": "page_break"},
+            {"type": "table", "caption": "<표 {n}> 첫", "rows": [["a"]]},
+            {"type": "image", "path": "x.png", "caption": "<그림 {n}> 첫"},
+            {"type": "table", "rows": [["b"]]},
+            {"type": "table", "caption": "<표 {n}> 둘", "rows": [["c"]]}]}
+        spec, plan = native.split(doc)
+        texts = [b.get("text", b["type"]) for b in spec["blocks"]]
+        self.assertEqual(texts, ["a", "<표 1> 첫", "table", "[[hwp-master:image:0]]", "<그림 1> 첫",
+                                 "table", "<표 2> 둘", "table"])
+        # 쪽 나눔은 표가 아니라 그 위 캡션에 걸리고, 캡션·그림 문단은 다음 문단과 묶인다
+        self.assertEqual(plan["page_breaks"], [1])
+        self.assertEqual([(a["block"], a["keep"]) for a in plan["aligns"]],
+                         [(1, True), (3, True), (4, False), (6, True)])
+
+    def test_validate_caption(self):
+        blocks = [{"type": "table", "caption": "<표 3> 손번호", "rows": [["a"]]},
+                  {"type": "table", "caption": "{n}{n}", "rows": [["a"]]},
+                  {"type": "table", "caption": " ", "rows": [["a"]]},
+                  {"type": "image", "path": "a.png", "caption": "<그림 {n}> 자동"}]
+        found = hds.validate_blocks(blocks)
+        self.assertEqual([(f.code, f.where) for f in found],
+                         [("W204", "blocks[0]"), ("E120", "blocks[1]"), ("E120", "blocks[2]")])
 
 
 class ProjectLintTest(unittest.TestCase):
@@ -427,6 +472,29 @@ class ProduceTest(unittest.TestCase):
         self.assertEqual(sum(c["header"] for c in cells), 2)
         problems = native.check(self.dir / "merge" / "work" / "scaffold.hwpx", MERGE_DOC)
         self.assertTrue(any("병합" in p for p in problems) and any("셀 강조" in p for p in problems), problems)
+
+    def test_caption_and_extended_emphasis(self):
+        png = self.dir / "fig.png"
+        png.write_bytes(png_bytes(300, 120))
+        doc = {"version": "1", "title": "캡션", "blocks": [
+            {"type": "paragraph", "text": "크게 형광 취소", "emphasis": [
+                {"text": "크게", "size": 14}, {"text": "형광", "highlight": "#FFFF00"}, {"text": "취소", "strike": True}]},
+            {"type": "table", "caption": "<표 {n}> 시험", "rows": [["a", "b"]],
+             "cell_emphasis": [{"row": 0, "col": 1, "highlight": "#FFF2CC"}]},
+            {"type": "image", "path": str(png), "caption": "<그림 {n}> 시험"},
+            {"type": "paragraph", "text": "끝"}]}
+        out = self.dir / "cap" / "out.hwpx"
+        result = native.produce(doc, out, self.rhwp, self.dir / "cap" / "work")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(native.check(out, doc), [])
+        texts = [p["text"] for p in native.top_paragraphs(out)]
+        layout = native.para_layout(out)
+        cap = texts.index("<표 1> 시험")
+        self.assertEqual(layout[cap], ("CENTER", True))
+        self.assertTrue(native.top_paragraphs(out)[cap + 1]["table"])  # 캡션 바로 뒤가 표
+        self.assertIn("<그림 1> 시험", texts)
+        problems = native.check(self.dir / "cap" / "work" / "scaffold.hwpx", doc)
+        self.assertTrue(any("정렬·묶음" in p for p in problems), problems)
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")

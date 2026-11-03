@@ -255,6 +255,8 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
 - 2026-11-03: 표 셀 병합(`merges` → `edit merge-cells`)·셀 강조(`cell_emphasis` → `apply-char-format-in-cell
   --start/--end`, end 는 미포함). 한컴 2024 대조 실루엣 100%. 표 셀 각주는 `insert-footnote` 가 본문 문단 좌표만
   받아 보류(rhwp 코어 확장 필요).
+- 2026-11-03: 강조에 `size`(fontSize, pt×100)·`highlight`(shadeColor)·`strike`(strikethrough) 추가, 캡션 자동 번호
+  (`{n}`, 그림·표 따로)와 표 캡션(표 위, keepWithNext). 그림 문단도 캡션과 묶는다. 한컴 2024 대조 실루엣 99.85%.
 - 각 블록은 rhwp 이슈 `task/<이슈번호>-scaffold-<블록>` 브랜치로 진행한다.
 - 완료 기준: 블록별로 rhwp 정본 게이트 통과(§7).
 

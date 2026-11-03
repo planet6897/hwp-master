@@ -10,13 +10,14 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
     heading    {"type": "heading", "level": 1..7, "text": str}
     paragraph  {"type": "paragraph", "text": str,
                 "footnotes"?: [{"text": str, "after"?: str}],
-                "emphasis"?: [{"text": str, "bold"?, "italic"?, "underline"?: bool, "color"?: "#RRGGBB"}]}
-    table      {"type": "table", "rows": [[str]], "cell_align"?: str | [str],
+                "emphasis"?: [{"text": str, "bold"?, "italic"?, "underline"?, "strike"?: bool,
+                               "color"?, "highlight"?: "#RRGGBB", "size"?: pt}]}
+    table      {"type": "table", "rows": [[str]], "caption"?: str, "cell_align"?: str | [str],
                 "header_row"?: bool, "header_fill"?: "#RRGGBB", "col_widths"?: [num],
                 "merges"?: [{"row", "col", "rowspan"?, "colspan"?}],
                 "cell_emphasis"?: [{"row", "col", "text"?, "bold"?, "italic"?, "underline"?, "color"?}]}
     page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
-    image      {"type": "image", "path": str, "width_mm"?: num, "caption"?: str,
+    image      {"type": "image", "path": str, "width_mm"?: num, "caption"?: str,  # "{n}" = 순번
                 "align"?: "left"|"center"|"right"}  # 글자처럼 취급한 그림 한 줄
     list       {"type": "list", "items": [str | {"text": str, "level"?: 1..,
                 "footnotes"?, "emphasis"?}], "markers"?: [str]}
@@ -46,7 +47,7 @@ TOP_KEYS = {"version", "title", "font", "page_size", "header", "footer", "blocks
 BLOCK_KEYS = {
     "heading": {"type", "level", "text"},
     "paragraph": {"type", "text", "footnotes", "emphasis"},
-    "table": {"type", "rows", "cell_align", "header_row", "header_fill", "col_widths", "merges",
+    "table": {"type", "rows", "caption", "cell_align", "header_row", "header_fill", "col_widths", "merges",
               "cell_emphasis"},
     "page_break": {"type"},
     "image": {"type", "path", "width_mm", "caption", "align"},
@@ -213,7 +214,8 @@ def _validate_footnotes(b: dict, where: str) -> List[Finding]:
     return out
 
 
-EMPHASIS_STYLES = ("bold", "italic", "underline", "color")
+EMPHASIS_STYLES = ("bold", "italic", "underline", "strike", "color", "highlight", "size")
+EMPHASIS_SIZE_PT = (6, 40)
 HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
@@ -225,18 +227,24 @@ def _validate_emphasis(b: dict, where: str) -> List[Finding]:
     for k, m in enumerate(marks):
         w = f"{where}.emphasis[{k}]"
         if not isinstance(m, dict) or set(m) - {"text", *EMPHASIS_STYLES}:
-            out.append(_err("E109", "강조는 {text, bold?, italic?, underline?, color?} 객체여야 합니다", w))
+            out.append(_err("E109", "강조는 {text, bold?, italic?, underline?, strike?, color?, highlight?, size?} "
+                                    "객체여야 합니다", w))
             continue
         text = m.get("text")
         if not isinstance(text, str) or not text or text not in b["text"]:
             out.append(_err("E110", f"강조 text {text!r} 가 문단 글자에 없습니다", w))
-        for key in ("bold", "italic", "underline"):
+        for key in ("bold", "italic", "underline", "strike"):
             if key in m and not isinstance(m[key], bool):
                 out.append(_err("E109", f"{key} 는 true/false 여야 합니다", w))
-        if "color" in m and not (isinstance(m["color"], str) and HEX_COLOR.match(m["color"])):
-            out.append(_err("E109", "color 는 #RRGGBB 형식이어야 합니다", w))
+        for key in ("color", "highlight"):
+            if key in m and not (isinstance(m[key], str) and HEX_COLOR.match(m[key])):
+                out.append(_err("E109", f"{key} 는 #RRGGBB 형식이어야 합니다", w))
+        size = m.get("size")
+        lo, hi = EMPHASIS_SIZE_PT
+        if "size" in m and (isinstance(size, bool) or not isinstance(size, (int, float)) or not lo <= size <= hi):
+            out.append(_err("E109", f"size 는 {lo}~{hi} pt 숫자여야 합니다", w))
         if not any(m.get(k) for k in EMPHASIS_STYLES):
-            out.append(_err("E109", "bold·italic·underline·color 중 하나는 있어야 합니다", w))
+            out.append(_err("E109", "bold·italic·underline·strike·color·highlight·size 중 하나는 있어야 합니다", w))
     return out
 
 
@@ -250,12 +258,26 @@ def _validate_image(b: dict, where: str) -> List[Finding]:
     w = b.get("width_mm")
     if w is not None and (isinstance(w, bool) or not isinstance(w, (int, float)) or w <= 0):
         out.append(_err("E111", "image.width_mm 는 양수여야 합니다", where))
-    cap = b.get("caption")
-    if cap is not None and (not isinstance(cap, str) or not cap.strip()):
-        out.append(_err("E111", "image.caption 은 비어 있지 않은 문자열이어야 합니다", where))
+    if "caption" in b:
+        out.extend(_validate_caption(b["caption"], where))
     if b.get("align", "center") not in IMAGE_ALIGNS:
         out.append(_err("E111", f"image.align 은 {IMAGE_ALIGNS} 중 하나여야 합니다", where))
     return out
+
+
+CAPTION_TOKEN = "{n}"
+MANUAL_CAPTION_NUMBER = re.compile(r"^\s*[<〈［\[(]?\s*(그림|표|도표|사진)\s*\d+")
+
+
+def _validate_caption(cap, where: str) -> List[Finding]:
+    """E120 형식, W204 번호를 손으로 씀."""
+    if not isinstance(cap, str) or not cap.strip():
+        return [_err("E120", "caption 은 비어 있지 않은 문자열이어야 합니다", where)]
+    if cap.count(CAPTION_TOKEN) > 1:
+        return [_err("E120", "caption 의 {n} 은 한 번만 씁니다", where)]
+    if CAPTION_TOKEN not in cap and MANUAL_CAPTION_NUMBER.match(cap):
+        return [_warn("W204", f"캡션 번호를 직접 썼습니다: {cap!r} — \"<표 {{n}}> …\" 처럼 쓰면 순서대로 매겨집니다", where)]
+    return []
 
 
 def lint_image_widths(blocks, page_width_mm: float, where_prefix: str = "") -> List[Finding]:
@@ -340,6 +362,8 @@ def _validate_table(b: dict, where: str) -> List[Finding]:
             out.append(_err("E116", "header_fill 은 #RRGGBB 형식이어야 합니다", where))
         elif b.get("header_row") is not True:
             out.append(_err("E116", "header_fill 은 header_row: true 와 함께 씁니다", where))
+    if "caption" in b:
+        out.extend(_validate_caption(b["caption"], where))
     covered = set()
     if "merges" in b:
         found, covered = _validate_merges(b, rows, ncols, where)
@@ -402,7 +426,7 @@ def _validate_cell_emphasis(b: dict, rows, ncols: int, covered: set, where: str)
     for k, m in enumerate(marks):
         w = f"{where}.cell_emphasis[{k}]"
         if not isinstance(m, dict) or set(m) - {"row", "col", "text", *EMPHASIS_STYLES}:
-            out.append(_err("E119", "셀 강조는 {row, col, text?, bold?, italic?, underline?, color?} 객체여야 합니다", w))
+            out.append(_err("E119", "셀 강조는 {row, col, text?, 강조 서식…} 객체여야 합니다", w))
             continue
         r, c = m.get("row"), m.get("col")
         if not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in (r, c)) \
