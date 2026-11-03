@@ -12,6 +12,8 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
     table.header_row         → 첫 행 셀마다 edit set-cell-props {fill, isHeader} +
                                apply-char-format-in-cell 굵게 + apply-para-format-in-cell 가운데
     table.col_widths         → edit set-column-widths (scaffold 표 폭을 비율로 나눔)
+    table.merges             → edit merge-cells (머리 행 꾸밈보다 먼저, 가려진 셀은 건너뜀)
+    table.cell_emphasis      → edit apply-char-format-in-cell --start/--end
     list 블록                → 항목마다 "글머리 + 빈칸 + 글" 문단 + apply-para-format
                                왼쪽 여백(단계)·내어쓰기(글머리 폭)
     header / footer          → edit insert-header-footer + insert-header-footer-text
@@ -50,7 +52,7 @@ SPACE_HU = 475
 MARKER_HU = {"-": 580, "·": 341, "ㆍ": 341, "*": 500, ".": 300, ")": 330, "(": 330}
 BODY_HEIGHT_HU = 1000  # scaffold 본문 글자 크기 10pt
 HEADER_FILL = "#D9D9D9"  # 머리 행 기본 배경 (회색 15%)
-TABLE_STYLE_KEYS = ("header_row", "header_fill", "col_widths")
+TABLE_STYLE_KEYS = ("header_row", "header_fill", "col_widths", "merges", "cell_emphasis")
 
 
 
@@ -115,12 +117,21 @@ def split(doc: dict) -> tuple:
             ntab = sum(1 for x in blocks if x.get("type") == "table")
             style = {k: b[k] for k in TABLE_STYLE_KEYS if k in b}
             b = {k: v for k, v in b.items() if k not in TABLE_STYLE_KEYS}
-            if style.get("header_row") or style.get("col_widths"):
+            if any(style.get(k) for k in TABLE_STYLE_KEYS):
+                merges = [{"row": m["row"], "col": m["col"], "rowspan": m.get("rowspan", 1),
+                           "colspan": m.get("colspan", 1)} for m in style.get("merges") or []]
+                cell_marks = []
+                for m in style.get("cell_emphasis") or []:
+                    cell = b["rows"][m["row"]][m["col"]] if m["col"] < len(b["rows"][m["row"]]) else ""
+                    start = cell.index(m["text"]) if m.get("text") else 0
+                    count = len(m["text"]) if m.get("text") else len(cell)
+                    cell_marks.append({"row": m["row"], "col": m["col"], "start": start, "count": count,
+                                       "props": char_props(m)})
                 plan["tables"].append({
                     "table": ntab, "cols": max(len(r) for r in b["rows"]),
                     "header_fill": (style.get("header_fill") or HEADER_FILL).upper()
                     if style.get("header_row") else None,
-                    "col_widths": style.get("col_widths")})
+                    "col_widths": style.get("col_widths"), "merges": merges, "cell_emphasis": cell_marks})
         add_para(b)
     spec["blocks"] = blocks
     return spec, plan
@@ -220,6 +231,12 @@ def table_widths(hwpx: Path) -> List[int]:
     return [int(t.find(f"{{{HP}}}sz").get("width")) for t in _top_tables(root)]
 
 
+def covered_cells(merges: List[dict]) -> set:
+    """병합으로 가려지는 셀 (row, col) — 병합 첫 셀은 빠진다."""
+    return {(r, c) for m in merges for r in range(m["row"], m["row"] + m["rowspan"])
+            for c in range(m["col"], m["col"] + m["colspan"])} - {(m["row"], m["col"]) for m in merges}
+
+
 def split_widths(total: int, ratios: List[float]) -> List[int]:
     """total 을 비율대로 나눈 정수 폭. 반올림 나머지는 마지막 열에 준다."""
     s = float(sum(ratios))
@@ -237,7 +254,14 @@ def table_cells(hwpx: Path) -> List[List[dict]]:
         for tc in t.iter(f"{{{HP}}}tc"):
             addr, size = tc.find(f"{{{HP}}}cellAddr"), tc.find(f"{{{HP}}}cellSz")
             runs = [r for r in tc.iter(f"{{{HP}}}run") if r.find(f"{{{HP}}}t") is not None]
+            span = tc.find(f"{{{HP}}}cellSpan")
+            first = tc.find(f".//{{{HP}}}p")
+            chars = [] if first is None else [
+                r.get("charPrIDRef") for r in first.findall(f"{{{HP}}}run")
+                for t in r.findall(f"{{{HP}}}t") for _ in (t.text or "")]
             cells.append({"row": int(addr.get("rowAddr")), "col": int(addr.get("colAddr")),
+                          "rowspan": int(span.get("rowSpan")), "colspan": int(span.get("colSpan")),
+                          "chars": chars,
                           "header": tc.get("header") == "1", "border_fill": tc.get("borderFillIDRef"),
                           "width": int(size.get("width")),
                           "char_prs": [r.get("charPrIDRef") for r in runs],
@@ -435,16 +459,31 @@ def produce(doc: dict, out: Path, rhwp: str, work: Path) -> dict:
             if not step(["set-column-widths", "--table", t, "--widths", ",".join(map(str, cols))]):
                 result["error"] = "표 열 폭 설정 실패"
                 return result
+        for m in tb["merges"]:
+            if not step(["merge-cells", "--table", t, "--row", str(m["row"]), "--col", str(m["col"]),
+                         "--end-row", str(m["row"] + m["rowspan"] - 1),
+                         "--end-col", str(m["col"] + m["colspan"] - 1)]):
+                result["error"] = "표 셀 병합 실패"
+                return result
+        hidden = covered_cells(tb["merges"])
         if tb["header_fill"]:
             props = json.dumps({"fillType": "solid", "fillColor": tb["header_fill"], "isHeader": True},
                                separators=(",", ":"))
             for c in range(tb["cols"]):
+                if (0, c) in hidden:
+                    continue
                 cell = ["--table", t, "--row", "0", "--col", str(c)]
                 if not (step(["set-cell-props"] + cell + ["--props", props])
                         and step(["apply-char-format-in-cell"] + cell + ["--props", '{"bold":true}'])
                         and step(["apply-para-format-in-cell"] + cell + ["--props", '{"alignment":"center"}'])):
                     result["error"] = "표 머리 행 꾸밈 실패"
                     return result
+        for em in tb["cell_emphasis"]:
+            if not step(["apply-char-format-in-cell", "--table", t, "--row", str(em["row"]),
+                         "--col", str(em["col"]), "--start", str(em["start"]),
+                         "--end", str(em["start"] + em["count"]), "--props", em["props"]]):
+                result["error"] = "표 셀 강조 실패"
+                return result
     # apply-para-format 의 여백 값은 HWPUNIT 의 2배로 받는다(4000 → 저장 2000 = 20pt).
     for ind in plan["indents"]:
         props = {"marginLeft": ind["left"] * 2, "indent": ind["indent"] * 2}
@@ -531,11 +570,26 @@ def check(out: Path, doc: dict) -> List[str]:
             cells = tables[tb["table"]] if tb["table"] < len(tables) else []
             where = f"표 {tb['table']}"
             if tb["col_widths"]:
-                total = sum(c["width"] for c in cells if c["row"] == 0)
-                want = split_widths(total, tb["col_widths"])
-                got = [c["width"] for c in sorted((c for c in cells if c["row"] == 0), key=lambda c: c["col"])]
+                want = split_widths(table_widths(out)[tb["table"]], tb["col_widths"])
+                # 열마다 병합되지 않은 셀 하나의 폭 (그런 셀이 없는 열은 계획값과 같다고 본다)
+                got = [next((c["width"] for c in cells if c["col"] == k and c["colspan"] == 1), want[k])
+                       for k in range(len(want))]
                 if got != want:
                     problems.append(f"{where} 열 폭 {got} (계획 {want})")
+            got_spans = sorted((c["row"], c["col"], c["rowspan"], c["colspan"]) for c in cells
+                               if c["rowspan"] > 1 or c["colspan"] > 1)
+            want_spans = sorted((m["row"], m["col"], m["rowspan"], m["colspan"]) for m in tb["merges"])
+            if got_spans != want_spans:
+                problems.append(f"{where} 병합 {got_spans} (계획 {want_spans})")
+            by_addr = {(c["row"], c["col"]): c for c in cells}
+            for em in tb["cell_emphasis"]:
+                want = json.loads(em["props"])
+                ids = by_addr.get((em["row"], em["col"]), {}).get("chars", [])[em["start"]:em["start"] + em["count"]]
+                bad = len(ids) != em["count"] or any(
+                    not shapes.get(i, {}).get(k) if k != "textColor" else shapes.get(i, {}).get("color") != v
+                    for i in ids for k, v in want.items())
+                if bad:
+                    problems.append(f"{where} 셀 강조 미반영: ({em['row']},{em['col']}) {em['props']}")
             if tb["header_fill"]:
                 for c in cells:
                     head = c["row"] == 0

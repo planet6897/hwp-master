@@ -215,9 +215,12 @@ class TableStyleTest(unittest.TestCase):
         spec, plan = native.split(TABLE_DOC)
         self.assertTrue(all(set(b) <= {"type", "rows", "cell_align", "text"} for b in spec["blocks"]))
         self.assertEqual(plan["tables"], [
-            {"table": 0, "cols": 3, "header_fill": "#D9D9D9", "col_widths": [2, 3, 2]},
-            {"table": 1, "cols": 2, "header_fill": "#DCE6F2", "col_widths": None},
-            {"table": 2, "cols": 2, "header_fill": None, "col_widths": [1, 4]}])
+            {"table": 0, "cols": 3, "header_fill": "#D9D9D9", "col_widths": [2, 3, 2], "merges": [],
+             "cell_emphasis": []},
+            {"table": 1, "cols": 2, "header_fill": "#DCE6F2", "col_widths": None, "merges": [],
+             "cell_emphasis": []},
+            {"table": 2, "cols": 2, "header_fill": None, "col_widths": [1, 4], "merges": [],
+             "cell_emphasis": []}])
 
     def test_split_widths(self):
         self.assertEqual(native.split_widths(41952, [2, 3, 2]), [11986, 17979, 11987])
@@ -238,6 +241,48 @@ class TableStyleTest(unittest.TestCase):
         wide = [{"type": "table", "rows": [[cell, "b", "c"]], "col_widths": [4, 1, 1]}]
         self.assertEqual([f.code for f in hds.lint_table_widths(even, 210)], ["W201"])
         self.assertEqual([f.code for f in hds.lint_table_widths(wide, 210)], [])
+
+
+MERGE_DOC = {"version": "1", "title": "병합", "blocks": [
+    {"type": "table", "header_row": True, "col_widths": [1, 2, 1],
+     "merges": [{"row": 0, "col": 1, "colspan": 2}, {"row": 1, "col": 0, "rowspan": 2}],
+     "cell_emphasis": [{"row": 1, "col": 2, "text": "54", "bold": True, "color": "#C00000"},
+                       {"row": 1, "col": 0, "underline": True}],
+     "rows": [["구분", "실적", ""], ["주력", "반도체", "54.5%"], ["", "자동차", "-4%"]]}]}
+
+
+class MergeTest(unittest.TestCase):
+    def test_split(self):
+        _, plan = native.split(MERGE_DOC)
+        tb = plan["tables"][0]
+        self.assertEqual(tb["merges"], [{"row": 0, "col": 1, "rowspan": 1, "colspan": 2},
+                                        {"row": 1, "col": 0, "rowspan": 2, "colspan": 1}])
+        self.assertEqual([(e["start"], e["count"]) for e in tb["cell_emphasis"]], [(0, 2), (0, 2)])
+        self.assertEqual(native.covered_cells(tb["merges"]), {(0, 2), (2, 0)})
+
+    def test_validate(self):
+        self.assertEqual(codes(hds.validate_blocks(MERGE_DOC["blocks"])), [])
+        rows = [["a", "b"], ["c", "d"]]
+        bad = [{"type": "table", "rows": rows, "merges": []},
+               {"type": "table", "rows": rows, "merges": [{"row": 0, "col": 0}]},
+               {"type": "table", "rows": rows, "merges": [{"row": 1, "col": 0, "rowspan": 2}]},
+               {"type": "table", "rows": rows, "merges": [{"row": 0, "col": 0, "colspan": 2}]},
+               {"type": "table", "rows": [["a", ""], ["", ""]], "merges": [
+                   {"row": 0, "col": 0, "colspan": 2}, {"row": 0, "col": 1, "rowspan": 2}]},
+               {"type": "table", "rows": [["a", ""]], "merges": [{"row": 0, "col": 0, "colspan": 2}],
+                "cell_emphasis": [{"row": 0, "col": 1, "bold": True}]},
+               {"type": "table", "rows": rows, "cell_emphasis": [{"row": 0, "col": 0, "text": "z", "bold": True}]},
+               {"type": "table", "rows": rows, "cell_emphasis": [{"row": 0, "col": 0}]}]
+        self.assertEqual(codes(hds.validate_blocks(bad)),
+                         ["E118"] * 5 + ["E119", "E110", "E109"])
+
+    def test_w201_merged_width(self):
+        cell = "가" * 30
+        rows = [[cell, ""], ["a", "b"]]
+        self.assertEqual([f.code for f in hds.lint_table_widths([{"type": "table", "rows": rows}], 210)],
+                         ["W201"])
+        merged = {"type": "table", "rows": rows, "merges": [{"row": 0, "col": 0, "colspan": 2}]}
+        self.assertEqual(hds.lint_table_widths([merged], 210), [])
 
 
 class ProjectLintTest(unittest.TestCase):
@@ -370,6 +415,18 @@ class ProduceTest(unittest.TestCase):
         self.assertEqual(aligns[tables[0][5]["para_pr"]], "RIGHT")  # 데이터 행 cell_align 유지
         problems = native.check(self.dir / "tbl" / "work" / "scaffold.hwpx", TABLE_DOC)
         self.assertTrue(any("머리 행" in p for p in problems) and any("열 폭" in p for p in problems))
+
+    def test_merge_and_cell_emphasis(self):
+        out = self.dir / "merge" / "out.hwpx"
+        result = native.produce(MERGE_DOC, out, self.rhwp, self.dir / "merge" / "work")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(native.check(out, MERGE_DOC), [])
+        cells = native.table_cells(out)[0]
+        # 가려진 셀은 사라지고, 병합 첫 셀이 범위를 갖는다. 머리 행은 남은 두 셀만 꾸민다.
+        self.assertEqual(sorted((c["row"], c["col"]) for c in cells), [(0, 0), (0, 1), (1, 0), (1, 1), (1, 2), (2, 1), (2, 2)])
+        self.assertEqual(sum(c["header"] for c in cells), 2)
+        problems = native.check(self.dir / "merge" / "work" / "scaffold.hwpx", MERGE_DOC)
+        self.assertTrue(any("병합" in p for p in problems) and any("셀 강조" in p for p in problems), problems)
 
     def test_deterministic_and_receipt(self):
         a, b = self.produce("a"), self.produce("b")

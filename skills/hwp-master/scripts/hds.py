@@ -12,7 +12,9 @@ HDS v1 은 `rhwp scaffold` 명세 v1 과 같은 형식이다.
                 "footnotes"?: [{"text": str, "after"?: str}],
                 "emphasis"?: [{"text": str, "bold"?, "italic"?, "underline"?: bool, "color"?: "#RRGGBB"}]}
     table      {"type": "table", "rows": [[str]], "cell_align"?: str | [str],
-                "header_row"?: bool, "header_fill"?: "#RRGGBB", "col_widths"?: [num]}
+                "header_row"?: bool, "header_fill"?: "#RRGGBB", "col_widths"?: [num],
+                "merges"?: [{"row", "col", "rowspan"?, "colspan"?}],
+                "cell_emphasis"?: [{"row", "col", "text"?, "bold"?, "italic"?, "underline"?, "color"?}]}
     page_break {"type": "page_break"}          # 다음 블록을 새 쪽에서 시작
     image      {"type": "image", "path": str, "width_mm"?: num, "caption"?: str,
                 "align"?: "left"|"center"|"right"}  # 글자처럼 취급한 그림 한 줄
@@ -44,7 +46,8 @@ TOP_KEYS = {"version", "title", "font", "page_size", "header", "footer", "blocks
 BLOCK_KEYS = {
     "heading": {"type", "level", "text"},
     "paragraph": {"type", "text", "footnotes", "emphasis"},
-    "table": {"type", "rows", "cell_align", "header_row", "header_fill", "col_widths"},
+    "table": {"type", "rows", "cell_align", "header_row", "header_fill", "col_widths", "merges",
+              "cell_emphasis"},
     "page_break": {"type"},
     "image": {"type", "path", "width_mm", "caption", "align"},
     "list": {"type", "items", "markers"},
@@ -337,10 +340,87 @@ def _validate_table(b: dict, where: str) -> List[Finding]:
             out.append(_err("E116", "header_fill 은 #RRGGBB 형식이어야 합니다", where))
         elif b.get("header_row") is not True:
             out.append(_err("E116", "header_fill 은 header_row: true 와 함께 씁니다", where))
+    covered = set()
+    if "merges" in b:
+        found, covered = _validate_merges(b, rows, ncols, where)
+        out.extend(found)
+    if "cell_emphasis" in b:
+        out.extend(_validate_cell_emphasis(b, rows, ncols, covered, where))
     widths = b.get("col_widths")
     if widths is not None and (not isinstance(widths, list) or len(widths) != ncols or not all(
             isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0 for w in widths)):
         out.append(_err("E117", f"col_widths 는 열 수({ncols})만큼의 양수 배열이어야 합니다 (비율)", where))
+    return out
+
+
+def _cell_text(rows, r: int, c: int) -> str:
+    return rows[r][c] if r < len(rows) and c < len(rows[r]) and isinstance(rows[r][c], str) else ""
+
+
+def _validate_merges(b: dict, rows, ncols: int, where: str) -> tuple:
+    """E118. 반환 (findings, 가려지는 셀 좌표 집합)."""
+    merges = b["merges"]
+    if not isinstance(merges, list) or not merges:
+        return [_err("E118", "merges 는 비어 있지 않은 배열이어야 합니다", where)], set()
+    out: List[Finding] = []
+    taken, covered = set(), set()
+    for k, m in enumerate(merges):
+        w = f"{where}.merges[{k}]"
+        if not isinstance(m, dict) or set(m) - {"row", "col", "rowspan", "colspan"} or not {"row", "col"} <= set(m):
+            out.append(_err("E118", "병합은 {row, col, rowspan?, colspan?} 객체여야 합니다", w))
+            continue
+        vals = [m["row"], m["col"], m.get("rowspan", 1), m.get("colspan", 1)]
+        if not all(isinstance(v, int) and not isinstance(v, bool) for v in vals) or min(vals[:2]) < 0 \
+                or min(vals[2:]) < 1:
+            out.append(_err("E118", "row·col 은 0 이상, rowspan·colspan 은 1 이상 정수여야 합니다", w))
+            continue
+        r, c, rs, cs = vals
+        if rs == cs == 1:
+            out.append(_err("E118", "rowspan 이나 colspan 중 하나는 2 이상이어야 합니다", w))
+            continue
+        if r + rs > len(rows) or c + cs > ncols:
+            out.append(_err("E118", f"병합 범위가 표({len(rows)}×{ncols}) 밖입니다", w))
+            continue
+        cells = {(rr, cc) for rr in range(r, r + rs) for cc in range(c, c + cs)}
+        if cells & taken:
+            out.append(_err("E118", "다른 병합과 겹칩니다", w))
+            continue
+        taken |= cells
+        hidden = cells - {(r, c)}
+        covered |= hidden
+        full = sorted(x for x in hidden if _cell_text(rows, *x).strip())
+        if full:
+            out.append(_err("E118", f"병합으로 가려지는 셀 {full} 에 글이 있습니다 — 첫 셀에 모아 쓰고 나머지는 \"\" 로 둡니다", w))
+    return out, covered
+
+
+def _validate_cell_emphasis(b: dict, rows, ncols: int, covered: set, where: str) -> List[Finding]:
+    marks = b["cell_emphasis"]
+    if not isinstance(marks, list) or not marks:
+        return [_err("E119", "cell_emphasis 는 비어 있지 않은 배열이어야 합니다", where)]
+    out: List[Finding] = []
+    for k, m in enumerate(marks):
+        w = f"{where}.cell_emphasis[{k}]"
+        if not isinstance(m, dict) or set(m) - {"row", "col", "text", *EMPHASIS_STYLES}:
+            out.append(_err("E119", "셀 강조는 {row, col, text?, bold?, italic?, underline?, color?} 객체여야 합니다", w))
+            continue
+        r, c = m.get("row"), m.get("col")
+        if not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in (r, c)) \
+                or r >= len(rows) or c >= ncols:
+            out.append(_err("E119", f"셀 강조 좌표가 표({len(rows)}×{ncols}) 밖입니다", w))
+            continue
+        if (r, c) in covered:
+            out.append(_err("E119", f"병합으로 가려지는 셀 ({r},{c}) 입니다 — 병합 첫 셀을 가리키세요", w))
+            continue
+        cell = _cell_text(rows, r, c)
+        text = m.get("text")
+        if text is not None and (not isinstance(text, str) or not text or text not in cell):
+            out.append(_err("E110", f"강조 text {text!r} 가 셀 글자에 없습니다", w))
+        if text is None and not cell:
+            out.append(_err("E119", "빈 셀은 강조할 수 없습니다", w))
+        out.extend(f for f in _validate_emphasis({"text": cell, "emphasis": [
+            {**{k2: v for k2, v in m.items() if k2 in EMPHASIS_STYLES}, "text": text or cell or "x"}]}, w)
+            if f.code == "E109")
     return out
 
 
@@ -366,9 +446,12 @@ def lint_table_widths(blocks, page_width_mm: float, where_prefix: str = "") -> L
         if not ncols:
             continue
         ratios = col_ratios(b, ncols)
+        spans = {(m.get("row"), m.get("col")): m.get("colspan", 1) for m in b.get("merges") or []
+                 if isinstance(m, dict) and isinstance(m.get("colspan", 1), int)}
         for r, row in enumerate(rows):
             for c, cell in enumerate(row):
-                cap_em = (content_mm * ratios[c] - CELL_PAD_MM) / BASE_EM_MM
+                share = sum(ratios[c:c + max(1, spans.get((r, c), 1))])
+                cap_em = (content_mm * share - CELL_PAD_MM) / BASE_EM_MM
                 if isinstance(cell, str) and text_em(cell) > cap_em:
                     out.append(_warn(
                         "W201",

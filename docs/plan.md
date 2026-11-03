@@ -252,6 +252,9 @@ hwp-master는 rhwp 소스를 포함하지 않고 설치된 `rhwp` 바이너리�
 - 2026-11-03: 표 꾸밈(`header_row`·`header_fill`·`col_widths`)도 코어 확장 없이 제공 — `edit set-column-widths`
   (scaffold 표 폭을 비율로 나눔), 첫 행 셀마다 `set-cell-props {fillType, fillColor, isHeader}`(기존 테두리 유지)
   + `apply-char-format-in-cell` 굵게 + `apply-para-format-in-cell` 가운데. 한컴 2024 대조 실루엣 100%.
+- 2026-11-03: 표 셀 병합(`merges` → `edit merge-cells`)·셀 강조(`cell_emphasis` → `apply-char-format-in-cell
+  --start/--end`, end 는 미포함). 한컴 2024 대조 실루엣 100%. 표 셀 각주는 `insert-footnote` 가 본문 문단 좌표만
+  받아 보류(rhwp 코어 확장 필요).
 - 각 블록은 rhwp 이슈 `task/<이슈번호>-scaffold-<블록>` 브랜치로 진행한다.
 - 완료 기준: 블록별로 rhwp 정본 게이트 통과(§7).
 

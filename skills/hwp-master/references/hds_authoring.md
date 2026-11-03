@@ -2,13 +2,13 @@
 
 HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔·그림·목록·표 꾸밈·글자 강조·각주·머리말·꼬리말은
 빌드가 scaffold 결과에 `rhwp edit`으로 붙인다(`scripts/native.py`). 아래 밖의 필드나 블록은 오류(E002·E003)다.
-수식·글자 크기·셀 병합은 아직 없다. 미지원 표현을 그림이나 꼼수로 흉내 내지 않는다.
+수식·글자 크기·표 셀 각주는 아직 없다. 미지원 표현을 그림이나 꼼수로 흉내 내지 않는다.
 
 | 블록 | 필드 | 한글 문서에서 |
 |---|---|---|
 | `heading` | `level` 1~7, `text` | 개요 문단 (자동 번호, 굵게 12pt) |
 | `paragraph` | `text`, `emphasis`·`footnotes` (선택) | 본문 문단 (10pt, 양쪽 정렬, 줄 간격 160%) |
-| `table` | `rows` (문자열 2차원 배열), `cell_align`·`header_row`·`header_fill`·`col_widths` (선택) | 실선 표. 열 폭은 균등(또는 `col_widths` 비율), `header_row`면 첫 행이 배경·굵게·가운데인 제목 행 |
+| `table` | `rows` (문자열 2차원 배열), `cell_align`·`header_row`·`header_fill`·`col_widths`·`merges`·`cell_emphasis` (선택) | 실선 표. 열 폭은 균등(또는 `col_widths` 비율), `header_row`면 첫 행이 배경·굵게·가운데인 제목 행 |
 | `page_break` | (없음) | 다음 블록을 새 쪽에서 시작 |
 | `image` | `path`, `width_mm`·`caption`·`align` (선택) | 글자처럼 취급한 그림 한 줄(기본 가운데), 캡션은 그 아래 가운데 문단 |
 | `list` | `items` (문자열 또는 `{text, level?, emphasis?, footnotes?}`), `markers` (선택) | 항목마다 "글머리 + 빈칸 + 글" 문단, 단계별 왼쪽 여백 10pt·글머리 폭 내어쓰기 |
@@ -41,7 +41,7 @@ HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔
 - `text`가 문단에서 **처음** 나오는 곳에 `bold`·`italic`·`underline`(true/false)·`color`(`#RRGGBB`)를 준다.
   적어도 하나는 있어야 한다. 같은 말이 두 번 나오면 강조할 쪽이 먼저 나오도록 `text`를 길게 잡는다.
 - 핵심 수치·결론 한두 군데에만 쓴다. 문단 전체를 굵게 하지 않는다. 빨간색은 경고·변경 사항에만 쓴다.
-- 제목은 이미 굵고, 표 셀에는 아직 강조를 줄 수 없다.
+- 제목은 이미 굵다. 표 셀은 `table.cell_emphasis`로 강조한다.
 
 ### 그림
 
@@ -69,6 +69,23 @@ HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔
 - `col_widths`는 열 수만큼의 양수 **비율**이다(`[1, 4]` = 1:4). 표 전체 폭은 그대로 두고 나눈다.
   긴 설명 열을 넓히면 W201(셀이 한 줄을 넘음) 경고도 그 폭으로 다시 잰다.
 - `cell_align`은 데이터 행에 그대로 적용되고, 제목 행만 가운데로 바뀐다.
+
+병합과 셀 강조:
+
+```json
+{"type": "table", "header_row": true,
+ "merges": [{"row": 1, "col": 0, "rowspan": 2}, {"row": 3, "col": 0, "colspan": 2}],
+ "cell_emphasis": [{"row": 3, "col": 2, "bold": true},
+                   {"row": 1, "col": 2, "text": "54.5", "color": "#C00000"}],
+ "rows": [["구분", "품목", "증감률"], ["주력", "반도체", "54.5%"], ["", "자동차", "-4.4%"],
+          ["합계", "", "11.7%"]]}
+```
+
+- `merges`는 병합 첫 셀(`row`·`col`, 0부터)과 `rowspan`·`colspan`이다. 가려지는 셀은 `""`로 둔다(글이 있으면 E118).
+  병합끼리 겹칠 수 없다. 병합한 셀은 세로 가운데로 보인다.
+- `cell_emphasis`는 문단 `emphasis`와 같은 서식 키를 쓴다. `text`를 빼면 셀 글 전체, 쓰면 셀에서 처음 나오는 곳이다.
+  가려진 셀은 가리킬 수 없다(E119). 합계 행·핵심 수치에만 쓴다.
+- 표 셀에는 아직 각주를 달 수 없다(rhwp 편집 명령이 본문 문단 좌표만 받는다). 출처는 표 아래 문단의 각주나 주석 문단으로 쓴다.
 
 ### 목록
 
@@ -116,6 +133,8 @@ HDS v1의 제목·문단·표는 `rhwp scaffold` 명세 v1과 같다. 쪽 나눔
 | E115 | `list.markers`가 빈칸 없는 3글자 이하 문자열의 배열이 아님 |
 | E116 | `header_row`가 true/false가 아니거나 `header_fill`이 `#RRGGBB`가 아니거나 `header_row` 없이 씀 |
 | E117 | `col_widths`가 열 수만큼의 양수 배열이 아님 |
+| E118 | `merges` 형식·범위가 틀리거나 서로 겹치거나 가려지는 셀에 글이 있음 |
+| E119 | `cell_emphasis` 좌표가 표 밖이거나 가려진 셀·빈 셀이거나 형식이 틀림 |
 | E005 | `cell_align`이 `justify`/`left`/`center`/`right`(또는 열별 목록)가 아님 |
 
 ## 경고
