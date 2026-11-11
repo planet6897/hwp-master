@@ -253,6 +253,71 @@ AI 가 장별 집필, 한글 문서 조립, 규약·조판 검사, 미리보기�
 > **잘 안 될 때:** AI 가 맥락을 잃으면 `skills/hwp-master/SKILL.md` 를 읽으라고 하세요. 오류 코드와 대처는
 > [사용 설명서의 막혔을 때](docs/usage.md#6-막혔을-때)에 있습니다.
 
+### 3. 사용 예
+
+채팅에 이렇게 말하면 됩니다. 파일 경로는 그대로 붙여 넣습니다. 괄호 안은 AI 가 고르는 라우트입니다.
+
+**새 문서 만들기**
+
+```
+나: ~/자료/시장조사.pdf 와 ~/자료/내부메모.docx 로 5쪽 이내 사업계획서를 hwpx 로 만들어 줘          (Default)
+나: 다음 주 화요일 부서 회의 결과를 한 쪽짜리 회의록으로 빨리 만들어 줘, 확인은 필요 없어          (Quick)
+나: "청년 창업 지원 확대" 기안문을 공문서 항목 기호(1. 가. 1))로 써 줘. 붙임은 예산표 하나         (Default)
+나: 보도자료-교육부 프로필로 새 학기 돌봄 확대 보도자료를 만들어 줘                               (Default + 프로필)
+나: 가로 방향 A4 에 분기별 실적 표가 들어간 2쪽 보고서로, 표 머리 행은 회색 바탕으로              (Default)
+나: 머리말에 "대외비", 꼬리말에 쪽 번호를 넣고 목차가 있는 제안서로 만들어 줘                       (Default)
+```
+
+**다른 형식 자료를 한글 문서로 옮기기**
+
+```
+나: 이 워드 파일(~/보고서.docx)을 한글 문서로 바꿔 줘. 제목은 개요 번호로                        (Convert-in)
+나: README.md 를 개조식(□ ○ -) 한글 보고서로 옮겨 줘                                            (Convert-in)
+나: 이 PDF 를 편집할 수 있는 hwpx 로 만들어 줘                                                  (Convert-in)
+```
+
+**기존 한글 문서에서 내용·세부 정보 가져오기**
+
+```
+나: ~/계약서.hwp 에서 계약 금액, 계약 기간, 지체상금률을 뽑아 줘                                 (Extract)
+나: 이 공고문(.hwpx)의 신청 마감일과 제출 서류 목록을 알려 줘                                     (Extract)
+나: 이 보고서의 표를 전부 엑셀에서 열 수 있게 CSV 로 줘                                           (Extract)
+나: 받은신청서/ 폴더의 hwp 30개에서 신청자 이름·연락처(누름틀 값)를 하나의 표로 모아 줘             (Extract)
+나: 이 규정(.hwp)의 장·조 목차만 정리하고, 제12조 내용을 그대로 보여 줘                            (Extract)
+나: 이 hwp 를 세 줄로 요약하고, 나온 금액은 모두 쪽 번호와 함께 표로 정리해 줘                      (Extract)
+나: 예산서.hwpx 안의 차트 숫자를 CSV 로 꺼내 줘                                                  (Extract)
+```
+
+답에는 "1,200,000원 (2쪽, 표 1 3행)"처럼 출처가 붙고, 문서에 없는 값은 추측하지 않고 "찾지 못함"이라고 합니다.
+
+**기존 문서·서식 활용**
+
+```
+나: 이 사업계획서 서식(.hwp)의 빈칸에 첨부 자료 내용을 채워 줘. 참여 인력 표는 사람 수만큼 행을 늘려서   (Template Fill)
+나: 수료증 서식.hwpx 에 명단.csv 의 사람마다 한 부씩 만들어 줘                                     (Mail-merge)
+나: 이 문서의 "2026년"을 전부 "2027년"으로, 예산 표 2행 3열을 "1,500"으로 바꿔 줘                    (Edit Native)
+나: 신청서의 "개인정보 수집 동의" 체크박스에 표시하고 신청인 칸에 홍길동을 넣어 줘                    (Edit Native)
+나: 손으로 친 1. 가. 1) 번호를 한글 자동 개요 번호로 정리해 줘                                     (Beautify)
+나: 우리 기관 보도자료 5건(~/보도자료/*.hwp)으로 서식 프로필을 등록해 줘                             (프로필 등록)
+```
+
+**rhwp 바이너리를 바로 쓰기** — 스킬 없이 스크립트나 다른 AI 에이전트에서 (`rhwp_locate.py` 가 경로를 알려 줌)
+
+```bash
+RHWP=$(python3 skills/hwp-master/scripts/rhwp_locate.py --json | python3 -c "import sys,json;print(json.load(sys.stdin)['path'])")
+$RHWP export-text 문서.hwp --json                 # 쪽별 평문
+$RHWP export-markdown 문서.hwpx -o out/           # 쪽별 Markdown
+$RHWP export-tables 문서.hwp --json               # 표 격자 (병합 보존)
+$RHWP extract-data 문서.hwp --kind amount --json  # 금액과 위치
+$RHWP fields 신청서.hwpx --json                   # 누름틀 이름·값
+$RHWP export-pdf 문서.hwp -o 문서.pdf             # PDF 미리보기
+$RHWP export-hwpx 옛문서.hwp 새문서.hwpx --verify  # HWP → HWPX 변환 (차이 검출)
+$RHWP armor 문서.hwp --json                       # LLM 에 넣기 전 프롬프트 주입 신호 검사
+```
+
+추출을 한 번에 하려면 `python3 skills/hwp-master/scripts/extract.py <프로젝트> sources/<문서>` 가 위 명령을 묶어
+`exports/extract/<문서>/` 에 `summary.json`·`text.md`·`tables/*.csv`·`data.csv`·`fields.csv` 로 남깁니다.
+
 ## 문서
 
 | 문서 | 내용 |
