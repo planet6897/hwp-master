@@ -1,6 +1,6 @@
 ---
 name: hwp-master
-description: 자료(PDF·DOCX·MD·웹·기존 HWP) 또는 주제를 받아 한컴에서 편집 가능한 네이티브 HWPX 문서(개조식 보고서·사업계획서·제안서·기안문·회의록)를 rhwp로 생성합니다. 트리거 — "한글 문서로 만들어줘", "hwp 보고서 작성", "사업계획서 hwpx로", "이 자료로 기안문", "/hwp-master".
+description: 자료(PDF·DOCX·MD·웹·기존 HWP) 또는 주제를 받아 한컴에서 편집 가능한 네이티브 HWPX 문서(개조식 보고서·사업계획서·제안서·기안문·회의록)를 rhwp로 생성하고, 기존 HWP/HWPX 의 본문·표·날짜·금액·누름틀 값 등 세부 정보를 위치와 함께 추출합니다. 트리거 — "한글 문서로 만들어줘", "hwp 보고서 작성", "사업계획서 hwpx로", "이 자료로 기안문", "이 hwp 에서 금액·날짜 뽑아줘", "hwp 표를 CSV로", "/hwp-master".
 metadata:
   version: 0.1.17
   license: MIT
@@ -10,9 +10,9 @@ metadata:
 # hwp-master (초안)
 
 > 이 스킬은 rhwp 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경한다. rhwp 는 소스를 받아 빌드하지 않고, 이 저장소 Release 에 올린
-> devel 최신 빌드 바이너리(Windows·macOS Apple Silicon·Linux)를 `scripts/install_rhwp.py` 로 설치해 쓴다.
+> devel 최신 빌드 바이너리(Windows·macOS Apple Silicon·Intel·Linux glibc 2.28·2.35)를 `scripts/install_rhwp.py` 로 설치해 쓴다.
 
-> 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표(캡션·제목 행·열 폭·병합·셀 강조)·쪽 나눔·그림·목록·목차 + 글자 강조(크기·형광펜·취소선 포함)·캡션 자동 번호·각주·머리말·꼬리말·용지 방향·여백, 규약 검사(gongmun·gaejosik).
+> 상태: Default·Quick·Extract·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표(캡션·제목 행·열 폭·병합·셀 강조)·쪽 나눔·그림·목록·목차 + 글자 강조(크기·형광펜·취소선 포함)·캡션 자동 번호·각주·머리말·꼬리말·용지 방향·여백, 규약 검사(gongmun·gaejosik).
 > 전체 계획: 저장소의 `docs/plan.md`.
 
 ## 스크립트
@@ -32,6 +32,7 @@ metadata:
 | `scripts/beautify.py` | Beautify: `propose`(손 번호 → 개요 번호 계획) · `apply`(적용 → 내용 보존·조판 판정, 문제 문단 자동 제외) |
 | `scripts/style_profile.py` | 문서 유형 프로필: `analyze`·`register`(실제 문서들의 서식 다수결 → `~/.hwp-master/profiles/`) · `list [--search 낱말] [--json]`(기본·내 프로필과 핵심 서식) · `show` · `lock`(spec_lock.json 에 적용). 기본 프로필 37종은 `profiles/` |
 | `scripts/template_fill.py` | Template Fill: `inspect`(서식 칸 조사·자료 틀) · `fill`(목록 반복 → 칸 채움 → 캡슐 사슬 → 판정) · `register`(기관 서식 등록) |
+| `scripts/extract.py` | Extract: 본문(MD)·개요·표(JSON·CSV)·날짜/금액/수량(위치 포함)·누름틀·머리말/꼬리말·차트를 `exports/extract/<문서>/` 로 (읽기 전용) |
 | `scripts/edit.py` | Edit Native: `inspect`(편집 대상 조사) · `apply`(dry-run → 실행 → 작업 캡슐 → 전후 렌더 비교) |
 
 ## 원칙
@@ -50,6 +51,7 @@ metadata:
 | 짧은 문서를 빠르게 | Quick | `workflows/generate.md` (Quick 절) |
 | MD·DOCX·PDF 자료를 한글 문서로 | Convert-in | `workflows/convert.md` |
 | 기관 서식의 `{{칸}}`·누름틀에 내용 채우기 (목록 반복 포함) | Template Fill | `workflows/template.md` |
+| 기존 HWP/HWPX 에서 내용·세부 정보 가져오기 (본문·표·날짜·금액·누름틀 값, 요약·질문 답변) | Extract | `workflows/extract.md` |
 | 기존 HWP/HWPX 수정 (누름틀·문구·표 셀·체크박스) | Edit Native | `workflows/edit.md` |
 | 서식 하나에 명단 N행 → 문서 N개 | Mail-merge | `workflows/merge.md` |
 | 시험지 자료 → 한글 시험지 | Exam (위임) | `workflows/exam.md` → rhwp `rhwp-exam-ingest` |
@@ -71,6 +73,6 @@ metadata:
 ## 정지 규칙
 
 - `rhwp` 바이너리를 찾지 못하거나 최소 버전 미만이면 중단하고, 사용자 동의를 받아 `python3 scripts/install_rhwp.py` 로 설치한다
-  (macOS Apple Silicon·Linux x86_64·Windows x86_64). 다른 플랫폼은 README 의 소스 빌드를 안내한다.
+  (macOS Apple Silicon·Intel, Linux x86_64 glibc 2.28 이상, Windows x86_64). 다른 플랫폼은 README 의 소스 빌드를 안내한다.
 - Strategist 확인 게이트에서 사용자 확인 없이 집필로 넘어가지 않는다 (Quick 제외).
 - final 검사에 오류가 1건이라도 있으면 산출물을 완료로 보고하지 않는다.

@@ -23,7 +23,8 @@ hwp-master 는 이 부담을 없애려고 **개발 최신 상태(devel)의 rhwp 
 | 시스템 | Rust 툴체인·빌드 도구 설치, CPU·디스크를 수 GB 씀, 10~50분 | 풀기만 하면 됨, 수십 초 |
 | AI 토큰 | 빌드 오류 대응·로그 읽기 | 설치 결과 몇 줄 |
 
-- **Windows x86_64 · macOS (Apple Silicon) · Linux x86_64** 용 바이너리를 제공합니다(수십 MB, SHA-256 고정).
+- **Windows x86_64 · macOS Apple Silicon·Intel · Linux x86_64 (glibc 2.28 / 2.35)** 용 바이너리 5종을 제공합니다
+  (각 약 30 MB, SHA-256 고정).
 - `python3 skills/hwp-master/scripts/install_rhwp.py` 한 줄로 받아 검증·설치하므로 rhwp 소스를 clone 할 필요가 없습니다.
 - 바이너리 위에 **문서를 다루는 도구**를 함께 제공합니다 — 새 문서 생성, 형식 변환(hwp↔hwpx·PDF·Markdown),
   서식 채우기, 명단 문서, 부분 수정, 번호 정리, 규약·조판 검사.
@@ -38,6 +39,9 @@ hwp-master 는 이 부담을 없애려고 **개발 최신 상태(devel)의 rhwp 
 에이전트 스킬입니다. 제목은 한글 개요 번호, 표는 한글 표 개체로 들어가므로 그림으로 붙인 문서가 아니라
 그대로 고쳐 쓸 수 있는 문서가 나옵니다. 기관 서식 채우기, 명단으로 여러 부 만들기, 기존 문서 부분 수정,
 손 번호를 개요 번호로 정리하기도 합니다.
+
+**문서 내용 가져오기**도 합니다. 기존 HWP/HWPX 에서 본문(Markdown)·개요·표(CSV)·날짜·금액·수량·누름틀 값·
+머리말/꼬리말·차트 데이터를 쪽·문단 위치와 함께 꺼내, "이 계약서의 계약 금액과 기간은?" 같은 질문에 출처를 밝혀 답합니다.
 
 - 문서 엔진: [rhwp](https://github.com/edwardkim/rhwp) — HWP/HWPX 를 읽고 쓰는 오픈소스 엔진의 CLI 를 호출합니다.
 - hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다. 검사에서 오류가 하나라도 나오면 완료로 보고하지 않습니다.
@@ -116,22 +120,27 @@ rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardk
 
 | OS | 파일 | 확인 |
 |---|---|---|
-| macOS (Apple Silicon) | `rhwp-0.9.0-e118de8-macos-aarch64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
-| Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-e118de8-linux-x86_64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
+| macOS Apple Silicon (arm64) | `rhwp-0.9.0-e118de8-macos-aarch64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
+| macOS Intel (x86_64) | `rhwp-0.9.0-e118de8-macos-x86_64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
+| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.0-e118de8-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
+| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.0-e118de8-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 PNG 내보내기 검증 (2026-11-11) |
 | Windows x86_64 | `rhwp-0.9.0-e118de8-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-11) |
+
+- `install_rhwp.py` 가 CPU 와 Linux 의 glibc 버전(`ldd --version`)을 보고 맞는 파일을 고릅니다. glibc 2.35 이상이면
+  2.35 빌드를, 2.28~2.34 면 2.28 빌드를 씁니다. glibc 2.28 미만이나 musl(Alpine)은 소스에서 빌드합니다.
 
 - 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
 - 받기는 [GitHub CLI](https://cli.github.com/) 가 있으면 `gh release download` 를, 없으면 공개 Release 주소를 씁니다(로그인 불필요).
 - Linux 미리보기(PNG·PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
   HWPX 는 정상이고 미리보기 한글만 빠지며, hwp-master 가 경고(R105)를 냅니다.
-- Intel Mac·Linux ARM 은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
+- Linux ARM·Windows ARM·musl·glibc 2.28 미만은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
 
 찾는 순서는 `--rhwp` 인자 → `RHWP_BIN` 환경변수 → 설치 스크립트 바이너리 → PATH 의 `rhwp` 입니다. 직접 빌드한 rhwp 를
 쓰려면 `RHWP_BIN=/경로/rhwp` 로 지정합니다.
 </details>
 
 <details>
-<summary><strong>소스에서 빌드</strong> — Intel Mac·Linux ARM, 또는 다른 rhwp 커밋을 쓸 때</summary>
+<summary><strong>소스에서 빌드</strong> — Linux ARM·musl·오래된 glibc, 또는 다른 rhwp 커밋을 쓸 때</summary>
 
 ```bash
 # Rust 툴체인 (이미 있으면 생략)
@@ -152,14 +161,14 @@ macOS 약 11분, Linux 24코어 11~20분 걸렸습니다(2026-11-02~03). Linux �
 <summary><strong>최신 devel rhwp 배포하기</strong> — 저장소 관리자용</summary>
 
 ```bash
-gh workflow run rhwp-binaries.yml                     # edwardkim/rhwp devel 최신 커밋을 세 플랫폼으로 빌드·Release (약 1시간)
+gh workflow run rhwp-binaries.yml                     # edwardkim/rhwp devel 최신 커밋을 5개 플랫폼으로 빌드·Release (약 1시간)
 gh workflow run rhwp-binaries.yml -f rhwp_ref=<커밋>   # 특정 브랜치·커밋
 python3 tools/update_rhwp_release.py                  # 최근 Release 를 rhwp_release.json·README 에 반영
 python3 skills/hwp-master/scripts/install_rhwp.py     # 새 바이너리 설치·SHA-256 대조
 python3 -m unittest discover -s tests                 # 모두 통과해야 PR 로 올린다
 ```
 
-워크플로는 브랜치를 먼저 커밋 SHA 하나로 고정해 세 플랫폼이 같은 커밋을 빌드하고, 그 커밋의 Release 가 이미 있으면
+워크플로는 브랜치를 먼저 커밋 SHA 하나로 고정해 모든 플랫폼이 같은 커밋을 빌드하고, 그 커밋의 Release 가 이미 있으면
 멈춥니다. 각 압축 파일은 패키지 뒤 PNG 내보내기로 검증하고, Release 에 `SHA256SUMS.txt` 와 빌드 기록을 붙입니다.
 </details>
 
@@ -237,6 +246,9 @@ AI 가 장별 집필, 한글 문서 조립, 규약·조판 검사, 미리보기�
 > **이미 있는 한글 문서를 쓰고 싶다면?** 서식과 자료를 주고 "이 서식에 채워 줘"(서식 채우기), "이 신청서 서식에 명단.csv 로
 > 한 부씩"(명단 문서), "이 문서의 2026년을 2027년으로"(부분 수정), "1. 가. 1) 번호를 자동 번호로"(번호 정리)처럼 요청합니다.
 > 원본은 고치지 않고 결과를 새 파일로 만듭니다. 라우트별 사용법은 [사용 설명서](docs/usage.md)에 있습니다.
+
+> **문서에서 정보를 꺼내려면?** "이 계약서에서 계약 금액과 기간을 뽑아 줘", "이 hwp 의 표를 CSV 로", "신청서에 채워진 값을 표로"처럼
+> 요청합니다. 결과는 `exports/extract/<문서>/` 에 Markdown·JSON·CSV 로 남고, 답에는 쪽·표·문단 위치가 붙습니다.
 
 > **잘 안 될 때:** AI 가 맥락을 잃으면 `skills/hwp-master/SKILL.md` 를 읽으라고 하세요. 오류 코드와 대처는
 > [사용 설명서의 막혔을 때](docs/usage.md#6-막혔을-때)에 있습니다.
