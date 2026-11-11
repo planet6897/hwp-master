@@ -1,14 +1,14 @@
 {
   "repo": "planet6897/hwp-master",
-  "tag": "rhwp-0.9.0-4e2cc6b",
+  "tag": "rhwp-0.9.0-e118de8",
   "rhwp_version": "0.9.0",
-  "rhwp_commit": "4e2cc6bb36576b95d58d4c76cd833281ea652554",
+  "rhwp_commit": "e118de8abadd2dffb2798036b9ffd381b96ed7d5",
   "features": [
     "native-skia"
   ],
   "assets": {
-    "rhwp-0.9.0-4e2cc6b-linux-x86_64.tar.gz": "6b3a4348002fabc0726aa206196994825415239d714301d49642ac229277d9aa",
-    "rhwp-0.9.0-4e2cc6b-macos-aarch64.tar.gz": "417bc01496c5394eff4925d2004d7128239d8ca764dcf667c6facd53ba26422c",
-    "rhwp-0.9.0-4e2cc6b-windows-x86_64.zip": "fe5225bc1b3232580cf2c7c23d3f709bbf14c37574c9fa33f8049d050a68e4e4"
+    "rhwp-0.9.0-e118de8-linux-x86_64.tar.gz": "9f36d872e27cb144cf6c0506817c58204cb71c456b2f21ca9b2d9992afb1b2a3",
+    "rhwp-0.9.0-e118de8-macos-aarch64.tar.gz": "0ab8a6162642171eaa4833e99d9d166317cbaa9fdbd4d46b18bcc8ccbc31ed71",
+    "rhwp-0.9.0-e118de8-windows-x86_64.zip": "962ef1c2aa1702cb9041dd1a58b30461e11a98aaef50efe1423c8050c7a9b2c8"
   }
 }

@@ -169,7 +169,7 @@ jobs:
                 | sh -s -- -y -q --profile minimal --default-toolchain stable --target "$TARGET"
               . "$CARGO_HOME/env"
               rustc --version
-              ldd --version | head -1
+              ldd --version | sed -n 1p
               cargo build --locked --release --bin rhwp --features native-skia --target "$TARGET"
             '
           sudo chown -R "$(id -u):$(id -g)" target
