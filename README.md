@@ -120,10 +120,10 @@ rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardk
 
 | OS | 파일 | 확인 |
 |---|---|---|
-| macOS Apple Silicon (arm64) | `rhwp-0.9.0-e118de8-macos-aarch64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
-| macOS Intel (x86_64) | `rhwp-0.9.0-e118de8-macos-x86_64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
-| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.0-e118de8-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
-| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.0-e118de8-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 PNG 내보내기 검증 (2026-11-11) |
+| macOS Apple Silicon (arm64) | `rhwp-0.9.0-e118de8-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-11) |
+| macOS Intel (x86_64) | `rhwp-0.9.0-e118de8-macos-x86_64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-11) |
+| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.0-e118de8-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-11) |
+| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.0-e118de8-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 안에서 추출·PDF 검증 (2026-11-11) |
 | Windows x86_64 | `rhwp-0.9.0-e118de8-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-11) |
 
 - `install_rhwp.py` 가 CPU 와 Linux 의 glibc 버전(`ldd --version`)을 보고 맞는 파일을 고릅니다. glibc 2.35 이상이면
@@ -131,7 +131,9 @@ rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardk
 
 - 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
 - 받기는 [GitHub CLI](https://cli.github.com/) 가 있으면 `gh release download` 를, 없으면 공개 Release 주소를 씁니다(로그인 불필요).
-- Linux 미리보기(PNG·PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
+- 배포 바이너리는 문서 읽기·쓰기·편집·추출용이라 PNG 렌더(native-skia)를 넣지 않았습니다. 미리보기는 PDF 로 나오고,
+  Linux 에 fontconfig·freetype 같은 추가 라이브러리가 필요 없습니다. PNG 가 필요하면 아래처럼 `--features native-skia` 로 빌드합니다.
+- Linux 미리보기(PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
   HWPX 는 정상이고 미리보기 한글만 빠지며, hwp-master 가 경고(R105)를 냅니다.
 - Linux ARM·Windows ARM·musl·glibc 2.28 미만은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
 
@@ -147,9 +149,8 @@ rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardk
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Linux 는 먼저: sudo apt install build-essential libfontconfig1-dev libfreetype6-dev fonts-noto-cjk
 
-# native-skia 기능을 켜야 PNG·PDF 미리보기가 동작합니다
-cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel \
-  --features native-skia --bin rhwp rhwp
+# 배포 바이너리와 같은 기본 기능 (PNG 렌더가 필요하면 --features native-skia 를 덧붙인다)
+cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel --bin rhwp rhwp
 rhwp --version    # rhwp v0.9.0
 ```
 
@@ -169,7 +170,7 @@ python3 -m unittest discover -s tests                 # 모두 통과해야 PR �
 ```
 
 워크플로는 브랜치를 먼저 커밋 SHA 하나로 고정해 모든 플랫폼이 같은 커밋을 빌드하고, 그 커밋의 Release 가 이미 있으면
-멈춥니다. 각 압축 파일은 패키지 뒤 PNG 내보내기로 검증하고, Release 에 `SHA256SUMS.txt` 와 빌드 기록을 붙입니다.
+멈춥니다. 각 압축 파일은 새 폴더에 풀어 텍스트·표·개요·데이터 추출, PDF 내보내기, HWPX 저장을 돌려 검증하고, Release 에 `SHA256SUMS.txt` 와 빌드 기록을 붙입니다.
 </details>
 
 <details>

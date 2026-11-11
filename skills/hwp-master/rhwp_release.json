@@ -3,9 +3,7 @@
   "tag": "rhwp-0.9.0-e118de8",
   "rhwp_version": "0.9.0",
   "rhwp_commit": "e118de8abadd2dffb2798036b9ffd381b96ed7d5",
-  "features": [
-    "native-skia"
-  ],
+  "features": [],
   "assets": {
     "rhwp-0.9.0-e118de8-linux-x86_64.tar.gz": "9f36d872e27cb144cf6c0506817c58204cb71c456b2f21ca9b2d9992afb1b2a3",
     "rhwp-0.9.0-e118de8-macos-aarch64.tar.gz": "0ab8a6162642171eaa4833e99d9d166317cbaa9fdbd4d46b18bcc8ccbc31ed71",

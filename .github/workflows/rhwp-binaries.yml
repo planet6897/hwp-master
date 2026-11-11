@@ -2,13 +2,14 @@ name: rhwp binaries
 
 # hwp-master 가 쓰는 rhwp CLI 를 공개 upstream(edwardkim/rhwp) 의 커밋에서 빌드해
 # 이 저장소의 Release 에 붙인다. 네트워크·시스템 비용을 줄이려고, AI 에이전트가 수 GB 인 rhwp 저장소를 받아 빌드하지 않고
-# 플랫폼별 바이너리만 받아 쓰게 하려는 것이다. 빌드 방식은 upstream release-binary.yml 과 같다
-# (native-skia, --locked, 패키지 후 PNG 내보내기 검증).
+# 플랫폼별 바이너리만 받아 쓰게 하려는 것이다. 문서 읽기·쓰기·편집·추출이 목적이라 native-skia(PNG 렌더)는 넣지 않는다.
+# 그래서 Linux 에 fontconfig·freetype 런타임 의존성이 없고 오래된 glibc 에서도 빌드된다.
+# 빌드는 --locked release, 패키지 뒤 텍스트·표·개요·데이터 추출·PDF·HWPX 저장을 돌려 검증한다.
 #
 #   gh workflow run rhwp-binaries.yml                        # devel 최신 커밋
 #   gh workflow run rhwp-binaries.yml -f rhwp_ref=<브랜치 또는 40자 커밋 SHA>
 #
-# 브랜치를 주면 resolve 작업이 그 시점의 커밋 SHA 하나로 고정해 세 플랫폼이 같은 커밋을 빌드한다.
+# 브랜치를 주면 resolve 작업이 그 시점의 커밋 SHA 하나로 고정해 모든 플랫폼이 같은 커밋을 빌드한다.
 # 같은 태그의 Release 가 이미 있으면 빌드하지 않는다. 끝나면 tools/update_rhwp_release.py 로
 # rhwp_release.json·README 를 새 Release 에 맞춘다.
 #
@@ -103,8 +104,8 @@ jobs:
       short: ${{ steps.meta.outputs.short }}
 
     steps:
-      # rhwp 작업 트리(샘플·문서 포함 약 0.6GB)와 native-skia release 빌드가 Linux 러너 기본 여유 공간을
-      # 넘긴다(첫 실행에서 checkout 중 No space left on device). 쓰지 않는 도구를 지워 공간을 만든다.
+      # rhwp 작업 트리(샘플·문서 포함 약 0.6GB)와 release 빌드가 Linux 러너 기본 여유 공간을 넘길 수 있다
+      # (첫 실행에서 checkout 중 No space left on device). 쓰지 않는 도구를 지워 공간을 만든다.
       - name: Free disk space (Linux)
         if: runner.os == 'Linux'
         shell: bash
@@ -124,10 +125,6 @@ jobs:
           fetch-depth: 1
           lfs: false
 
-      - name: Disk after checkout
-        shell: bash
-        run: df -h . || true
-
       - name: Read version
         id: meta
         shell: bash
@@ -145,18 +142,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install native Skia dependencies (Linux)
-        if: runner.os == 'Linux' && !matrix.docker
-        shell: bash
-        run: |
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 \
-            install -y --no-install-recommends fonts-dejavu-core libfontconfig1-dev libfreetype6-dev
-
       - name: Build
         if: ${{ !matrix.docker }}
         shell: bash
-        run: cargo build --locked --release --bin rhwp --features native-skia --target ${{ matrix.target }}
+        run: cargo build --locked --release --bin rhwp --target ${{ matrix.target }}
 
       - name: Build in container
         if: ${{ matrix.docker }}
@@ -164,13 +153,12 @@ jobs:
         run: |
           docker run --rm -v "$PWD":/src -w /src -e CARGO_HOME=/src/.ci-cargo -e RUSTUP_HOME=/src/.ci-rustup \
             -e TARGET="${{ matrix.target }}" "${{ matrix.docker }}" bash -euo pipefail -c '
-              dnf install -y -q fontconfig-devel freetype-devel dejavu-sans-fonts
               curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs \
                 | sh -s -- -y -q --profile minimal --default-toolchain stable --target "$TARGET"
               . "$CARGO_HOME/env"
               rustc --version
               ldd --version | sed -n 1p
-              cargo build --locked --release --bin rhwp --features native-skia --target "$TARGET"
+              cargo build --locked --release --bin rhwp --target "$TARGET"
             '
           sudo chown -R "$(id -u):$(id -g)" target
 
@@ -183,6 +171,7 @@ jobs:
           echo "필요한 glibc: $need (허용 ${{ matrix.glibc }})"
           echo "### ${{ matrix.suffix }}: 필요한 glibc $need" >> "$GITHUB_STEP_SUMMARY"
           test "$(printf '%s\n%s\n' "$need" "${{ matrix.glibc }}" | sort -V | tail -1)" = "${{ matrix.glibc }}"
+          echo "동적 라이브러리:"; objdump -p "$bin" | grep NEEDED
 
       - name: Package
         shell: bash
@@ -194,7 +183,8 @@ jobs:
           rhwp ${{ steps.meta.outputs.version }}
           source: https://github.com/edwardkim/rhwp/commit/${{ needs.resolve.outputs.sha }}
           license: MIT (LICENSE)
-          build: cargo build --locked --release --bin rhwp --features native-skia --target ${{ matrix.target }}
+          build: cargo build --locked --release --bin rhwp --target ${{ matrix.target }}
+          features: default (native-skia 없음 — PNG 렌더 제외, PDF 는 SVG backend)
           runner: ${{ matrix.runner }}${{ matrix.docker && format(' (container {0})', matrix.docker) || '' }}
           workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           EOF
@@ -205,28 +195,67 @@ jobs:
           fi
           ls -la "$ARCHIVE"
 
+      # 압축 파일을 새 폴더에 풀어 hwp-master 가 쓰는 읽기·추출·PDF 경로를 실제로 돌려 본다.
+      - name: Write verify script
+        shell: bash
+        run: |
+          cat > .ci-verify.py <<'EOF'
+          import json, os, subprocess, sys, tarfile, tempfile, zipfile
+          from pathlib import Path
+
+          archive, sample = sys.argv[1], sys.argv[2]
+          work = Path(tempfile.mkdtemp())
+          if archive.endswith(".zip"):
+              zipfile.ZipFile(archive).extractall(work)
+          else:
+              with tarfile.open(archive) as t:
+                  t.extractall(work, **({"filter": "data"} if hasattr(tarfile, "data_filter") else {}))
+          exe = work / "rhwp" / ("rhwp.exe" if os.name == "nt" else "rhwp")
+          exe.chmod(0o755)
+
+          def run(*args):
+              p = subprocess.run([str(exe), *args], capture_output=True, text=True, encoding="utf-8",
+                                 errors="replace", timeout=600)
+              if p.returncode != 0:
+                  sys.exit(f"rhwp {' '.join(args)} 실패 (exit {p.returncode}): {p.stderr[-1500:]}")
+              return p.stdout
+
+          print(run("--version").strip())
+          pages = json.loads(run("export-text", sample, "--json"))["pages"]
+          assert pages and any(p["text"].strip() for p in pages), "본문 텍스트가 비었다"
+          tables = json.loads(run("export-tables", sample, "--json"))
+          structure = json.loads(run("export-structure", sample, "--json"))
+          data = json.loads(run("extract-data", sample, "--json"))
+          pdf = work / "out.pdf"
+          run("export-pdf", sample, "-o", str(pdf))
+          assert pdf.read_bytes()[:4] == b"%PDF", "PDF 가 아니다"
+          hwpx = work / "round.hwpx"
+          run("export-hwpx", sample, str(hwpx))
+          assert zipfile.is_zipfile(hwpx), "HWPX 저장 실패"
+          print(f"ok: pages {len(pages)}, tables {tables.get('tableCount')}, outline {structure.get('nodeCount')}, "
+                f"data {data.get('itemCount')}, pdf {pdf.stat().st_size} bytes")
+          EOF
+
       - name: Set up Python
+        if: ${{ !matrix.docker }}
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
 
-      - name: Verify packaged binary (PNG export)
+      - name: Verify packaged binary
         if: ${{ !matrix.docker }}
         shell: bash
-        run: |
-          python scripts/verify_release_binary.py --archive "$ARCHIVE" \
-            --sample samples/issue2527_empty_linesegs.hwpx
+        run: python .ci-verify.py "$ARCHIVE" samples/issue2527_empty_linesegs.hwpx
 
-      # 오래된 glibc 에서 실제로 도는지는 빌드 도구 없이 런타임 라이브러리만 깐 그 컨테이너 안에서 확인한다.
-      - name: Verify packaged binary in container (PNG export)
+      # 오래된 glibc 에서 실제로 도는지는 빌드 도구 없는 그 컨테이너 안에서 확인한다.
+      - name: Verify packaged binary in container
         if: ${{ matrix.docker }}
         shell: bash
         run: |
-          docker run --rm -v "$PWD":/src -w /src -e ARCHIVE="$ARCHIVE" "${{ matrix.docker }}" bash -euo pipefail -c '
-            dnf install -y -q fontconfig freetype dejavu-sans-fonts
-            python3.12 scripts/verify_release_binary.py --archive "$ARCHIVE" \
-              --sample samples/issue2527_empty_linesegs.hwpx
-          '
+          docker run --rm -v "$PWD":/src -w /src "${{ matrix.docker }}" bash -euo pipefail -c '
+            ldd --version | sed -n 1p
+            python3.12 .ci-verify.py "$0" samples/issue2527_empty_linesegs.hwpx
+          ' "$ARCHIVE"
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -265,7 +294,7 @@ jobs:
           네트워크·시스템 비용을 줄이려고, AI 에이전트가 rhwp 소스 저장소(수 GB)를 받아 빌드하지 않고 이 바이너리만 받아 쓰게 올린다.
 
           - 원본: https://github.com/edwardkim/rhwp/commit/${{ needs.resolve.outputs.sha }} (요청: ${{ inputs.rhwp_ref }})
-          - 기능: native-skia (PNG·PDF 미리보기)
+          - 기능: 기본 (읽기·쓰기·편집·추출·PDF 미리보기). native-skia(PNG 렌더)는 넣지 않았다
           - 빌드: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           - 설치: \`python3 skills/hwp-master/scripts/install_rhwp.py\` (SHA256SUMS.txt 로 검증)
           EOF
