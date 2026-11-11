@@ -35,15 +35,54 @@ def load_lock() -> dict:
     return json.loads(LOCK.read_text(encoding="utf-8"))
 
 
-def platform_suffix() -> Optional[str]:
-    """이 컴퓨터에 맞는 압축 파일 접미사. 지원하지 않으면 None."""
+# Linux 바이너리는 빌드한 glibc 기준으로 나눈다. 높은 것부터 시스템 glibc 이하인 첫 파일을 쓴다.
+LINUX_GLIBC_BUILDS = ((2, 35), (2, 28))
+
+
+def glibc_version() -> Optional[tuple]:
+    """시스템 glibc 버전 (예: (2, 35)). glibc 가 아니면(musl 등) None."""
+    try:
+        text = os.confstr("CS_GNU_LIBC_VERSION") or ""
+    except (AttributeError, ValueError, OSError):
+        text = ""
+    parts = text.split()
+    if len(parts) == 2 and parts[0] == "glibc":
+        try:
+            return tuple(int(x) for x in parts[1].split(".")[:2])
+        except ValueError:
+            return None
+    return None
+
+
+def platform_suffixes() -> list:
+    """이 컴퓨터에서 쓸 수 있는 압축 파일 접미사, 좋은 순. 지원하지 않으면 빈 목록."""
     machine = platform.machine().lower()
     if sys.platform == "darwin" and machine in ("arm64", "aarch64"):
-        return "macos-aarch64"
+        return ["macos-aarch64"]
+    if sys.platform == "darwin" and machine in ("x86_64", "amd64"):
+        return ["macos-x86_64"]
     if sys.platform.startswith("linux") and machine in ("x86_64", "amd64"):
-        return "linux-x86_64"
+        libc = glibc_version()
+        if libc is None:
+            return []
+        return [f"linux-x86_64-glibc{a}.{b}" for a, b in LINUX_GLIBC_BUILDS if libc >= (a, b)]
     if sys.platform == "win32" and machine in ("amd64", "x86_64"):
-        return "windows-x86_64"
+        return ["windows-x86_64"]
+    return []
+
+
+def platform_suffix() -> Optional[str]:
+    """이 컴퓨터에 가장 맞는 압축 파일 접미사. 지원하지 않으면 None."""
+    found = platform_suffixes()
+    return found[0] if found else None
+
+
+def pick_asset(lock: dict, suffixes: list) -> Optional[str]:
+    """고정 기록에서 접미사 순서대로 첫 파일 이름."""
+    for suffix in suffixes:
+        for name in lock["assets"]:
+            if name.startswith(f"{lock['tag']}-{suffix}."):
+                return name
     return None
 
 
@@ -107,13 +146,15 @@ def _safe_extract(archive: Path, target: Path) -> None:
 
 def install(dest_dir: Optional[Path] = None) -> dict:
     lock = load_lock()
-    suffix = platform_suffix()
-    if suffix is None:
-        raise RuntimeError(f"이 플랫폼({sys.platform} {platform.machine()})용 바이너리는 없습니다. "
+    suffixes = platform_suffixes()
+    if not suffixes:
+        libc = glibc_version() if sys.platform.startswith("linux") else None
+        detail = f", glibc {'.'.join(map(str, libc))}" if libc else ""
+        raise RuntimeError(f"이 플랫폼({sys.platform} {platform.machine()}{detail})용 바이너리는 없습니다. "
                            "README 의 cargo install 방법으로 빌드하세요.")
-    asset = next((a for a in lock["assets"] if suffix in a), None)
+    asset = pick_asset(lock, suffixes)
     if asset is None:
-        raise RuntimeError(f"{lock['tag']} 에 {suffix} 파일이 없습니다")
+        raise RuntimeError(f"{lock['tag']} 에 {suffixes[0]} 파일이 없습니다")
     target = dest_dir or default_dir(lock["tag"])
     with tempfile.TemporaryDirectory() as tmp:
         archive = Path(tmp) / asset

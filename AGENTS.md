@@ -2,6 +2,14 @@
 
 이 저장소에서 일하는 AI 에이전트의 진입점이다.
 
+이 프로젝트는 rhwp 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경하기 위한 프로젝트다. upstream rhwp 저장소는 수 GB 라
+받아서 빌드하면 네트워크·시스템 비용이 크다. 그 비용을 줄이려고 이 저장소가 devel 최신 rhwp 를 Windows·macOS(Apple Silicon)·Linux 용 바이너리로
+빌드해 Release 에 올리고, 그 위에서 문서를 다루는 도구(`skills/hwp-master/scripts/`)를 제공한다.
+
+- **hwp/hwpx 를 다루려고 `edwardkim/rhwp` 를 clone 하거나 `cargo build` 하지 않는다.** `install_rhwp.py` 로
+  고정된 Release 바이너리를 설치한다. 지원하지 않는 플랫폼(Intel Mac·Linux ARM)일 때만 README 의 소스 빌드를 안내한다.
+- 문서 생성·편집 요청이 아니어도(읽기·텍스트 추출·변환) 설치된 rhwp 바이너리를 쓴다. 경로는 `rhwp_locate.py` 가 알려 준다.
+
 **한글 문서를 만들거나 고치는 요청을 처리하기 전에 [`skills/hwp-master/SKILL.md`](skills/hwp-master/SKILL.md) 를 반드시 읽는다.**
 라우팅·원칙·정지 규칙은 그 파일이 정본이고, 라우트를 고른 뒤에는 해당 `skills/hwp-master/workflows/*.md` 의 절차를 따른다.
 

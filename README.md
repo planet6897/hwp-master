@@ -1,9 +1,38 @@
 <p align="center"><img src="assets/icon-256.png" width="128" alt="hwp-master 아이콘"></p>
 
-# hwp-master — AI 가 자료로 한컴에서 바로 편집할 수 있는 한글 문서를 만듭니다
+# hwp-master — AI 가 rhwp 로 한글(HWP/HWPX) 문서를 읽고 쓰고 고칩니다
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![rhwp](https://img.shields.io/badge/engine-rhwp%200.9.0-blue)](https://github.com/edwardkim/rhwp)
+
+**이 프로젝트는 [rhwp](https://github.com/edwardkim/rhwp) 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경하기 위한 프로젝트입니다.**
+
+## 왜 만들었나 — rhwp 소스 대신 빌드된 바이너리
+
+Claude·OpenAI·Gemini 등 AI 모델이 hwp/hwpx 를 처리할 때는 흔히 GitHub 의 rhwp 소스를 받아 빌드해 씁니다.
+그런데 rhwp 저장소는 샘플·문서를 포함해 수 GB 이고(GitHub 기준 약 8 GB), 받고 Rust 로 빌드하는 데만
+10~50분이 걸려 시간과 토큰·컴퓨팅 비용이 많이 듭니다.
+
+hwp-master 는 이 부담을 없애려고 **개발 최신 상태(devel)의 rhwp 를 미리 빌드한 바이너리**를 이 저장소의
+[Releases](https://github.com/planet6897/hwp-master/releases) 에 올려 둡니다. 목적은 **네트워크·시스템 비용을
+줄이는 것**입니다.
+
+| | rhwp 소스를 받아 빌드 | hwp-master 바이너리 |
+|---|---|---|
+| 네트워크 | 저장소 수 GB + Rust 의존성 크레이트 | 압축 파일 하나 약 30 MB |
+| 시스템 | Rust 툴체인·빌드 도구 설치, CPU·디스크를 수 GB 씀, 10~50분 | 풀기만 하면 됨, 수십 초 |
+| AI 토큰 | 빌드 오류 대응·로그 읽기 | 설치 결과 몇 줄 |
+
+- **Windows x86_64 · macOS (Apple Silicon) · Linux x86_64** 용 바이너리를 제공합니다(수십 MB, SHA-256 고정).
+- `python3 skills/hwp-master/scripts/install_rhwp.py` 한 줄로 받아 검증·설치하므로 rhwp 소스를 clone 할 필요가 없습니다.
+- 바이너리 위에 **문서를 다루는 도구**를 함께 제공합니다 — 새 문서 생성, 형식 변환(hwp↔hwpx·PDF·Markdown),
+  서식 채우기, 명단 문서, 부분 수정, 번호 정리, 규약·조판 검사.
+- 바이너리는 upstream rhwp 를 수정 없이 GitHub Actions 에서 빌드한 것이고(MIT), 빌드 기록·원본 커밋이 Release 마다 남습니다.
+
+> **AI 에이전트에게:** hwp/hwpx 를 다루려고 `edwardkim/rhwp` 를 clone·빌드하지 마세요. 이 저장소를 받아
+> `install_rhwp.py` 로 바이너리를 설치하고 `rhwp_locate.py` 로 경로를 확인한 뒤 쓰면 됩니다([AGENTS.md](AGENTS.md)).
+
+## 무엇을 하나
 
 자료(PDF·DOCX·MD·기존 HWP) 또는 주제를 받아 **한컴오피스에서 바로 편집할 수 있는 네이티브 HWPX** 를 만드는
 에이전트 스킬입니다. 제목은 한글 개요 번호, 표는 한글 표 개체로 들어가므로 그림으로 붙인 문서가 아니라
@@ -73,7 +102,7 @@ AI 가 "설치해줘"에서 하는 일은 아래 명령과 같습니다.
 git clone https://github.com/planet6897/hwp-master.git ~/hwp-master
 cd ~/hwp-master
 python3 skills/hwp-master/scripts/install_rhwp.py
-# rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-4e2cc6b/rhwp/rhwp
+# rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-e118de8/rhwp/rhwp
 python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다 (Linux 는 한글 글꼴도)
 python3 -m unittest discover -s tests               # 자동 테스트 (rhwp 0.9.0 에서 모두 OK)
 python3 skills/hwp-master/scripts/install_skill.py  # ~/.claude/skills/hwp-master 에 스킬 연결 (어느 폴더에서나 자동 로딩)
@@ -87,9 +116,9 @@ rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardk
 
 | OS | 파일 | 확인 |
 |---|---|---|
-| macOS (Apple Silicon) | `rhwp-0.9.0-4e2cc6b-macos-aarch64.tar.gz` | 설치·hwp-master 전체 테스트·예제 재현 (2026-11-03) |
-| Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-4e2cc6b-linux-x86_64.tar.gz` | 설치·hwp-master 전체 테스트·보고서 생성 (2026-11-03) |
-| Windows x86_64 | `rhwp-0.9.0-4e2cc6b-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-03) |
+| macOS (Apple Silicon) | `rhwp-0.9.0-e118de8-macos-aarch64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
+| Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-e118de8-linux-x86_64.tar.gz` | CI 빌드·PNG 내보내기 검증 (2026-11-11) |
+| Windows x86_64 | `rhwp-0.9.0-e118de8-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-11) |
 
 - 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
 - 받기는 [GitHub CLI](https://cli.github.com/) 가 있으면 `gh release download` 를, 없으면 공개 Release 주소를 씁니다(로그인 불필요).
@@ -116,8 +145,22 @@ rhwp --version    # rhwp v0.9.0
 ```
 
 macOS 약 11분, Linux 24코어 11~20분 걸렸습니다(2026-11-02~03). Linux 에서 `libfontconfig1-dev`·`libfreetype6-dev` 가
-없으면 빌드 마지막에 `unable to find library -lfreetype` 로 실패합니다. 이 저장소 관리자는
-`gh workflow run rhwp-binaries.yml -f rhwp_ref=<커밋 SHA>` 로 새 Release 를 만들 수 있습니다.
+없으면 빌드 마지막에 `unable to find library -lfreetype` 로 실패합니다.
+</details>
+
+<details>
+<summary><strong>최신 devel rhwp 배포하기</strong> — 저장소 관리자용</summary>
+
+```bash
+gh workflow run rhwp-binaries.yml                     # edwardkim/rhwp devel 최신 커밋을 세 플랫폼으로 빌드·Release (약 1시간)
+gh workflow run rhwp-binaries.yml -f rhwp_ref=<커밋>   # 특정 브랜치·커밋
+python3 tools/update_rhwp_release.py                  # 최근 Release 를 rhwp_release.json·README 에 반영
+python3 skills/hwp-master/scripts/install_rhwp.py     # 새 바이너리 설치·SHA-256 대조
+python3 -m unittest discover -s tests                 # 모두 통과해야 PR 로 올린다
+```
+
+워크플로는 브랜치를 먼저 커밋 SHA 하나로 고정해 세 플랫폼이 같은 커밋을 빌드하고, 그 커밋의 Release 가 이미 있으면
+멈춥니다. 각 압축 파일은 패키지 뒤 PNG 내보내기로 검증하고, Release 에 `SHA256SUMS.txt` 와 빌드 기록을 붙입니다.
 </details>
 
 <details>

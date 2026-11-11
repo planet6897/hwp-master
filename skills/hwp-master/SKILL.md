@@ -9,6 +9,9 @@ metadata:
 
 # hwp-master (초안)
 
+> 이 스킬은 rhwp 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경한다. rhwp 는 소스를 받아 빌드하지 않고, 이 저장소 Release 에 올린
+> devel 최신 빌드 바이너리(Windows·macOS Apple Silicon·Linux)를 `scripts/install_rhwp.py` 로 설치해 쓴다.
+
 > 상태: Default·Quick·Edit Native·Convert-in·Mail-merge·Beautify·Template Fill 라우트, Exam 위임, HDS v1 = 제목·문단·표(캡션·제목 행·열 폭·병합·셀 강조)·쪽 나눔·그림·목록·목차 + 글자 강조(크기·형광펜·취소선 포함)·캡션 자동 번호·각주·머리말·꼬리말·용지 방향·여백, 규약 검사(gongmun·gaejosik).
 > 전체 계획: 저장소의 `docs/plan.md`.
 
