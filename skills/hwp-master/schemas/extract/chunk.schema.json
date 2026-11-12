@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extract chunks.jsonl (한 줄)",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "headingPath",
+    "outlinePath",
+    "pages",
+    "blockIds",
+    "chars",
+    "text",
+    "values",
+    "tables",
+    "untrustedContent"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^c\\d{4,}$"
+    },
+    "headingPath": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outlinePath": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "minItems": 1
+    },
+    "blockIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^s\\d+\\.p\\d+"
+      },
+      "minItems": 1
+    },
+    "chars": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "text": {
+      "type": "string"
+    },
+    "values": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "raw"
+        ]
+      }
+    },
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "blockId",
+          "records"
+        ]
+      }
+    },
+    "part": {
+      "type": "string",
+      "pattern": "^\\d+/\\d+$"
+    },
+    "untrustedContent": {
+      "const": true
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extract data.json",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "source",
+    "untrustedContent",
+    "counts",
+    "items"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "source": {
+      "type": "string"
+    },
+    "untrustedContent": {
+      "const": true
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "raw",
+          "page",
+          "detector"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "date",
+              "amount",
+              "number",
+              "period",
+              "change",
+              "contact",
+              "reference"
+            ]
+          },
+          "raw": {
+            "type": "string"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "blockId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "detector": {
+            "enum": [
+              "rhwp",
+              "hwp-master"
+            ]
+          },
+          "charOffset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

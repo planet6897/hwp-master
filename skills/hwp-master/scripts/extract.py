@@ -70,6 +70,8 @@ import tablesem  # noqa: E402
 import values as valuesmod  # noqa: E402
 
 READABLE = {".hwp", ".hwpx", ".hml"}
+# 결과 파일 형식 판. 키를 빼거나 뜻을 바꾸면 올린다(더하기만 하면 그대로). 스키마: skills/hwp-master/schemas/extract/
+SCHEMA_VERSION = docmodel.SCHEMA_VERSION
 PARTS = ("document", "text", "structure", "tables", "data", "fields", "kv", "headers", "charts", "chunks")
 
 
@@ -240,7 +242,8 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
         return False
 
     def save(name: str, data) -> None:
-        write_json(out / name, data)
+        # 모든 결과 파일에 schemaVersion·untrustedContent 를 붙인다(schemas/extract/*.schema.json)
+        write_json(out / name, {"schemaVersion": SCHEMA_VERSION, "untrustedContent": True, **data})
         files.append(name)
 
     digest = rhwp_json(rhwp, ["digest", str(src)])
@@ -528,7 +531,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
 
     summary = {"source": rel, "sha256": sha256(src), "extractedAt": dt.datetime.now().isoformat(timespec="seconds"),
                "info": info, "counts": counts, "injectionSignals": signals, "untrustedContent": True,
-               "files": sorted(files), "dir": out.relative_to(project).as_posix()}
+               "files": sorted(files), "dir": out.relative_to(project).as_posix(), "schemaVersion": SCHEMA_VERSION}
     write_json(out / "summary.json", summary)
     return summary
 

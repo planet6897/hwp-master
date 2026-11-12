@@ -85,6 +85,19 @@ python3 scripts/extract.py <프로젝트> "sources/신청서/*.hwpx"            
 
 CSV 는 엑셀에서 바로 열리게 UTF-8 BOM 으로 쓴다. 병합된 표 칸은 왼쪽 위 칸에만 글을 두고 나머지는 비운다.
 
+## 결과 형식과 읽는 순서
+
+모든 결과 파일에는 `schemaVersion`(지금 `"1"`)과 `untrustedContent: true` 가 붙는다.
+형식은 `skills/hwp-master/schemas/extract/*.schema.json`(JSON Schema)에 고정돼 있다.
+키를 빼거나 뜻을 바꾸면 판을 올리고, 키를 더하기만 하면 그대로 둔다.
+다른 도구가 결과를 읽기 전에 `python3 scripts/schema_check.py exports/extract/<문서>` 로 형식을 확인할 수 있다.
+
+에이전트가 읽는 순서는 다음과 같다.
+1. `summary.json`: 무엇이 얼마나 있는지, 주입 신호
+2. 짧은 문서는 `document.json`, 긴 문서는 `chunks.jsonl` 에서 질문에 맞는 청크
+3. 필요한 상세 파일: 숫자는 `tables.json` 의 `semantics.records` 와 `data.json`, 항목은 `kv.json`, 계층은 `outline.json`
+4. 출처는 `blockId` 로 `document.json` 에서 확인한다(쪽·상위 제목·칸).
+
 ## 3. 답하기
 
 1. `summary.json` 을 읽어 무엇이 있는지 본다. 긴 문서는 `chunks.jsonl` 에서 질문과 맞는 청크(제목·상위 항목 경로)만 골라 읽는다. 질문에 맞는 파일만 연다(긴 문서의 `text.md` 를 통째로 읽지 않는다).

@@ -36,6 +36,7 @@ metadata:
 | `scripts/install_mcp.py` | (선택) 배포 rhwp `mcp-serve` 를 Claude Code·Desktop MCP 서버로 등록·제거, 연결 확인. 기존 다른 서버는 덮어쓰지 않음 |
 | `scripts/convert_hwpx.py` | HWP → HWPX 일괄 변환: 폴더·glob, rhwp verify·쪽 수·글 동일성·구조 개수 검증 보고서 |
 | `scripts/ai_readability.py` | AI 가독성 진단: 표 안의 표·복잡한 병합·레이아웃 표·공백 정렬·빈 문단·손 번호·그림만 쪽·단편 장 → 점수·고치는 법 |
+| `scripts/schema_check.py` | Extract 결과를 `schemas/extract/*.schema.json`(JSON Schema, 표준 라이브러리 검사기)으로 확인 |
 | `scripts/merge_extract.py` | Extract 여러 문서 합치기: `_merged/` documents·fields·kv·data CSV, 서식 비교(forms.json) |
 | `scripts/chunks.py` | Extract LLM 청크: 제목 경계·목표 크기·표 행 나누기(머리 반복)·출처 ID·값 → `chunks.jsonl` |
 | `scripts/values.py` | Extract 의미 값 확장: 기간·증감률·연락처·조문 참조 → `data.json` |

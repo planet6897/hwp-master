@@ -166,7 +166,8 @@ def build_chunks(blocks: List[dict], data_items: Iterable[dict] = (), tables_by_
                     seen.add(key)
                     values.append(v)
         text = "\n\n".join(chunk["parts"])
-        entry = {"id": f"c{k:04d}", "headingPath": chunk["headingPath"], "outlinePath": chunk["outlinePath"],
+        entry = {"schemaVersion": "1", "id": f"c{k:04d}", "headingPath": chunk["headingPath"],
+                 "outlinePath": chunk["outlinePath"],
                  "pages": sorted(chunk["pages"]),
                  "blockIds": chunk["blocks"], "chars": len(text), "text": text, "values": values,
                  "tables": chunk["tables"], "untrustedContent": True}

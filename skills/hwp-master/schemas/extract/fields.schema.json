@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extract fields.json",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "source",
+    "untrustedContent",
+    "fields"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "source": {
+      "type": "string"
+    },
+    "untrustedContent": {
+      "const": true
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "blockId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

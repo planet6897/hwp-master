@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extract document.json",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "source",
+    "untrustedContent",
+    "counts",
+    "blocks"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "source": {
+      "type": "string"
+    },
+    "untrustedContent": {
+      "const": true
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/block"
+      }
+    },
+    "emptyRuns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "start",
+          "length",
+          "page"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "block": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "section",
+        "paragraph",
+        "page"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^s\\d+\\.p\\d+"
+        },
+        "type": {
+          "enum": [
+            "heading",
+            "paragraph",
+            "list",
+            "table",
+            "image",
+            "note",
+            "headerFooter"
+          ]
+        },
+        "section": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "paragraph": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "headingPath": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parentHeadingId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fromLayoutTable": {
+          "type": "string"
+        },
+        "cellId": {
+          "type": "string"
+        },
+        "outline": {
+          "$ref": "#/$defs/outline"
+        },
+        "role": {
+          "enum": [
+            "layout",
+            "data"
+          ]
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cell"
+          }
+        }
+      }
+    },
+    "table": {
+      "type": "object",
+      "required": [
+        "id",
+        "rows",
+        "cols",
+        "cells",
+        "role",
+        "roleReasons"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^s\\d+\\.p\\d+"
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cols": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "role": {
+          "enum": [
+            "layout",
+            "data"
+          ]
+        },
+        "roleReasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cell"
+          }
+        }
+      }
+    },
+    "cell": {
+      "type": "object",
+      "required": [
+        "id",
+        "row",
+        "col",
+        "rowSpan",
+        "colSpan",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^s\\d+\\.p\\d+"
+        },
+        "row": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "col": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rowSpan": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "colSpan": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "text": {
+          "type": "string"
+        },
+        "header": {
+          "type": "boolean"
+        },
+        "border": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hasNestedTable": {
+          "type": "boolean"
+        },
+        "paragraphs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "text",
+              "tables"
+            ]
+          }
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/table"
+          }
+        }
+      }
+    },
+    "outline": {
+      "type": "object",
+      "required": [
+        "marker",
+        "kind",
+        "level",
+        "parentId",
+        "body"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "body": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

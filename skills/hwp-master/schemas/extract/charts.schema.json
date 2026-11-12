@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extract charts.json",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "source",
+    "untrustedContent",
+    "charts"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "source": {
+      "type": "string"
+    },
+    "untrustedContent": {
+      "const": true
+    },
+    "charts": {
+      "type": "array"
+    }
+  }
+}
