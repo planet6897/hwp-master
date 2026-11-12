@@ -11,7 +11,8 @@ scaffold 명세 v1 은 제목·문단·표만 받는다. HDS 의 나머지 요�
                                한 번 만든 결과의 rhwp dump-pages 에서 읽어 다시 만든다(produce 두 번)
     table.caption            → 표 위 가운데 문단("{n}" = 표 순번), 표와 같은 쪽에 둠(keepWithNext)
     paragraph.emphasis       → edit apply-char-format (굵게·기울임·밑줄·취소선·글자색·형광펜·크기)
-    paragraph.footnotes      → edit insert-footnote + insert-footnote-text
+    paragraph.footnotes      → edit insert-footnote + insert-footnote-text. 각주가 여럿이면 하나만 rhwp 로
+                               넣고 그 컨트롤을 본으로 나머지를 구역 XML 에 바로 쓴다(글만 든 문단, #50)
     모든 표                  → edit set-table-props {"restrictInPage":true} (쪽 영역 안으로 제한)
     table.header_row         → 첫 행 셀마다 edit set-cell-props {fill, isHeader} +
                                apply-char-format-in-cell 굵게 + apply-para-format-in-cell 가운데
@@ -758,6 +759,109 @@ def _rewrite_cell(body: str, want: tuple) -> str:
     return "".join(out)
 
 
+# 각주 묶음 삽입(#50): rhwp 로 넣은 각주 하나를 본으로 삼아 나머지는 구역 XML 에 바로 쓴다.
+_FN_TAB = '<hp:tab width="0" leader="0" type="1"/>'  # rhwp 가 글 속 탭을 쓰는 꼴
+_FN_RUN = re.compile(r'<hp:run charPrIDRef="\d+">((?:<hp:t>(?:[^<]|<hp:tab\b[^>]*/>)*</hp:t>)*)</hp:run>')
+_FN_TOKEN = re.compile(r"<hp:tab\b[^>]*/>|&[a-z]+;|&#x?[0-9a-fA-F]+;|[^<&]")
+_FN_TEXT_OK = re.compile(r"[^\x00-\x08\x0a-\x1f\U00010000-\U0010ffff]*")
+
+
+def _fn_escape(text: str) -> str:
+    return "".join(_FN_TAB if ch == "\t" else escape(ch, {'"': "&quot;", "'": "&apos;"}) for ch in text)
+
+
+def footnote_para_simple(xml: str, k: int) -> bool:
+    """최상위 문단 k 가 글(hp:t·탭)만 든 run 들로만 되어 있나 — 각주를 XML 로 바로 넣을 수 있는 꼴."""
+    spans = _top_p_spans(xml)
+    s, e = spans[k]
+    end = _balanced(xml, s, "p")
+    if xml[s:e].endswith("/>"):
+        return False
+    body = xml[e:end - len("</hp:p>")]
+    pos = 0
+    for m in _FN_RUN.finditer(body):
+        if m.start() != pos:
+            return False
+        pos = m.end()
+    if pos != len(body):
+        return False
+    return all(len(tok) == 1 or tok.startswith(("<", "&")) for tok in _FN_TOKEN.findall(body)) and \
+        not re.search(r"[\U00010000-\U0010ffff]", body)
+
+
+def footnote_template(xml: str, k: int) -> str:
+    """최상위 문단 k 의 첫 각주 컨트롤 XML(줄 배치 정보는 뺀다 — 한컴·rhwp 가 다시 계산한다)."""
+    s = _top_p_spans(xml)[k][0]
+    body = xml[s:_balanced(xml, s, "p")]
+    a = body.index("<hp:ctrl><hp:footNote ")
+    b = _balanced(body, a, "ctrl")
+    return re.sub(r"<hp:linesegarray>.*?</hp:linesegarray>", "", body[a:b], flags=re.S)
+
+
+def _fn_from_template(template: str, text: str) -> str:
+    head, sep, rest = template.partition("</hp:autoNum></hp:ctrl><hp:t>")
+    if not sep:
+        raise ValueError("각주 본에 번호 뒤 글이 없음")
+    return f"{head}{sep} {_fn_escape(text)}</hp:t>{rest[rest.index('</hp:t>') + len('</hp:t>'):]}"
+
+
+def insert_footnotes_xml(xml: str, notes: Dict[int, List[tuple]], template: str) -> str:
+    """notes = {최상위 문단: [(글자 오프셋, 각주 글)]} 를 rhwp insert-footnote 처럼 넣는다.
+
+    각주 컨트롤은 그 자리 글이 든 run 안에 넣고 hp:t 를 둘로 가른다. run 경계면 앞 run 의 끝에 붙는다.
+    번호(footNote number·autoNum num)와 문단 id 는 rhwp 처럼 문서 차례로 다시 매긴다."""
+    spans = _top_p_spans(xml)
+    for k in sorted(notes, reverse=True):
+        s, e = spans[k]
+        end = _balanced(xml, s, "p") - len("</hp:p>")
+        body = xml[e:end]
+        for offset, text in sorted(notes[k], reverse=True):
+            ctrl = _fn_from_template(template, text)
+            pos, done = 0, False
+            ts = [m for m in re.finditer(r"<hp:t>((?:[^<]|<hp:tab\b[^>]*/>)*)</hp:t>", body)]
+            for m in ts:
+                toks = _FN_TOKEN.findall(m.group(1))
+                if pos + len(toks) >= offset:
+                    cut = offset - pos
+                    left, right = "".join(toks[:cut]), "".join(toks[cut:])
+                    new = (f"<hp:t>{left}</hp:t>" if left else "") + ctrl + (f"<hp:t>{right}</hp:t>" if right else "")
+                    body = body[:m.start()] + new + body[m.end():]
+                    done = True
+                    break
+                pos += len(toks)
+            if not done:
+                raise ValueError(f"각주 자리 {offset} 가 문단 {k} 의 글보다 뒤")
+        xml = xml[:e] + body + xml[end:]
+    num = iter(range(1, 1 << 30))
+    xml = re.sub(r'(<hp:footNote number=")\d+(")', lambda m: f"{m.group(1)}{next(num)}{m.group(2)}", xml)
+    num = iter(range(1, 1 << 30))
+    xml = re.sub(r'(<hp:autoNum num=")\d+(" numType="FOOTNOTE")', lambda m: f"{m.group(1)}{next(num)}{m.group(2)}", xml)
+    return renumber_para_ids(xml)
+
+
+def renumber_para_ids(xml: str) -> str:
+    """문단 id 를 rhwp 저장 차례(문단이 닫히는 차례, 0 부터)로 다시 매긴다."""
+    stack, ids, nxt = [], {}, 0
+    for m in _P_TAG.finditer(xml):
+        tag = m.group(0)
+        if tag.startswith("</"):
+            ids[stack.pop()] = nxt
+            nxt += 1
+        elif tag.endswith("/>"):
+            ids[m.start()] = nxt
+            nxt += 1
+        else:
+            stack.append(m.start())
+    out, last = [], 0
+    for start in sorted(ids):
+        tag_end = xml.index(">", start)
+        tag = re.sub(r'^(<hp:p id=")\d+(")', rf"\g<1>{ids[start]}\g<2>", xml[start:tag_end])
+        out += [xml[last:start], tag]
+        last = tag_end
+    out.append(xml[last:])
+    return "".join(out)
+
+
 def read_section(hwpx: Path) -> str:
     with zipfile.ZipFile(hwpx) as z:
         return z.read("Contents/section0.xml").decode("utf-8")
@@ -1320,13 +1424,51 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
             result["error"] = "글자 강조 적용 실패"
             return result
     # 같은 문단의 각주는 뒤에서부터 넣는다: 앞 오프셋이 그대로이고 새 각주는 늘 그 문단의 첫 컨트롤이다.
-    for fn in sorted(plan["footnotes"], key=lambda f: (f["block"], -f["offset"])):
+    def one_footnote(fn) -> bool:
         para = str(paras[fn["block"]])
-        if not (step(["insert-footnote", "--para", para, "--offset", str(fn["offset"])])
+        return (step(["insert-footnote", "--para", para, "--offset", str(fn["offset"])])
                 and step(["insert-footnote-text", "--para", para, "--ctrl", "0", "--fn-para", "0",
-                          "--offset", "2", "--text", fn["text"]])):
+                          "--offset", "2", "--text", fn["text"]]))
+
+    ordered = sorted(plan["footnotes"], key=lambda f: (f["block"], -f["offset"]))
+    direct: Dict[int, List[dict]] = {}
+    if BATCH_EDITS and len(ordered) > 1:
+        # 각주가 많으면 rhwp 를 각주마다 두 번 부르는 데 시간이 오래 걸린다(#50, 88개면 약 9분).
+        # 글만 든 문단(같은 자리 각주가 없고 각주 글에 줄 바꿈이 없음)은 XML 로 바로 넣는다.
+        xml = read_section(cur)
+        groups: Dict[int, List[dict]] = {}
+        for fn in ordered:
+            groups.setdefault(fn["block"], []).append(fn)
+        for b, fns in groups.items():
+            offsets = [f["offset"] for f in fns]
+            if (len(set(offsets)) == len(offsets) and footnote_para_simple(xml, paras[b])
+                    and all(_FN_TEXT_OK.fullmatch(f["text"]) for f in fns)):
+                direct[b] = fns
+    if sum(map(len, direct.values())) < 2:
+        direct = {}
+    for fn in ordered:
+        if fn["block"] not in direct and not one_footnote(fn):
             result["error"] = "각주 삽입 실패"
             return result
+    if direct:
+        # 본: 첫 묶음 문단의 맨 뒤 각주를 rhwp 로 넣고 그 컨트롤 XML 을 나머지에 쓴다
+        b0 = next(iter(direct))
+        head = direct[b0][0]
+        if not one_footnote(head):
+            result["error"] = "각주 삽입 실패"
+            return result
+        xml = read_section(cur)
+        rest = {paras[b]: [(f["offset"], f["text"]) for f in fns if f is not head] for b, fns in direct.items()}
+        try:
+            xml = insert_footnotes_xml(xml, {k: v for k, v in rest.items() if v}, footnote_template(xml, paras[b0]))
+        except ValueError as exc:
+            result["error"] = f"각주 삽입 실패: {exc}"
+            return result
+        n += 1
+        nxt = work / f"e{n:02d}.hwpx"
+        write_section(cur, nxt, xml)
+        log.append({"cmd": ["batch-footnote", f"{sum(map(len, rest.values()))} 개"], "exit": 0})
+        cur = nxt
     for kind in ("header", "footer"):
         hf = plan[kind]
         if hf:
