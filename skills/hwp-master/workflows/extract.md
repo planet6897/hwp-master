@@ -36,7 +36,7 @@ python3 scripts/extract.py <프로젝트> "sources/신청서/*.hwpx"            
 | `summary.json` | 형식·쪽·문단 수, 항목별 개수, 주입 신호, 파일 목록, 원본 SHA-256 | 가장 먼저 읽는다 |
 | `chunks.jsonl` | LLM 용 청크(한 줄에 하나): 제목 경계를 지키고 목표 `--chunk-chars`(기본 1500)자. `headingPath`·`outlinePath`(상위 □ 항목)·`pages`·`blockIds`·`text`(Markdown, 데이터 표 포함)·`values`(그 안의 의미 값)·`tables`(레코드). 큰 표는 행 단위로 나누고 머리 행을 반복(`part`) | 긴 문서 질의·요약·RAG |
 | `document.json` | 통합 문서 모델: 읽기 순서 블록(heading·paragraph·list·table·image·note·headerFooter)과 고정 ID(`s0.p12`, 표 `s0.p5.t0`, 셀 `s0.p5.t0.r2c1`), 쪽(0부터), 상위 제목 경로(`headingPath`) | 위치·맥락을 잇는 기준 |
-| `text.md` | 쪽마다 `<!-- page N -->` 를 붙인 본문 Markdown | 요약·질문 답변 |
+| `text.md`, `assets/` | 쪽마다 `<!-- page N -->` 를 붙인 본문 Markdown, 그 그림(`assets/p001_img001.png`) | 요약·질문 답변 |
 | `pages.json` | 쪽별 평문 | 쪽 번호로 인용 |
 | `structure.json` | 개요/조문(장·절·조·항·호) 계층 트리 (rhwp) | 조문 찾기 |
 | `outline.json` | 개요 제목 + 개조식·공문 항목 계층 트리(`Ⅰ.`·`1.`·`□`·`가.`·`○`/`ㅇ`·`1)`·`-`·`·`·`(1)`·`①`, `※`·`*` 주석은 앞 항목의 자식). `document.json` 블록에도 `outline{marker, kind, level, parentId, body}` | 목차·요약·장별 질문 |
@@ -147,3 +147,4 @@ CSV 는 엑셀에서 바로 열리게 UTF-8 BOM 으로 쓴다. 병합된 표 칸
 | W307 | 경고 | 여러 문서 가운데 다수와 다른 서식(누름틀·항목 이름) | `forms.json` 의 빠진·더 있는 이름을 보고, 합친 표에서 그 문서를 따로 다룬다 |
 | W306 | 경고 | 연락처(전화·이메일)가 있음 | 개인정보일 수 있다. 옮기거나 공유하기 전에 사용자에게 확인한다 |
 | W305 | 경고 | 일부 표·값·누름틀을 블록에 잇지 못함 | 그 항목은 `section`·`paragraph` 위치로 찾는다 |
+| W309 | 경고 | 그림 파일을 결과 폴더로 옮기지 못함(Windows 260자 경로 한도 등) | `text.md` 그림 링크가 깨진다. 프로젝트를 짧은 경로로 옮기거나 긴 경로 사용(LongPathsEnabled)을 켜고 다시 꺼낸다. 나머지 결과는 그대로 쓴다 |

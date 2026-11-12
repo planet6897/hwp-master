@@ -117,8 +117,7 @@ class ExtractTest(unittest.TestCase):
         self.assertIn("currency", rows[0])
         self.assertTrue(any(r[1] == "49억 달러" and r[rows[0].index("cell")] for r in rows[1:]))
 
-    def test_text_md_image_links_resolve(self):
-        import re
+    def add_image(self):
         import struct
         import zlib
 
@@ -131,6 +130,10 @@ class ExtractTest(unittest.TestCase):
                         + chunk(b"IEND", b""))
         subprocess.run([self.rhwp, "edit", "insert-image", str(self.doc), "--image", str(png), "-o", str(self.doc)],
                        check=True, capture_output=True)
+
+    def test_text_md_image_links_resolve(self):
+        import re
+        self.add_image()
         proc, report = self.run_extract("sources/doc.hwpx", extra=("--only", "text"))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         out = self.project / "exports/extract/doc"
@@ -138,6 +141,28 @@ class ExtractTest(unittest.TestCase):
         self.assertTrue(links, "그림이 들어간 문서인데 text.md 에 그림 링크가 없다")
         for link in links:
             self.assertTrue((out / link).is_file(), f"깨진 그림 링크: {link}")
+            # 결과 폴더가 이미 문서 이름이라 그림 경로에 이름을 되풀이하지 않는다(Windows 260자 경로 한도, #57)
+            self.assertRegex(link, r"^assets/p\d{3}_img\d{3}\.\w+$")
+        summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+        self.assertIn(links[0], summary["files"])
+
+    def test_image_copy_failure_is_a_warning_not_a_crash(self):
+        from unittest import mock
+        self.add_image()
+        findings = []
+
+        def fail(src, dst, *a, **k):
+            raise FileNotFoundError(3, "지정된 경로를 찾을 수 없습니다", str(dst))
+
+        with mock.patch.object(extract.shutil, "copyfile", fail):
+            summary = extract.extract_one(self.rhwp, self.project, self.doc.resolve(), ("text", "data"), 500, findings)
+        codes = [f["code"] for f in findings]
+        self.assertIn("W309", codes)
+        self.assertNotIn("X102", codes)
+        out = self.project / "exports/extract/doc"
+        self.assertTrue((out / "text.md").is_file())
+        self.assertTrue((out / "data.json").is_file(), "그림 복사가 실패해도 나머지 추출은 계속한다")
+        self.assertIn("LongPathsEnabled", next(f["message"] for f in findings if f["code"] == "W309"))
 
     def test_extracts_text_tables_data_and_keeps_source(self):
         before = sha(self.doc)
@@ -387,3 +412,26 @@ class OutlineExtractTest(unittest.TestCase):
             self.assertEqual([(n["marker"], n["text"]) for n in items], [("□", "현황"), ("□", "과제")])
             self.assertEqual(items[0]["children"][0]["text"], "수출 580억 달러로 증가")
             self.assertEqual(items[0]["children"][0]["children"][0]["kind"], "note")
+
+
+class AssetLinkTest(unittest.TestCase):
+    def test_short_names_and_relink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp) / "통합재정통계(2014.8월)_assets"
+            d.mkdir()
+            for n in ("통합재정통계(2014.8월)_p001_img001.png", "통합재정통계(2014.8월)_p012_img002.jpg", "logo.png"):
+                (d / n).write_bytes(b"x")
+            links = extract.asset_links(Path(tmp))
+        self.assertEqual(links["통합재정통계(2014.8월)_assets/통합재정통계(2014.8월)_p001_img001.png"],
+                         "assets/p001_img001.png")
+        self.assertEqual(links["통합재정통계(2014.8월)_assets/logo.png"], "assets/logo.png", "접두어가 없으면 그대로")
+        md = "![image 1](통합재정통계(2014.8월)_assets/통합재정통계(2014.8월)_p012_img002.jpg)\n본문 (괄호) 그대로"
+        self.assertEqual(extract.relink(md, links), "![image 1](assets/p012_img002.jpg)\n본문 (괄호) 그대로")
+
+    def test_name_clash_keeps_original(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for folder in ("a_assets", "b_assets"):
+                (Path(tmp) / folder).mkdir()
+                (Path(tmp) / folder / f"{folder[0]}_p001_img001.png").write_bytes(b"x")
+            links = extract.asset_links(Path(tmp))
+        self.assertEqual(sorted(links.values()), ["assets/b_p001_img001.png", "assets/p001_img001.png"])
