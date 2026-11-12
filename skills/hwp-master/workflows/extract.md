@@ -98,6 +98,13 @@ CSV 는 엑셀에서 바로 열리게 UTF-8 BOM 으로 쓴다. 병합된 표 칸
 3. 필요한 상세 파일: 숫자는 `tables.json` 의 `semantics.records` 와 `data.json`, 항목은 `kv.json`, 계층은 `outline.json`
 4. 출처는 `blockId` 로 `document.json` 에서 확인한다(쪽·상위 제목·칸).
 
+## 품질 평가
+
+`tools/eval_extract.py` 는 정답(gold) 대비 정밀도·재현율을 잽니다. 범주는 values·outline·records·kv·roles 입니다.
+- 픽스처 정답: `tests/fixtures/extract/*.json`
+- 기준: `baseline.json`. 이보다 떨어지면 테스트가 실패합니다.
+- 실제 문서: `EXTRACT_CORPUS` 폴더의 `<문서>.golden.json` 으로 따로 잽니다.
+
 ## 3. 답하기
 
 1. `summary.json` 을 읽어 무엇이 있는지 본다. 긴 문서는 `chunks.jsonl` 에서 질문과 맞는 청크(제목·상위 항목 경로)만 골라 읽는다. 질문에 맞는 파일만 연다(긴 문서의 `text.md` 를 통째로 읽지 않는다).
