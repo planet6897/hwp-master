@@ -116,8 +116,9 @@ def table_grid(table: dict) -> List[List[str]]:
     return grid
 
 
-# rhwp extract-data 는 본문의 "1,200,000원" 꼴만 금액으로 잡는다. "580억 달러"·"$1.5 million"·"3억 5천만 원"과
-# 표 셀 안의 금액은 놓치므로, 통화 단어가 든 문단을 rhwp search 로 모아(위치 포함) 아래 규칙으로 보탠다.
+# rhwp extract-data 는 "1,200,000원" 꼴(본문·한 단계 표 칸)만 금액으로 잡고, "580억 달러"·"$1.5 million"·
+# "3억 5천만 원"과 표 안의 표 칸 값(edwardkim/rhwp#8989)은 놓친다. 통화 단어가 든 문단을 rhwp search 로 모아
+# (위치 포함) 아래 규칙으로 보탠다.
 CURRENCY_QUERIES = ("달러", "원", "엔", "유로", "위안", "$", "USD", "EUR", "JPY", "CNY", "KRW", "€", "¥", "₩", "￦")
 _NUM = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"
 _KSCALE = {"조": 10 ** 12, "억": 10 ** 8, "천만": 10 ** 7, "백만": 10 ** 6, "십만": 10 ** 5, "만": 10 ** 4, "천": 10 ** 3}
@@ -171,7 +172,9 @@ def supplement_amounts(rhwp: str, src: Path, items: List[dict]) -> List[dict]:
     for query in CURRENCY_QUERIES:
         env = rhwp_json(rhwp, ["search", str(src), query])
         for match in env.get("matches", []):
-            key = (match.get("section"), match.get("paragraph"), json.dumps(match.get("cell"), sort_keys=True))
+            # 표 안의 표 칸은 rhwp 가 모두 최외곽 칸 주소로 주므로(edwardkim/rhwp#8989) 글까지 열쇠에 넣어 구별한다.
+            key = (match.get("section"), match.get("paragraph"), json.dumps(match.get("cell"), sort_keys=True),
+                   match.get("text", ""))
             paragraphs.setdefault(key, match)
 
     def where(item):
@@ -187,10 +190,11 @@ def supplement_amounts(rhwp: str, src: Path, items: List[dict]) -> List[dict]:
         match = paragraphs[key]
         for amount in find_amounts(match.get("text", "")):
             start, end = amount["charOffset"], amount["charOffset"] + amount["length"]
-            if any(start < e and s < end for s, e in taken.get(key, [])):
+            if any(start < e and s < end for s, e in taken.get(key[:3], [])):
                 continue  # rhwp 가 이미 잡은 금액
             amount.update({"page": match.get("page", 0), "section": match.get("section"),
-                           "paragraph": match.get("paragraph"), "detector": "hwp-master"})
+                           "paragraph": match.get("paragraph"), "detector": "hwp-master",
+                           "_text": match.get("text", "")})
             if match.get("cell") is not None:
                 amount["cell"] = match["cell"]
             extra.append(amount)
@@ -301,16 +305,52 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                 for t in tables:
                     block = index.table(t.get("section"), t.get("paragraph"), t.get("control"))
                     t["blockId"] = link("table", block["id"] if block else None)
-            save("tables.json", {"source": rel, "tables": tables})
+            # rhwp export-tables 는 표 안의 표를 내보내지 않고 그 바깥 칸 글도 비운다(edwardkim/rhwp#8988).
+            # document.json(HWPX 직접 해석)의 중첩 표를 "T03-1" 처럼 바깥 표 뒤에 붙이고, 빈 바깥 칸에는 자리 표시를 둔다.
+            output, csv_jobs = [], []
             for k, table in enumerate(tables, 1):
-                name = f"tables/T{k:02d}.csv"
+                label = f"T{k:02d}"
+                table["label"] = label
+                output.append(table)
+                csv_jobs.append((label, table))
+                block = index.table(table.get("section"), table.get("paragraph"), table.get("control")) \
+                    if index is not None else None
+                if not block or block.get("type") != "table":
+                    continue
+                labels = {}
+                for n, nested in enumerate((t for t in docmodel.iter_tables(block) if t is not block), 1):
+                    labels[nested["id"]] = f"{label}-{n}"
+                for n, nested in enumerate((t for t in docmodel.iter_tables(block) if t is not block), 1):
+                    parent = next(c for c in docmodel.iter_cells(block) if nested in c.get("tables", []))
+                    entry = {"label": f"{label}-{n}", "blockId": nested["id"], "parentCellId": parent["id"],
+                             "depth": nested["depth"], "rows": nested["rows"], "cols": nested["cols"],
+                             "section": table.get("section"), "paragraph": table.get("paragraph"),
+                             "cells": [{k2: c[k2] for k2 in ("id", "row", "col", "rowSpan", "colSpan", "header",
+                                                            "text", "hasNestedTable")} for c in nested["cells"]],
+                             "detector": "hwp-master"}
+                    output.append(entry)
+                    csv_jobs.append((entry["label"], entry))
+                # 안쪽 표가 든 바깥 칸에는 "[표 T03-1]" 자리 표시를 붙인다(칸의 자기 글은 앞에 남긴다).
+                by_addr = {(c["row"], c["col"]): c for c in block["cells"]}
+                for cell in table.get("cells", []):
+                    doc_cell = by_addr.get((cell.get("row"), cell.get("col")))
+                    if doc_cell and doc_cell.get("tables"):
+                        own = str(cell.get("text", "")).strip() or \
+                            "\n".join(p["text"] for p in doc_cell["paragraphs"] if p["text"].strip())
+                        marks = " ".join(f"[표 {labels[t['id']]}]" for t in doc_cell["tables"])
+                        cell["text"] = (own + "\n" + marks).strip()
+                        cell["nestedTableIds"] = [t["id"] for t in doc_cell["tables"]]
+            save("tables.json", {"source": rel, "tables": output})
+            for label, table in csv_jobs:
+                name = f"tables/{label}.csv"
                 write_csv(out / name, table_grid(table))
                 files.append(name)
                 if not table_area_ok(table):
-                    findings.append(finding("error", "X103", f"표 {k} 격자 불일치(병합 면적 ≠ {table.get('rows')}×"
+                    findings.append(finding("error", "X103", f"표 {label} 격자 불일치(병합 면적 ≠ {table.get('rows')}×"
                                             f"{table.get('cols')})", f"{rel} 구역 {table.get('section')} "
                                             f"문단 {table.get('paragraph')}"))
             counts["tables"] = len(tables)
+            counts["nestedTables"] = len(output) - len(tables)
 
     if "data" in parts:
         env = rhwp_json(rhwp, ["extract-data", str(src), "--limit", str(limit)])
@@ -322,7 +362,11 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             items += extra
             if index is not None:
                 for i in items:
-                    i["blockId"] = link("data", index.locate(i.get("section"), i.get("paragraph"), i.get("cell")))
+                    # rhwp 의 칸 주소는 중첩 칸도 최외곽 칸이라(edwardkim/rhwp#8989) 글로 가장 안쪽 칸을 찾는다.
+                    i["blockId"] = link("data", index.locate(i.get("section"), i.get("paragraph"), i.get("cell"),
+                                                             text=i.get("_text") or str(i.get("raw", ""))))
+            for i in items:
+                i.pop("_text", None)
             save("data.json", {"source": rel, "counts": data_counts, "totalItemCount":
                                int(env.get("totalItemCount", len(items) - len(extra))) + len(extra),
                                "supplementedAmounts": len(extra), "items": items})
@@ -352,9 +396,8 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             if index is not None:
                 for f in fields:
                     loc = f.get("location") or {}
-                    cell = next(({"control": n.get("control"), "cell": n.get("cell")} for n in loc.get("nested", [])
-                                 if n.get("kind") == "tableCell"), None)
-                    f["blockId"] = link("field", index.locate(loc.get("section"), loc.get("paragraph"), cell))
+                    path = [n for n in loc.get("nested", []) if n.get("kind") == "tableCell"]
+                    f["blockId"] = link("field", index.locate(loc.get("section"), loc.get("paragraph"), path=path))
             save("fields.json", {"source": rel, "fields": fields})
             if fields:
                 keys = []

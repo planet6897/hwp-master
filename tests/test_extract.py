@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 import extract  # noqa: E402
 import rhwp_locate  # noqa: E402
 from form_fixture import make_form  # noqa: E402
+from nested_fixture import make_nested  # noqa: E402
 
 SPEC = {"version": "1", "title": "추출 시험 문서", "blocks": [
     {"type": "heading", "level": 1, "text": "사업 개요"},
@@ -222,6 +223,36 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual([b["text"] for b in doc["blocks"] if b["type"] == "heading"], ["사업 개요", "추진 일정"])
         items = json.loads((out / "data.json").read_text(encoding="utf-8"))["items"]
         self.assertTrue(items and all(i.get("blockId") for i in items))
+
+    def test_nested_tables_are_kept(self):
+        doc_path = make_nested(self.rhwp, self.project / "sources/nest.hwpx")
+        proc, report = self.run_extract(f"sources/{doc_path.name}", extra=("--only", "document,tables,data"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse([f for f in report["findings"] if f["code"] == "W305"], report["findings"])
+        out = self.project / "exports/extract/nest"
+        doc = json.loads((out / "document.json").read_text(encoding="utf-8"))
+        self.assertEqual(doc["counts"]["nestedTable"], 1)
+        outer = next(b for b in doc["blocks"] if b["type"] == "table")
+        holder = next(c for c in outer["cells"] if c["hasNestedTable"])
+        inner = holder["tables"][0]
+        self.assertEqual(inner["id"], f"{holder['id']}.t0")
+        self.assertEqual((inner["rows"], inner["cols"], inner["depth"]), (3, 2, 1))
+        cells = {c["id"]: c["text"] for c in inner["cells"]}
+        self.assertEqual(cells[f"{inner['id']}.r1c1"], "580억 달러")
+        self.assertIn("세부 내역", holder["text"])
+        self.assertIn("장비 | 580억 달러", holder["text"], "바깥 칸 글에 안쪽 표가 펼쳐진다")
+
+        tables = json.loads((out / "tables.json").read_text(encoding="utf-8"))["tables"]
+        self.assertEqual([t["label"] for t in tables], ["T01", "T01-1"])
+        self.assertEqual(tables[1]["parentCellId"], holder["id"])
+        self.assertEqual(read_csv(out / "tables/T01-1.csv"),
+                         [["항목", "금액"], ["장비", "580억 달러"], ["인건비", "3억 5천만 원"]])
+        self.assertEqual(read_csv(out / "tables/T01.csv")[1], ["예산", "세부 내역\n[표 T01-1]"])
+
+        items = {i["raw"]: i for i in json.loads((out / "data.json").read_text(encoding="utf-8"))["items"]
+                 if i["kind"] == "amount"}
+        self.assertEqual(items["580억 달러"]["blockId"], f"{inner['id']}.r1c1", "가장 안쪽 칸으로 잇는다")
+        self.assertEqual(items["3억 5천만 원"]["blockId"], f"{inner['id']}.r2c1")
 
     def test_fields_link_to_cells(self):
         form = make_form(self.rhwp, self.project / "sources/form.hwpx", ["회사명", "대표자"])
