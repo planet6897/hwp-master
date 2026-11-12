@@ -105,6 +105,28 @@ class ToHdsTest(unittest.TestCase):
         self.assertEqual((lost["ratio"], lost["missing"]), (0.5, ["직접비용"]))
 
 
+class ImageTest(unittest.TestCase):
+    def test_images_become_hds_image_blocks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            png = Path(tmp) / "a.png"
+            png.write_bytes(b"png")
+            gif = Path(tmp) / "b.gif"
+            gif.write_bytes(b"gif")
+            media = {"BinData/a.png": png, "BinData/b.gif": gif}
+            cell = {"id": "s0.p1.t0.r0c0", "row": 0, "col": 0, "rowSpan": 1, "colSpan": 1, "text": "칸",
+                    "paragraphs": [{"text": "칸", "tables": []}], "images": [{"paragraph": 0, "media": "BinData/a.png"}]}
+            doc = {"blocks": [
+                {"id": "s0.p0.g0", "type": "image", "page": 0, "media": "BinData/a.png", "widthHU": 28346},
+                {"id": "s0.p1.t0", "type": "table", "role": "data", "rows": 1, "cols": 1, "page": 0, "cells": [cell]},
+                {"id": "s0.p2.g0", "type": "image", "page": 0, "media": "BinData/b.gif"},
+                {"id": "s0.p3.g0", "type": "image", "page": 0}]}
+            spec, notes = ai_restructure.to_hds(doc, "t", media)
+        images = [b for b in spec["blocks"] if b["type"] == "image"]
+        self.assertEqual(images[0], {"type": "image", "path": str(png), "width_mm": 100.0})
+        self.assertIn("1행 1열", images[1]["caption"], "표 칸 그림은 표 뒤에, 어느 칸인지 캡션으로")
+        self.assertEqual((notes["imagesPlaced"], notes["images"]), (2, 2), "gif·파일 없는 그림은 못 옮긴 수로 센다")
+
+
 class EndToEndTest(unittest.TestCase):
     def test_layout_and_nested_fixtures_improve(self):
         rhwp = rhwp_locate.locate(None)["path"]

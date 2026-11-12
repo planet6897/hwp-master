@@ -206,13 +206,14 @@ def table_lines(table: dict) -> List[str]:
 
 
 def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
-                borders: Optional[Dict[str, bool]] = None) -> dict:
+                borders: Optional[Dict[str, bool]] = None, media: Optional[Dict[str, str]] = None) -> dict:
     """표 하나. 칸 안의 표(표 안의 표)는 칸의 tables 로 재귀해 넣고 ID 를 이어 붙인다(…r1c2.t0.r0c0).
 
     rhwp export-tables 는 중첩 표를 내보내지 않는다(edwardkim/rhwp#8988). 여기서는 HWPX 를 직접 읽어 잃지 않는다.
     표마다 role(layout|data)·roleReasons 를 붙인다(classify_table).
     """
     borders = borders or {}
+    media = media or {}
     cells = []
     for tr in (c for c in tbl if _tag(c) == "tr"):
         for tc in (c for c in tr if _tag(c) == "tc"):
@@ -220,17 +221,21 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
             row = _int(addr.get("rowAddr")) if addr is not None else 0
             col = _int(addr.get("colAddr")) if addr is not None else 0
             cid = f"{tid}.r{row}c{col}"
-            paragraphs, nested, lines = [], [], []
+            paragraphs, nested, lines, cell_images = [], [], [], []
             for k, sp in enumerate(_sub_paragraphs(tc)):
                 own = _text_of(sp)
                 inner = []
                 controls = control_indices(sp)
                 for tbl_el in _direct_tables(sp):
-                    child = parse_table(tbl_el, f"{cid}.t{len(nested)}", counts, depth + 1, borders)
+                    child = parse_table(tbl_el, f"{cid}.t{len(nested)}", counts, depth + 1, borders, media)
                     child["cellParagraph"] = k
                     child["control"] = controls.get(id(tbl_el))
                     nested.append(child)
                     inner.append(child["id"])
+                pictures = [{"paragraph": k, **picture_info(pic, media)} for pic in _controls(sp) if _tag(pic) == "pic"]
+                if pictures:
+                    cell_images.extend(pictures)
+                    counts["cellImage"] = counts.get("cellImage", 0) + len(pictures)
                 paragraphs.append({"text": own, "tables": inner})
                 if own.strip():
                     lines.append(own)
@@ -248,6 +253,8 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
             }
             if nested:
                 cell["tables"] = nested
+            if cell_images:
+                cell["images"] = cell_images  # 칸 안의 그림(media·widthHU, 칸 문단 번호)
             cells.append(cell)
     counts["cell"] += len(cells)
     if depth:
@@ -271,6 +278,9 @@ def unwrap_layout(table: dict, base: dict, path: dict) -> List[dict]:
             if para["text"].strip():
                 out.append({"id": f"{cell['id']}.p{k}", "type": "paragraph", "text": para["text"],
                             "fromLayoutTable": table["id"], "cellId": cell["id"], **base, **path})
+            for g, image in enumerate(x for x in cell.get("images", []) if x.get("paragraph") == k):
+                out.append({"id": f"{cell['id']}.p{k}.g{g}", "type": "image", "fromLayoutTable": table["id"],
+                            "cellId": cell["id"], **{a: b for a, b in image.items() if a != "paragraph"}, **base, **path})
             for child_id in para["tables"]:
                 child = next(t for t in cell.get("tables", []) if t["id"] == child_id)
                 out.append({"type": "table", **base, **child, "fromLayoutTable": table["id"], **path})
@@ -394,8 +404,53 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
     pages = pages or {}
     try:
         return _build_from_hwpx(hwpx, pages)
-    except (ET.ParseError, zipfile.BadZipFile, KeyError) as exc:
+    except (ET.ParseError, zipfile.BadZipFile, KeyError, OSError) as exc:
         return {"_error": f"HWPX 를 읽지 못했습니다(암호 문서이거나 손상): {exc}"}
+
+
+def media_manifest(z: zipfile.ZipFile) -> Dict[str, str]:
+    """HWPX content.hpf 의 바이너리 항목 id → zip 안 경로(BinData/image1.png)."""
+    if "Contents/content.hpf" not in z.namelist():
+        return {}
+    hpf = z.read("Contents/content.hpf").decode("utf-8", "replace")
+    return {m.group(1): m.group(2) for m in re.finditer(r'<opf:item\b[^>]*?\bid="([^"]+)"[^>]*?\bhref="([^"]+)"', hpf)}
+
+
+def picture_info(pic, media: Dict[str, str]) -> dict:
+    """그림 블록에 붙일 정보: media(zip 안 그림 파일 경로)·widthHU(보이는 너비)."""
+    out = {}
+    img = next((x for x in pic.iter() if _tag(x) == "img"), None)
+    ref = img.get("binaryItemIDRef") if img is not None else None
+    if ref and ref in media:
+        out["media"] = media[ref]
+    size = _child(pic, "curSz")
+    if size is not None and _int(size.get("width")) > 0:
+        out["widthHU"] = _int(size.get("width"))
+    return out
+
+
+def extract_media(rhwp: str, src: Path, dest: Path) -> Dict[str, Path]:
+    """원본(HWP·HWPX·HML)의 그림 파일을 dest 에 꺼낸다 → {zip 안 경로: 꺼낸 파일}. 실패하면 빈 사전."""
+    def pull(hwpx: Path) -> Dict[str, Path]:
+        out = {}
+        with zipfile.ZipFile(hwpx) as z:
+            for name in z.namelist():
+                if name.startswith("BinData/") and not name.endswith("/"):
+                    target = dest / Path(name).name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(z.read(name))
+                    out[name] = target
+        return out
+    try:
+        if src.suffix.lower() == ".hwpx":
+            return pull(src)
+        with tempfile.TemporaryDirectory() as tmp:
+            hwpx = Path(tmp) / (src.stem + ".hwpx")
+            proc = subprocess.run([rhwp, "export-hwpx", str(src), str(hwpx)], capture_output=True, text=True,
+                                  encoding="utf-8", errors="replace", timeout=900)
+            return pull(hwpx) if proc.returncode == 0 and hwpx.exists() else {}
+    except (zipfile.BadZipFile, OSError):
+        return {}
 
 
 def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
@@ -405,6 +460,7 @@ def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
         kinds = paragraph_kinds(header) if header else {}
         borders = border_fills(header) if header else {}
         sections = [(i, ET.fromstring(z.read(n))) for i, n in enumerate(_section_names(names))]
+        media = media_manifest(z)
 
     blocks: List[dict] = []
     heading_stack: List[Tuple[int, str, str]] = []  # (level, id, text)
@@ -471,14 +527,15 @@ def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
                 name = _tag(ctrl)
                 cbase = {**base, "control": index_of.get(id(ctrl))}
                 if name == "tbl":
-                    table = parse_table(ctrl, f"{pid}.t{ordinal['tbl']}", counts, borders=borders)
+                    table = parse_table(ctrl, f"{pid}.t{ordinal['tbl']}", counts, borders=borders, media=media)
                     ordinal["tbl"] += 1
                     counts["table"] += 1
                     blocks.append({"type": "table", **cbase, **table, **path_for()})
                     if table["role"] == "layout":
                         blocks.extend(unwrap_layout(table, base, path_for()))
                 elif name == "pic":
-                    blocks.append({"id": f"{pid}.g{ordinal['pic']}", "type": "image", **cbase, **path_for()})
+                    blocks.append({"id": f"{pid}.g{ordinal['pic']}", "type": "image", **cbase, **picture_info(ctrl, media),
+                                   **path_for()})
                     ordinal["pic"] += 1
                     counts["image"] += 1
                 elif name in ("header", "footer"):
@@ -516,7 +573,7 @@ def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
                                            "fromTextBox": tbid, **base, **path_for()})
                         controls = control_indices(sp)
                         for m, tbl_el in enumerate(_direct_tables(sp)):
-                            table = parse_table(tbl_el, f"{tbid}.p{j}.t{m}", counts, borders=borders)
+                            table = parse_table(tbl_el, f"{tbid}.p{j}.t{m}", counts, borders=borders, media=media)
                             table["control"] = controls.get(id(tbl_el))
                             counts["table"] += 1
                             blocks.append({"type": "table", **base, **table, "fromTextBox": tbid, **path_for()})

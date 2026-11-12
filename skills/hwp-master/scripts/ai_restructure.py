@@ -90,10 +90,17 @@ def split_wide(spec: dict) -> List[dict]:
     return parts
 
 
-def to_hds(document: dict, title: str) -> dict:
-    """문서 모델 → HDS 명세. 보고용 메모(옮기지 않은 것)를 함께 돌려준다."""
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")  # HDS image 가 받는 형식
+HU_PER_MM = 7200 / 25.4
+MAX_IMAGE_MM = 150
+
+
+def to_hds(document: dict, title: str, media: Optional[Dict[str, Path]] = None) -> dict:
+    """문서 모델 → HDS 명세. media 는 {zip 안 그림 경로: 꺼낸 파일} (docmodel.extract_media).
+    보고용 메모(옮기지 않은 것)를 함께 돌려준다."""
+    media = media or {}
     blocks: List[dict] = []
-    notes = {"images": 0, "headerFooters": 0, "headingsFromNumbers": 0, "listItems": 0, "footnotes": 0,
+    notes = {"images": 0, "imagesPlaced": 0, "headerFooters": 0, "headingsFromNumbers": 0, "listItems": 0, "footnotes": 0,
              "nestedTablesLifted": 0, "layoutTablesUnwrapped": 0, "textBoxes": 0}
     current_list: Optional[dict] = None
     levels: Dict[int, str] = {}
@@ -118,6 +125,29 @@ def to_hds(document: dict, title: str) -> dict:
             flush()
             blocks.append({"type": "paragraph", "text": f"※ {text}"})
 
+    def image_block(info: dict, caption: Optional[str] = None) -> Optional[dict]:
+        """그림 정보(media·widthHU) → HDS image 블록. 꺼낸 파일이 없거나 형식을 못 받으면 None."""
+        path = media.get(info.get("media") or "")
+        if not path or path.suffix.lower() not in IMAGE_EXTS:
+            return None
+        out = {"type": "image", "path": str(path)}
+        if info.get("widthHU"):
+            out["width_mm"] = round(min(MAX_IMAGE_MM, max(5.0, info["widthHU"] / HU_PER_MM)), 1)
+        if caption:
+            out["caption"] = caption
+        return out
+
+    def emit_image(info: dict, caption: Optional[str] = None):
+        nonlocal last_target
+        spec = image_block(info, caption)
+        if spec is None:
+            notes["images"] += 1
+            return
+        flush()
+        blocks.append(spec)
+        notes["imagesPlaced"] += 1
+        last_target = None
+
     def emit_table(table: dict):
         nonlocal last_target
         flush()
@@ -137,12 +167,19 @@ def to_hds(document: dict, title: str) -> dict:
             spec["caption"] = f"아래 표 {labels[t['id']]} (앞 표의 칸 안에 있던 표)"
             blocks.append(spec)
             notes["nestedTablesLifted"] += 1
+        # 데이터 표 칸 안의 그림은 HDS 표 칸에 넣을 수 없어 표 바로 뒤에 둔다(어느 칸 그림인지 캡션으로)
+        for t in docmodel.iter_tables(table):
+            if t.get("role") == "layout" and t is not table:
+                continue
+            for cell in sorted(t["cells"], key=lambda x: (x["row"], x["col"])):
+                for info in cell.get("images", []):
+                    emit_image(info, f"앞 표 {cell['row'] + 1}행 {cell['col'] + 1}열 칸의 그림")
         last_target = None
 
     for block in document["blocks"]:
         kind = block["type"]
         if kind == "image":
-            notes["images"] += 1
+            emit_image(block)
             continue
         if kind == "headerFooter":
             notes["headerFooters"] += 1
@@ -292,7 +329,8 @@ def restructure_one(rhwp: str, project: Path, src: Path, preview: bool, timeout:
         row["findings"].append({"severity": "error", "code": "I101", "message": before["_error"]})
         return row
     title = next((clean(b["text"]) for b in before["blocks"] if b["type"] == "heading"), src.stem)
-    spec, notes = to_hds(before, title)
+    assets = out_dir / f"{src.stem}_assets"
+    spec, notes = to_hds(before, title, docmodel.extract_media(rhwp, src, assets))
     hds_path = out_dir / f"{src.stem}.hds.json"
     hds_path.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     out = out_dir / f"{src.stem}.hwpx"
