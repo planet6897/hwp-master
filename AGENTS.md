@@ -2,7 +2,8 @@
 
 이 저장소에서 일하는 AI 에이전트의 진입점이다.
 
-이 프로젝트는 rhwp 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경하기 위한 프로젝트다. upstream rhwp 저장소는 수 GB 라
+이 프로젝트는 rhwp 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경하기 위한 프로젝트다. 목표 하나는 문서 안의 내용을
+구조적·의미적으로 가져와(개요·표 격자·정규화된 날짜·금액·누름틀 값과 그 위치) AI 가 쓰기 쉬운 JSON·CSV·Markdown 으로 가공하는 것이다. upstream rhwp 저장소는 수 GB 라
 받아서 빌드하면 네트워크·시스템 비용이 크다. 그 비용을 줄이려고 이 저장소가 devel 최신 rhwp 를 Windows·macOS(Apple Silicon·Intel)·Linux(glibc 2.28·2.35) 용 바이너리로
 빌드해 Release 에 올리고, 그 위에서 문서를 다루는 도구(`skills/hwp-master/scripts/`)를 제공한다.
 

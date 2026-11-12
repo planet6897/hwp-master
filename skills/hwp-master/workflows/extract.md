@@ -36,7 +36,7 @@ python3 scripts/extract.py <프로젝트> sources/<문서> --only tables,data   
 | `pages.json` | 쪽별 평문 | 쪽 번호로 인용 |
 | `structure.json` | 개요/조문(장·절·조·항·호) 계층 트리 | 목차·조문 찾기 |
 | `tables.json`, `tables/T01.csv`… | 표 격자(병합·위치 보존), 표마다 CSV | 표 데이터 |
-| `data.json`, `data.csv` | 날짜·금액·수량, 정규화 값·단위·쪽·구역·문단·문자 위치 | 금액·기한 질문 |
+| `data.json`, `data.csv` | 날짜·금액·수량, 정규화 값·단위·통화(USD·KRW·EUR·JPY·CNY)·쪽·구역·문단·표 셀·문자 위치. rhwp 가 놓친 금액(`580억 달러`·`$1.5 million`·`3억 5천만 원`·표 셀 안)은 `detector: hwp-master` 로 보탠다 | 금액·기한 질문 |
 | `fields.json`, `fields.csv` | 누름틀 이름·현재값·안내문·위치 | 서식에 채워진 값 |
 | `headers_footers.json` | 머리말/꼬리말 | 문서 번호·기관명 |
 | `charts.json`, `charts/chart<N>.csv` | 차트 목록과 숫자 데이터 | 차트 값 |

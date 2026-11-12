@@ -49,6 +49,23 @@ class GridTest(unittest.TestCase):
         self.assertFalse(extract.table_area_ok(table))
 
 
+class AmountTest(unittest.TestCase):
+    def test_finds_currency_amounts(self):
+        text = ("총사업비는 1,200,000원이고 수출은 580억 달러, 수입은 $1.5 million, 단가는 USD 25.5, "
+                "3억 5천만 원, 49억달러 흑자, ¥100 25 EUR, 2,000백만 원.")
+        got = [(a["raw"], a["normalized"], a["currency"]) for a in extract.find_amounts(text)]
+        self.assertEqual(got, [("1,200,000원", 1200000, "KRW"), ("580억 달러", 58000000000, "USD"),
+                               ("$1.5 million", 1500000, "USD"), ("USD 25.5", 25.5, "USD"),
+                               ("3억 5천만 원", 350000000, "KRW"), ("49억달러", 4900000000, "USD"),
+                               ("¥100", 100, "JPY"), ("25 EUR", 25, "EUR"), ("2,000백만 원", 2000000000, "KRW")])
+        for a in extract.find_amounts(text):
+            self.assertEqual(text[a["charOffset"]:a["charOffset"] + a["length"]], a["raw"])
+
+    def test_ignores_words_and_unit_captions(self):
+        text = "3원칙과 위원 5명, 엔진 2대, 국립국어원, 2024년 5월 11.5% 증가 (단위: 억 달러, %)"
+        self.assertEqual(extract.find_amounts(text), [])
+
+
 class ExtractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -74,6 +91,30 @@ class ExtractTest(unittest.TestCase):
         summary = json.loads(proc.stdout.strip().splitlines()[-1])
         report = json.loads(Path(summary["report"]).read_text(encoding="utf-8"))
         return proc, report
+
+    def test_supplements_dollar_amounts_in_body_and_cells(self):
+        spec = Path(self.tmp.name) / "usd.json"
+        spec.write_text(json.dumps({"version": "1", "title": "수출 동향", "blocks": [
+            {"type": "paragraph", "text": "총사업비는 1,200,000원이고 5월 수출은 580억 달러로 11.5% 늘었다."},
+            {"type": "table", "rows": [["구분", "금액"], ["무역수지", "49억 달러"]]},
+        ]}, ensure_ascii=False), encoding="utf-8")
+        doc = self.project / "sources/usd.hwpx"
+        subprocess.run([self.rhwp, "scaffold", str(spec), "-o", str(doc)], check=True, capture_output=True)
+        proc, report = self.run_extract("sources/usd.hwpx", extra=("--only", "data"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        data = json.loads((self.project / "exports/extract/usd/data.json").read_text(encoding="utf-8"))
+        amounts = [i for i in data["items"] if i["kind"] == "amount"]
+        by_raw = {i["raw"]: i for i in amounts}
+        self.assertEqual(sorted(by_raw), ["1,200,000원", "49억 달러", "580억 달러"])
+        self.assertEqual(len(amounts), 3, "rhwp 가 잡은 원화 금액을 겹쳐 넣지 않는다")
+        self.assertEqual(by_raw["580억 달러"]["normalized"], 58000000000)
+        self.assertEqual(by_raw["580억 달러"]["currency"], "USD")
+        self.assertEqual(by_raw["580억 달러"]["detector"], "hwp-master")
+        self.assertIn("cell", by_raw["49억 달러"], "표 셀 안 금액은 셀 위치를 남긴다")
+        self.assertEqual(data["counts"]["amount"], 3)
+        rows = read_csv(self.project / "exports/extract/usd/data.csv")
+        self.assertIn("currency", rows[0])
+        self.assertTrue(any(r[1] == "49억 달러" and r[rows[0].index("cell")] for r in rows[1:]))
 
     def test_text_md_image_links_resolve(self):
         import re

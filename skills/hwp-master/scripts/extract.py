@@ -12,7 +12,9 @@
   structure.json      개요/조문 계층 트리 (rhwp export-structure)
   tables.json         표 격자 — 병합(rowSpan/colSpan)·위치 보존 (rhwp export-tables)
   tables/T01.csv …    표마다 CSV. 병합 칸은 왼쪽 위 칸에만 글을 두고 나머지는 비운다
-  data.json·data.csv  날짜·금액·수량과 구역·문단·쪽·문자 위치 (rhwp extract-data)
+  data.json·data.csv  날짜·금액·수량과 구역·문단·표 셀·쪽·문자 위치 (rhwp extract-data). rhwp 가 놓치는
+                      "580억 달러"·"$1.5 million"·"3억 5천만 원"·표 셀 안 금액은 rhwp search 로 문단을 모아
+                      보탠다(detector=hwp-master, currency=USD·KRW·EUR·JPY·CNY)
   fields.json·fields.csv  누름틀 이름·현재값·안내문·위치 (rhwp fields)
   headers_footers.json    머리말/꼬리말 (rhwp headers-footers)
   charts.json·charts/chart<N>.csv  차트 목록과 숫자 데이터 (rhwp charts·chart-to-csv)
@@ -109,6 +111,87 @@ def table_grid(table: dict) -> List[List[str]]:
     return grid
 
 
+# rhwp extract-data 는 본문의 "1,200,000원" 꼴만 금액으로 잡는다. "580억 달러"·"$1.5 million"·"3억 5천만 원"과
+# 표 셀 안의 금액은 놓치므로, 통화 단어가 든 문단을 rhwp search 로 모아(위치 포함) 아래 규칙으로 보탠다.
+CURRENCY_QUERIES = ("달러", "원", "엔", "유로", "위안", "$", "USD", "EUR", "JPY", "CNY", "KRW", "€", "¥", "₩", "￦")
+_NUM = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"
+_KSCALE = {"조": 10 ** 12, "억": 10 ** 8, "천만": 10 ** 7, "백만": 10 ** 6, "십만": 10 ** 5, "만": 10 ** 4, "천": 10 ** 3}
+_ESCALE = {"thousand": 10 ** 3, "million": 10 ** 6, "billion": 10 ** 9, "trillion": 10 ** 12}
+# "580억"·"3억 5천만"·"1억 2000" — 단위(조·억·만…) 뒤에서만 숫자를 이어 붙인다("¥100 25 EUR" 은 두 금액).
+_KAMT = (rf"(?:{_NUM})(?:\s?(?:조|억|천만|백만|십만|만|천)"
+         rf"(?:\s?(?:{_NUM})\s?(?:조|억|천만|백만|십만|만|천))*(?:\s?(?:{_NUM})(?![\d,.]))?)?")
+_SUFFIX_CUR = {"달러": "USD", "원": "KRW", "엔": "JPY", "유로": "EUR", "위안": "CNY",
+               "USD": "USD", "KRW": "KRW", "JPY": "JPY", "EUR": "EUR", "CNY": "CNY"}
+_PREFIX_CUR = {"US$": "USD", "$": "USD", "USD": "USD", "€": "EUR", "EUR": "EUR", "¥": "JPY", "JPY": "JPY",
+               "₩": "KRW", "￦": "KRW", "KRW": "KRW", "CNY": "CNY"}
+# 한글 통화 단어 뒤에는 조사·접미어만 온다("원칙"·"엔진"·"위원"은 금액이 아니다).
+_AFTER_KO = r"(?![가-힣])|(?=[은는이가을를의에과와로으도만씩화대정짜어권])"
+AMOUNT_RE = re.compile(
+    rf"(?<![\w.,])(?P<a>{_KAMT})\s?(?P<sc>(?:{'|'.join(map(re.escape, sorted(_SUFFIX_CUR, key=len, reverse=True)))}))"
+    rf"(?:(?<=[가-힣])(?:{_AFTER_KO})|(?<![가-힣])(?![A-Za-z]))"
+    rf"|(?P<pc>{'|'.join(map(re.escape, sorted(_PREFIX_CUR, key=len, reverse=True)))})\s?"
+    rf"(?P<b>{_KAMT})(?:\s?(?P<es>thousand|million|billion|trillion)\b)?")
+
+
+def amount_value(text: str, english_scale: str = "") -> Optional[float]:
+    """"3억 5천만" → 350000000, "1.5" + million → 1500000. 숫자가 없으면 None."""
+    total, rest = 0.0, text.replace(" ", "")
+    for num, scale in re.findall(rf"({_NUM})(조|억|천만|백만|십만|만|천)?", rest):
+        value = float(num.replace(",", ""))
+        total += value * _KSCALE.get(scale, 1)
+    if english_scale:
+        total *= _ESCALE[english_scale]
+    return int(total) if total == int(total) else round(total, 6)
+
+
+def find_amounts(text: str) -> List[dict]:
+    """문단 글에서 통화가 붙은 금액을 찾는다. charOffset 은 문단 안 글자 위치."""
+    found = []
+    for m in AMOUNT_RE.finditer(text):
+        if m.group("a") is not None:
+            number, currency, english = m.group("a"), _SUFFIX_CUR[m.group("sc")], ""
+        else:
+            number, currency, english = m.group("b"), _PREFIX_CUR[m.group("pc")], m.group("es") or ""
+        if not re.search(r"\d", number):
+            continue
+        raw = m.group(0).rstrip()
+        found.append({"kind": "amount", "raw": raw, "normalized": amount_value(number, english),
+                      "currency": currency, "charOffset": m.start(), "length": len(raw)})
+    return found
+
+
+def supplement_amounts(rhwp: str, src: Path, items: List[dict]) -> List[dict]:
+    """rhwp search 로 통화 단어가 든 문단(표 셀 포함)을 모아 rhwp 가 놓친 금액을 돌려준다."""
+    paragraphs = {}
+    for query in CURRENCY_QUERIES:
+        env = rhwp_json(rhwp, ["search", str(src), query])
+        for match in env.get("matches", []):
+            key = (match.get("section"), match.get("paragraph"), json.dumps(match.get("cell"), sort_keys=True))
+            paragraphs.setdefault(key, match)
+
+    def where(item):
+        return (item.get("section"), item.get("paragraph"), json.dumps(item.get("cell"), sort_keys=True))
+
+    taken = {}
+    for item in items:
+        if item.get("kind") == "amount":
+            start = int(item.get("charOffset", 0))
+            taken.setdefault(where(item), []).append((start, start + int(item.get("length", 1))))
+    extra = []
+    for key in sorted(paragraphs, key=lambda k: (k[0] or 0, k[1] or 0, k[2])):
+        match = paragraphs[key]
+        for amount in find_amounts(match.get("text", "")):
+            start, end = amount["charOffset"], amount["charOffset"] + amount["length"]
+            if any(start < e and s < end for s, e in taken.get(key, [])):
+                continue  # rhwp 가 이미 잡은 금액
+            amount.update({"page": match.get("page", 0), "section": match.get("section"),
+                           "paragraph": match.get("paragraph"), "detector": "hwp-master"})
+            if match.get("cell") is not None:
+                amount["cell"] = match["cell"]
+            extra.append(amount)
+    return extra
+
+
 def table_area_ok(table: dict) -> bool:
     area = sum(max(1, int(c.get("rowSpan", 1))) * max(1, int(c.get("colSpan", 1))) for c in table.get("cells", []))
     return area == int(table.get("rows", 0)) * int(table.get("cols", 0))
@@ -196,14 +279,29 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
     if "data" in parts:
         env = rhwp_json(rhwp, ["extract-data", str(src), "--limit", str(limit)])
         if not failed("extract-data", env):
-            items = env.get("items", [])
-            save("data.json", {"source": rel, "counts": env.get("counts", {}), "totalItemCount":
-                               env.get("totalItemCount", len(items)), "items": items})
-            head = ["kind", "raw", "normalized", "unit", "page", "section", "paragraph", "charOffset"]
-            write_csv(out / "data.csv", [head] + [[i.get(h, "") if h != "page" else int(i.get("page", 0)) + 1
-                                                   for h in head] for i in items])
+            items = [{**i, "detector": "rhwp"} for i in env.get("items", [])]
+            extra = supplement_amounts(rhwp, src, items)
+            data_counts = dict(env.get("counts", {}))
+            data_counts["amount"] = int(data_counts.get("amount", 0)) + len(extra)
+            items += extra
+            save("data.json", {"source": rel, "counts": data_counts, "totalItemCount":
+                               int(env.get("totalItemCount", len(items) - len(extra))) + len(extra),
+                               "supplementedAmounts": len(extra), "items": items})
+
+            def cell_text(item):
+                cell = item.get("cell")
+                return "" if not cell else f"control {cell.get('control')} cell {cell.get('cell')} " \
+                                           f"paragraph {cell.get('paragraph')}"
+
+            head = ["kind", "raw", "normalized", "unit", "currency", "page", "section", "paragraph", "cell",
+                    "charOffset", "detector"]
+            rows = []
+            for i in items:
+                rows.append([int(i.get("page", 0)) + 1 if h == "page" else cell_text(i) if h == "cell"
+                             else i.get(h, "") for h in head])
+            write_csv(out / "data.csv", [head] + rows)
             files.append("data.csv")
-            counts.update({f"data.{k}": v for k, v in env.get("counts", {}).items()})
+            counts.update({f"data.{k}": v for k, v in data_counts.items()})
             if env.get("truncated"):
                 findings.append(finding("warning", "W302", f"날짜·금액·수량 {env.get('totalItemCount')}건 중 "
                                         f"{len(items)}건만 담았습니다(--limit 를 늘리세요)", rel))
