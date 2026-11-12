@@ -8,7 +8,8 @@
   A01 표 안의 표    안쪽 표를 바깥 표 바로 뒤로 꺼내고, 바깥 칸에는 "[아래 표 n]" 표시를 남긴다
   A04 공백 정렬     글 가운데 공백·탭 여러 개를 하나로
   A05 빈 문단       빈 문단을 옮기지 않는다(간격은 문단 서식이 맡는다)
-  A06 손 번호       짧은 "1. 가." 항목은 개요 제목(자동 번호)으로, 개조식(□ ○ - ·)은 단계 목록(list)으로
+  A06 손 번호       짧은 "1. 가." 항목은 개요 제목(자동 번호)으로, 숫자형 항목은 단계 목록(list)으로.
+                   개조식(□ ○ - ·)은 기호를 글에 둔 문단으로(들여쓰기 꾸밈 생략 — 긴 문서 빌드 시간)
   ※·* 주석         바로 앞 문단·항목의 각주로
 그대로 두는 것: 그림(옮기지 않고 보고), 머리말·꼬리말, 글자 모양. 개선본은 AI·검색·요약용 정리본이다.
 제출용 원본을 대신하지 않는다.
@@ -36,6 +37,7 @@ import rhwp_locate  # noqa: E402
 
 READABLE = {".hwp", ".hwpx", ".hml"}
 HEADING_NUMBERS = {"Ⅰ.", "1.", "가."}
+BULLET_KINDS = {"□", "○", "-", "·", "①"}
 _GAPS = re.compile(r"[ \t 　]{2,}")
 _SPACE = re.compile(r"[\s 　]+")
 
@@ -64,7 +66,9 @@ def table_spec(table: dict, nested_labels: Dict[str, str]) -> dict:
         for rr in range(r, min(table["rows"], r + max(1, cell["rowSpan"]))):
             for cc in range(c, min(table["cols"], c + max(1, cell["colSpan"]))):
                 rows[rr][cc] = text
-    return {"type": "table", "rows": rows, "header_row": True}
+    # 머리 행 꾸밈(바탕·굵게·가운데)은 넣지 않는다. 사람 보기용 꾸밈이라 AI 읽기에는 쓸모가 없고, 칸마다 rhwp 편집을
+    # 세 번씩 돌려 긴 문서(표 86개·머리 칸 384개)에서는 빌드가 한 시간을 넘긴다.
+    return {"type": "table", "rows": rows}
 
 
 def to_hds(document: dict, title: str) -> dict:
@@ -153,8 +157,18 @@ def to_hds(document: dict, title: str) -> dict:
             notes["headingsFromNumbers"] += 1
             last_target = None
             continue
+        if o and o["kind"] in BULLET_KINDS:
+            # 개조식 항목은 기호를 글에 남긴 문단으로 넣는다. 들여쓰기 꾸밈(rhwp edit 한 번씩)은 AI 읽기에 쓸모가 없고
+            # 긴 문서에서 빌드 시간을 크게 늘린다. 기호가 글에 있으니 다시 추출해도 계층이 그대로 나온다.
+            flush()
+            para = {"type": "paragraph", "text": f"{o['marker']} {clean(o['body'])}"}
+            blocks.append(para)
+            notes["listItems"] += 1
+            last_target = para
+            continue
         if o:
-            # HDS 목록은 1단계에서 시작하고 단계를 건너뛸 수 없다 → 목록 첫 항목을 1단계로 보고 상대 단계로, 한 칸씩만 깊게
+            # 숫자형 항목(1) 가) (1) …)은 단계 목록으로. HDS 목록은 1단계에서 시작하고 단계를 건너뛸 수 없다
+            # → 목록 첫 항목을 1단계로 보고 상대 단계로, 한 칸씩만 깊게
             if current_list is None:
                 current_list = {"type": "list", "items": []}
                 levels.clear()
