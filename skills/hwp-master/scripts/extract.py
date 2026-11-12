@@ -38,6 +38,7 @@ CSV 는 엑셀에서 한글이 깨지지 않게 UTF-8 BOM 으로 쓴다.
   W304 경고  쪽 배치(dump-pages)를 얻지 못해 document.json 의 쪽 번호가 비어 있음
   W305 경고  값·누름틀·표 일부를 document.json 블록에 잇지 못함 (blockId 없음)
   W306 경고  연락처(전화·이메일)가 있음 — 개인정보일 수 있다
+  W308 경고  표 하나의 의미화(머리 행·값 해석)에 실패 — 그 표는 semantics 없이 격자만 남긴다
   W307 경고  여러 문서 가운데 다른 서식(누름틀·항목 이름 집합이 다수와 다름)
 
 문서가 둘 이상이면 exports/extract/_merged/ 에 documents.csv·fields.csv·kv.csv·data.csv(행마다 source)와
@@ -342,7 +343,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             tables = env.get("tables", [])
             if index is not None:
                 for t in tables:
-                    block = index.table(t.get("section"), t.get("paragraph"), t.get("control"))
+                    block = index.table(t.get("section"), t.get("paragraph"), t.get("control"), t.get("containerPath"))
                     t["blockId"] = link("table", block["id"] if block else None)
             # rhwp export-tables 는 표 안의 표를 내보내지 않고 그 바깥 칸 글도 비운다(edwardkim/rhwp#8988).
             # document.json(HWPX 직접 해석)의 중첩 표를 "T03-1" 처럼 바깥 표 뒤에 붙이고, 빈 바깥 칸에는 자리 표시를 둔다.
@@ -352,8 +353,8 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                 table["label"] = label
                 output.append(table)
                 csv_jobs.append((label, table))
-                block = index.table(table.get("section"), table.get("paragraph"), table.get("control")) \
-                    if index is not None else None
+                block = index.table(table.get("section"), table.get("paragraph"), table.get("control"),
+                                    table.get("containerPath")) if index is not None else None
                 if not block or block.get("type") != "table":
                     continue
                 table["role"], table["roleReasons"] = block["role"], block["roleReasons"]
@@ -393,8 +394,12 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                         continue
                     doc_table, pos = found
                     caption, caption_id = tablesem.find_caption(blocks, pos, doc_table)
-                    entry["semantics"] = tablesem.analyze(doc_table, caption, caption_id, find_amounts)
-                    counts["semanticTables"] = counts.get("semanticTables", 0) + 1
+                    try:
+                        entry["semantics"] = tablesem.analyze(doc_table, caption, caption_id, find_amounts)
+                        counts["semanticTables"] = counts.get("semanticTables", 0) + 1
+                    except Exception as exc:  # 표 하나를 해석하지 못해도 추출 전체를 멈추지 않는다
+                        findings.append(finding("warning", "W308", f"표 {entry.get('label')} 의미화 실패: {exc!r}"[:300],
+                                                rel))
             save("tables.json", {"source": rel, "tables": output})
             # CSV 는 데이터 표만 만든다. 레이아웃 표(제목 상자·투명 표)의 글은 document.json 에 문단으로 풀려 있다.
             for label, table in csv_jobs:
@@ -516,7 +521,10 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             for table in docmodel.iter_tables(block):
                 if table.get("role") == "data":
                     caption, caption_id = tablesem.find_caption(blocks, pos, table)
-                    semantics[table["id"]] = tablesem.analyze(table, caption, caption_id, find_amounts)
+                    try:
+                        semantics[table["id"]] = tablesem.analyze(table, caption, caption_id, find_amounts)
+                    except Exception:
+                        pass  # tables 단계에서 W308 로 알린다
         if "fields" not in parts:
             fenv = rhwp_json(rhwp, ["fields", str(src)])
             fields_found = [] if "_error" in fenv else fenv.get("fields", [])

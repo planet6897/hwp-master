@@ -20,7 +20,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from kv import is_label
 
 UNIT_CAPTION = re.compile(r"[(\[<〈]?\s*단\s*위\s*[:：]\s*([^)\]>〉]*)[)\]>〉]?")
-_NUM = r"[\d,]+(?:\.\d+)?"
+_NUM = r"\d[\d,]*(?:\.\d+)?"  # 숫자가 하나는 있어야 한다(쉼표만 있는 칸 "," 은 값이 아니다)
 VALUE = re.compile(rf"^(?P<s1>[△▽-]?)\s*(?P<n1>{_NUM})\s*(?P<p1>%)?\s*"
                    rf"(?:\(\s*(?P<s2>[△▽-]?)\s*(?P<n2>{_NUM})\s*(?P<p2>%)?\s*\))?$")
 PERCENT_WORDS = ("증감", "률", "율", "비중", "대비", "%", "증가율", "감소율")

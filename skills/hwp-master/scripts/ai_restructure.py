@@ -39,6 +39,9 @@ import rhwp_locate  # noqa: E402
 READABLE = {".hwp", ".hwpx", ".hml"}
 HEADING_NUMBERS = {"Ⅰ.", "1.", "가."}
 BULLET_KINDS = {"□", "○", "-", "·", "①"}
+WIDE_TABLE_COLS = 30  # 이보다 열이 많은 표가 있으면 개선본을 가로 용지로
+SPLIT_TABLE_COLS = 40  # 이보다 열이 많은 표는 가로 용지에도 들어가지 않아 열 묶음으로 나눈다
+SPLIT_CHUNK_COLS = 20  # 나눈 표 하나의 열 수(첫 열 제외)
 _GAPS = re.compile(r"[ \t 　]{2,}")
 _SPACE = re.compile(r"[\s 　]+")
 
@@ -70,6 +73,21 @@ def table_spec(table: dict, nested_labels: Dict[str, str]) -> dict:
     # 머리 행 꾸밈(바탕·굵게·가운데)은 넣지 않는다. 사람 보기용 꾸밈이라 AI 읽기에는 쓸모가 없고, 칸마다 rhwp 편집을
     # 세 번씩 돌려 긴 문서(표 86개·머리 칸 384개)에서는 빌드가 한 시간을 넘긴다.
     return {"type": "table", "rows": rows}
+
+
+def split_wide(spec: dict) -> List[dict]:
+    """열이 아주 많은 표는 쪽에 들어가지 않는다(최소 열 폭). 첫 열(행 이름)을 되풀이하며 열 묶음으로 나눈다."""
+    cols = len(spec["rows"][0]) if spec["rows"] else 0
+    if cols <= SPLIT_TABLE_COLS:
+        return [spec]
+    parts, start = [], 1
+    while start < cols:
+        end = min(cols, start + SPLIT_CHUNK_COLS)
+        part = {**spec, "rows": [[row[0]] + row[start:end] for row in spec["rows"]]}
+        part["caption"] = (spec.get("caption", "") + f" (열 {start + 1}–{end} / {cols})").strip()
+        parts.append(part)
+        start = end
+    return parts
 
 
 def to_hds(document: dict, title: str) -> dict:
@@ -105,7 +123,7 @@ def to_hds(document: dict, title: str) -> dict:
         flush()
         lifted = [t for t in docmodel.iter_tables(table) if t is not table]
         labels = {t["id"]: str(n) for n, t in enumerate(lifted, 1)}
-        blocks.append(table_spec(table, labels))
+        blocks.extend(split_wide(table_spec(table, labels)))
         for t in lifted:
             if t.get("role") == "layout":
                 # 칸 안에 있던 상자·투명 표는 표로 다시 만들지 않고 글을 문단으로 꺼낸다(A03)
@@ -196,6 +214,13 @@ def to_hds(document: dict, title: str) -> dict:
     if not blocks:
         blocks.append({"type": "paragraph", "text": "(본문 글자가 없는 문서입니다)"})
     spec = {"version": "1", "title": title, "blocks": blocks}
+    widest = max((len(b["rows"][0]) for b in blocks if b["type"] == "table" and b["rows"]), default=0)
+    if widest > WIDE_TABLE_COLS:
+        # 열이 아주 많은 표(달력·일정표 등)는 scaffold 의 최소 열 폭으로도 쪽보다 넓어진다(R103 overflow·off-canvas).
+        # 가로 용지·좁은 여백으로 두면 native 가 모든 표를 본문 폭에 맞춘다.
+        spec["orientation"] = "landscape"
+        spec["margins_mm"] = {"left": 10, "right": 10, "top": 10, "bottom": 10}
+        notes["landscape"] = widest
     if any(b["type"] == "heading" for b in blocks):
         # 제목 번호는 공문서 모양(1. → 가. → 1) …)으로. 기본값(1.1. 꼴)은 손 번호를 제목으로 올린 긴 문서에서
         # "56.10." 처럼 길어져 들여쓰기를 넘고 본문과 겹친다(R103).

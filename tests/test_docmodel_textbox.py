@@ -93,6 +93,12 @@ class TextBoxTest(unittest.TestCase):
         self.assertIsNone(index.locate(0, 0, path=[{"kind": "textBox", "control": 9, "paragraph": 0}]))
         self.assertEqual(index.locate(0, 1), "s0.p1")
 
+    def test_values_and_tables_inside_textbox_without_path(self):
+        """rhwp 는 글상자 안 값·표를 바깥 문단 번호(+containerPath)로만 준다 — 글·경로로 글상자 블록을 찾는다."""
+        index = docmodel.BlockIndex(self.doc, [])
+        self.assertEqual(index.locate(0, 0, text="1장 개요"), "s0.p0.x0.p1", "글이 맞는 글상자 문단이 하나뿐이면 그것")
+        self.assertEqual(index.locate(0, 0, text="없는 글"), "s0.p0.x0", "못 찾으면 그 문단의 첫 블록")
+
     def test_unreadable_hwpx_is_an_error_not_a_crash(self):
         bad = make_hwpx(Path(self.tmp.name) / "enc.hwpx", header="\x00암호화된 바이트")
         result = docmodel.build_from_hwpx(bad)

@@ -37,6 +37,8 @@ class UnitTest(unittest.TestCase):
         self.assertEqual((a["type"], a["value"], a["currency"]), ("amount", 58000000000, "USD"))
         self.assertEqual(pv("-")["type"], "empty")
         self.assertEqual(pv("반도체")["type"], "text")
+        self.assertEqual(pv(",")["type"], "text", "쉼표만 있는 칸은 숫자가 아니다(재시험 exam_science 의 멈춤)")
+        self.assertEqual(pv("△,")["type"], "text")
 
 
 class AnalyzeTest(unittest.TestCase):

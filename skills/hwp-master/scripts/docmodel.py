@@ -551,9 +551,18 @@ class BlockIndex:
         self.textboxes: Dict[Tuple[int, int, Optional[int]], dict] = {}
         self.textbox_tables: Dict[str, List[dict]] = {}
         self.ids = set()
+        # 문단에 딸린 글상자 문단·칸 글(rhwp 가 글상자 안 값을 바깥 문단 번호로만 줄 때 글로 찾는다)
+        self.inner_texts: Dict[Tuple[int, int], List[Tuple[str, str]]] = {}
+        self.anchor_block: Dict[Tuple[int, int], str] = {}  # 문단의 첫 블록(글 없는 문단의 마지막 대안)
         for block in document.get("blocks", []):
             key = (block["section"], block["paragraph"])
             self.ids.add(block["id"])
+            self.anchor_block.setdefault(key, block["id"])
+            if block.get("fromTextBox"):
+                if block["type"] == "table":
+                    self.inner_texts.setdefault(key, []).extend((c["id"], c["text"]) for c in iter_cells(block))
+                elif block.get("text"):
+                    self.inner_texts.setdefault(key, []).append((block["id"], block["text"]))
             if block["type"] == "textBox":
                 self.textboxes[(block["section"], block["paragraph"], block.get("control"))] = block
                 continue
@@ -572,14 +581,32 @@ class BlockIndex:
         self.control_to_ordinal: Dict[Tuple[int, int, int], int] = {}
         by_para: Dict[Tuple[int, int], List[int]] = {}
         for t in tables or []:
+            if t.get("containerPath"):
+                continue  # 머리말·글상자 안의 표는 본문 표 순번에 넣지 않는다
             by_para.setdefault((_int(t.get("section")), _int(t.get("paragraph"))), []).append(_int(t.get("control")))
         for key, controls in by_para.items():
             for k, control in enumerate(sorted(controls)):
                 self.control_to_ordinal[(*key, control)] = k
 
-    def table(self, section, paragraph, control) -> Optional[dict]:
-        """표 블록. 머리말/꼬리말 안의 표면 그 headerFooter 블록."""
+    def table(self, section, paragraph, control, container: Optional[List[dict]] = None) -> Optional[dict]:
+        """표 블록. 머리말/꼬리말 안의 표면 그 headerFooter 블록, 글상자 안의 표면 그 표 블록.
+
+        container 는 rhwp export-tables 의 containerPath([{kind: header|footer|textbox, control, paragraph}]).
+        """
         key = (_int(section), _int(paragraph))
+        if container:
+            step = container[0]
+            kind = str(step.get("kind", "")).lower()
+            if kind in ("header", "footer"):
+                hf = [b for b in self.header_footers.get(key, []) if b.get("control") == _int(step.get("control"), -1)]
+                return hf[0] if len(hf) == 1 else None
+            if kind == "textbox":
+                box = self.textboxes.get((key[0], key[1], _int(step.get("control"), -1)))
+                if box is None:
+                    return None
+                prefix = f"{box['id']}.p{_int(step.get('paragraph'))}.t"
+                return self._pick([t for t in self.textbox_tables.get(box["id"], []) if t["id"].startswith(prefix)],
+                                  control)
         found = self.tables.get(key, [])
         exact = [t for t in found if t.get("control") is not None and t.get("control") == _int(control, -1)]
         if len(exact) == 1:
@@ -680,7 +707,15 @@ class BlockIndex:
                 found = self._innermost(found, cell.get("paragraph"), text)
             return found["id"] if found else None
         key = (_int(section), _int(paragraph))
-        return f"s{key[0]}.p{key[1]}" if key in self.paragraphs else None
+        if key in self.paragraphs:
+            return f"s{key[0]}.p{key[1]}"
+        # 글 없는 바깥 문단: 딸린 글상자 문단·칸 가운데 글이 맞는 것이 하나뿐이면 그것, 아니면 그 문단의 첫 블록
+        norm = re.sub(r"\s+", "", text or "")
+        if norm:
+            hits = [bid for bid, t in self.inner_texts.get(key, []) if norm in re.sub(r"\s+", "", t)]
+            if len(hits) == 1:
+                return hits[0]
+        return self.anchor_block.get(key)
 
 
 if __name__ == "__main__":

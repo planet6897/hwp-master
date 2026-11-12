@@ -81,6 +81,22 @@ class ToHdsTest(unittest.TestCase):
         spec, notes = ai_restructure.to_hds(doc, "t")
         self.assertNotEqual(spec["blocks"][0]["type"], "heading", "자동 번호와 이중 번호가 되는 제목은 만들지 않는다")
 
+    def test_very_wide_tables_are_split_and_page_turns(self):
+        rows = [[f"r{r}c{c}" for c in range(65)] for r in range(3)]
+        cells = [{"id": f"t.r{r}c{c}", "row": r, "col": c, "rowSpan": 1, "colSpan": 1, "text": rows[r][c],
+                  "paragraphs": [{"text": rows[r][c], "tables": []}]} for r in range(3) for c in range(65)]
+        table = {"id": "s0.p0.t0", "type": "table", "role": "data", "rows": 3, "cols": 65, "page": 0, "cells": cells}
+        spec, notes = ai_restructure.to_hds({"blocks": [table]}, "t")
+        parts = [b for b in spec["blocks"] if b["type"] == "table"]
+        self.assertEqual([len(p["rows"][0]) for p in parts], [21, 21, 21, 5], "첫 열을 되풀이하며 20열씩")
+        self.assertTrue(all(p["rows"][1][0] == "r1c0" for p in parts))
+        self.assertNotIn("orientation", spec, "나눈 표는 세로 용지에 들어간다")
+        kept = {c for p in parts for row in p["rows"] for c in row}
+        self.assertTrue(set(sum(rows, [])) <= kept, "칸 글이 빠지지 않는다")
+        mid = {**table, "cols": 35, "cells": [c for c in cells if c["col"] < 35]}
+        spec, _ = ai_restructure.to_hds({"blocks": [mid]}, "t")
+        self.assertEqual(spec["orientation"], "landscape", "31~40열 표는 나누지 않고 가로 용지로")
+
     def test_coverage_ignores_markers(self):
         before = {"blocks": [para(0, "□ 직접비용", item("□", 1, "직접비용")), para(1, "남은 글")]}
         after = {"blocks": [{"type": "list", "text": "직접비용"}, {"type": "paragraph", "text": "남은 글"}]}
