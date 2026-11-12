@@ -1,0 +1,53 @@
+{
+  "name": "layout",
+  "build": {
+    "fixture": "layout"
+  },
+  "gold": {
+    "kinds": [
+      "amount",
+      "contact"
+    ],
+    "values": [
+      {
+        "kind": "amount",
+        "normalized": 100
+      },
+      {
+        "kind": "contact",
+        "normalized": {
+          "type": "phone",
+          "value": "02-000-0000"
+        }
+      }
+    ],
+    "kv": [
+      {
+        "key": "담당",
+        "value": "홍길동"
+      },
+      {
+        "key": "연락처",
+        "value": "02-000-0000"
+      }
+    ],
+    "roles": [
+      {
+        "label": "T01",
+        "role": "layout"
+      },
+      {
+        "label": "T02",
+        "role": "layout"
+      },
+      {
+        "label": "T03",
+        "role": "data"
+      },
+      {
+        "label": "T04",
+        "role": "layout"
+      }
+    ]
+  }
+}

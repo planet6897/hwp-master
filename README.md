@@ -455,7 +455,12 @@ projects/            작업 폴더 (Git 제외)
 
 1. 저장소를 fork 하거나 브랜치를 만들어 고칩니다.
 2. `python3 -m unittest discover -s tests` 가 모두 통과하는지 확인합니다.
-3. Pull Request 에 바꾼 내용과 확인 결과를 적습니다. 한글 문서 결과가 바뀌는 변경이면 재현에 쓴 hwp/hwpx 와 미리보기를 함께 올립니다.
+3. 추출 규칙을 바꿨으면 `python3 tools/eval_extract.py` 로 품질을 잽니다. 정답은 `tests/fixtures/extract/` 에 있고, `baseline.json` 보다 떨어지면 실패합니다.
+   실제 문서로도 재려면 다음과 같이 합니다.
+   - 저장소 밖 폴더에 `<문서>.hwp` 와 정답 `<문서>.golden.json` 을 둡니다.
+   - `EXTRACT_CORPUS=<폴더> python3 tools/eval_extract.py --corpus-only` 를 실행합니다.
+   - 범주별 P·R 과 놓친 것·잘못 잡은 것을 PR 에 붙입니다. 실제 문서는 저장소에 올리지 않습니다.
+4. Pull Request 에 바꾼 내용과 확인 결과를 적습니다. 한글 문서 결과가 바뀌는 변경이면 재현에 쓴 hwp/hwpx 와 미리보기를 함께 올립니다.
 
 ## 라이선스
 

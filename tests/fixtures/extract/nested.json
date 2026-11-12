@@ -1,0 +1,43 @@
+{
+  "name": "nested",
+  "build": {
+    "fixture": "nested"
+  },
+  "gold": {
+    "kinds": [
+      "amount"
+    ],
+    "values": [
+      {
+        "kind": "amount",
+        "normalized": 58000000000
+      },
+      {
+        "kind": "amount",
+        "normalized": 350000000
+      }
+    ],
+    "records": [
+      {
+        "label": "장비",
+        "key": "금액",
+        "value": 58000000000
+      },
+      {
+        "label": "인건비",
+        "key": "금액",
+        "value": 350000000
+      }
+    ],
+    "roles": [
+      {
+        "label": "T01",
+        "role": "data"
+      },
+      {
+        "label": "T01-1",
+        "role": "data"
+      }
+    ]
+  }
+}

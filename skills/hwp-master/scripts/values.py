@@ -31,9 +31,12 @@ CHANGE_SIGN = re.compile(r"(?P<s>[△▽▲])\s?(?P<n>\d+(?:\.\d+)?)\s?(?P<p>%|%
 CHANGE_WORD = re.compile(r"(?P<n>\d+(?:\.\d+)?)\s?(?P<p>%p?|퍼센트)\s?(?:포인트\s?)?(?P<w>증가|감소|상승|하락|늘|줄|확대|축소)")
 PHONE = re.compile(r"(?<![\d-])(?:0\d{1,2}[-)\s.]\s?\d{3,4}[-.\s]\d{4}|1[5-9]\d{2}-\d{4})(?![\d-])")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-LAW_NAME = (r"(?:「(?P<q>[^」]{1,40})」(?:\s?(?:시행령|시행규칙))?|"
-            r"(?P<w>(?:같은\s?법|[가-힣·]{1,24}(?:법률|법))(?:\s?(?:시행령|시행규칙))?|"
-            r"[가-힣·]{1,24}(?:고시|규정|조례|규칙|훈령|예규|지침)))")
+# 법령 이름 뒤의 시행령·시행규칙·부칙도 이름에 넣는다. 부칙 뒤 "(’19.12.31)" 같은 개정일 괄호는 건너뛴다.
+_LAW_TAIL = r"(?:\s?(?:시행령|시행규칙))?(?:\s?부칙)?"
+LAW_NAME = (r"(?:「(?P<q>[^」]{1,40})」" + _LAW_TAIL + "|"
+            r"(?P<w>(?:같은\s?법|[가-힣·]{1,24}(?:법률|법))" + _LAW_TAIL + "|"
+            r"[가-힣·]{1,24}(?:고시|규정|조례|규칙|훈령|예규|지침)))"
+            r"(?:\s?\([^)]{1,20}\))?")
 ARTICLE = re.compile(rf"(?:{LAW_NAME}\s?)?"
                      rf"제\s?(?P<a>\d+)\s?조(?:의\s?(?P<a2>\d+))?(?:\s?제\s?(?P<pa>\d+)\s?항)?(?:\s?제\s?(?P<it>\d+)\s?호)?")
 NEGATIVE_WORDS = ("감소", "하락", "줄", "축소")
@@ -112,8 +115,8 @@ def find_references(text: str) -> Iterator[dict]:
     for m in ARTICLE.finditer(text):
         law = m.group("q") or m.group("w")
         if m.group("q"):
-            tail = re.search(r"」\s?(시행령|시행규칙)", m.group(0))
-            law = f"{law} {tail.group(1)}" if tail else law
+            tail = re.findall(r"(?<=[」\s])(시행령|시행규칙|부칙)", m.group(0).split("제")[0])
+            law = " ".join([law] + tail) if tail else law
         law = re.sub(r"\s+", " ", law).strip() if law else None
         article = f"제{m.group('a')}조" + (f"의{m.group('a2')}" if m.group("a2") else "")
         yield {"kind": "reference", "raw": m.group(0).strip(),

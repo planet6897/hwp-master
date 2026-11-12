@@ -1,0 +1,24 @@
+{
+  "totals": {
+    "values": {
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "kv": {
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "roles": {
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "records": {
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "outline": {
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  }
+}

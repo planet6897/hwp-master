@@ -1,0 +1,218 @@
+{
+  "name": "report",
+  "build": {
+    "spec": {
+      "version": "1",
+      "title": "평가 보고서",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 1,
+          "text": "추진 배경"
+        },
+        {
+          "type": "paragraph",
+          "text": "□ 사업 기간은 2026. 3. 1.~12. 31.이고 총사업비는 3억 5천만 원이다."
+        },
+        {
+          "type": "paragraph",
+          "text": " ○ 수출은 580억 달러로 11.5% 증가했다."
+        },
+        {
+          "type": "paragraph",
+          "text": "   * 근거: 관세법 제222조 제1항"
+        },
+        {
+          "type": "paragraph",
+          "text": "담당자: 홍길동"
+        },
+        {
+          "type": "paragraph",
+          "text": "문의: 042-481-7760"
+        },
+        {
+          "type": "paragraph",
+          "text": "(단위: 백만 원, %)"
+        },
+        {
+          "type": "table",
+          "rows": [
+            [
+              "구분",
+              "2025년",
+              "증감률"
+            ],
+            [
+              "매출",
+              "1,200",
+              "△3.5"
+            ],
+            [
+              "비용",
+              "800",
+              "2.0"
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 1,
+          "text": "추진 계획"
+        },
+        {
+          "type": "paragraph",
+          "text": "□ 착수 보고는 2026년 4월 1일에 한다."
+        },
+        {
+          "type": "table",
+          "rows": [
+            [
+              "성명",
+              "홍길동"
+            ],
+            [
+              "연락처",
+              "02-000-0000"
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "gold": {
+    "kinds": [
+      "amount",
+      "period",
+      "change",
+      "contact",
+      "reference"
+    ],
+    "values": [
+      {
+        "kind": "period",
+        "normalized": {
+          "start": "2026-03-01",
+          "end": "2026-12-31"
+        }
+      },
+      {
+        "kind": "amount",
+        "normalized": 350000000
+      },
+      {
+        "kind": "amount",
+        "normalized": 58000000000
+      },
+      {
+        "kind": "change",
+        "normalized": 11.5
+      },
+      {
+        "kind": "change",
+        "normalized": -3.5
+      },
+      {
+        "kind": "reference",
+        "normalized": {
+          "law": "관세법",
+          "article": "제222조",
+          "paragraph": "제1항",
+          "item": null
+        }
+      },
+      {
+        "kind": "contact",
+        "normalized": {
+          "type": "phone",
+          "value": "042-481-7760"
+        }
+      },
+      {
+        "kind": "contact",
+        "normalized": {
+          "type": "phone",
+          "value": "02-000-0000"
+        }
+      }
+    ],
+    "outline": [
+      {
+        "text": "추진 배경",
+        "level": 1,
+        "type": "heading"
+      },
+      {
+        "text": "사업 기간은 2026. 3. 1.~12. 31.이고",
+        "level": 1
+      },
+      {
+        "text": "수출은 580억 달러로 11.5% 증가했다.",
+        "level": 2
+      },
+      {
+        "text": "근거: 관세법 제222조 제1항",
+        "level": 3,
+        "type": "note"
+      },
+      {
+        "text": "추진 계획",
+        "level": 1,
+        "type": "heading"
+      },
+      {
+        "text": "착수 보고는 2026년 4월 1일에 한다.",
+        "level": 1
+      }
+    ],
+    "records": [
+      {
+        "label": "매출",
+        "key": "2025년",
+        "value": 1200
+      },
+      {
+        "label": "매출",
+        "key": "증감률",
+        "value": -3.5
+      },
+      {
+        "label": "비용",
+        "key": "2025년",
+        "value": 800
+      },
+      {
+        "label": "비용",
+        "key": "증감률",
+        "value": 2.0
+      }
+    ],
+    "kv": [
+      {
+        "key": "담당자",
+        "value": "홍길동"
+      },
+      {
+        "key": "문의",
+        "value": "042-481-7760"
+      },
+      {
+        "key": "성명",
+        "value": "홍길동"
+      },
+      {
+        "key": "연락처",
+        "value": "02-000-0000"
+      }
+    ],
+    "roles": [
+      {
+        "label": "T01",
+        "role": "data"
+      },
+      {
+        "label": "T02",
+        "role": "data"
+      }
+    ]
+  }
+}

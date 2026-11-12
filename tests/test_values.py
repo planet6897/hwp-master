@@ -51,6 +51,8 @@ class ChangeContactReferenceTest(unittest.TestCase):
                                 {"law": "관세법 시행령", "article": "제231조", "paragraph": "제1항", "item": None}])
         self.assertEqual(found(values.find_references, "「국어기본법」 시행령 제5조의2")[0][1]["law"], "국어기본법 시행령")
         self.assertEqual(found(values.find_references, "제14조의2")[0][1]["article"], "제14조의2")
+        self.assertEqual(found(values.find_references, "관세법 부칙(’19.12.31) 제10조(경과조치)")[0][1]["law"], "관세법 부칙")
+        self.assertEqual(found(values.find_references, "「국어기본법」 부칙 제2조")[0][1]["law"], "국어기본법 부칙")
 
 
 class ExtractValuesTest(unittest.TestCase):
