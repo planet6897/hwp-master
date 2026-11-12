@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 import extract  # noqa: E402
 import rhwp_locate  # noqa: E402
 from form_fixture import make_form  # noqa: E402
-from nested_fixture import make_nested  # noqa: E402
+from nested_fixture import make_layout, make_nested  # noqa: E402
 
 SPEC = {"version": "1", "title": "추출 시험 문서", "blocks": [
     {"type": "heading", "level": 1, "text": "사업 개요"},
@@ -253,6 +253,34 @@ class ExtractTest(unittest.TestCase):
                  if i["kind"] == "amount"}
         self.assertEqual(items["580억 달러"]["blockId"], f"{inner['id']}.r1c1", "가장 안쪽 칸으로 잇는다")
         self.assertEqual(items["3억 5천만 원"]["blockId"], f"{inner['id']}.r2c1")
+
+    def test_layout_tables_are_unwrapped(self):
+        doc_path = make_layout(self.rhwp, self.project / "sources/layout.hwpx")
+        proc, report = self.run_extract(f"sources/{doc_path.name}", extra=("--only", "document,tables,data"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse([f for f in report["findings"] if f["code"] == "W305"], report["findings"])
+        out = self.project / "exports/extract/layout"
+        doc = json.loads((out / "document.json").read_text(encoding="utf-8"))
+        tables = [b for b in doc["blocks"] if b["type"] == "table" and not b.get("fromLayoutTable")]
+        self.assertEqual([(t["role"], t["roleReasons"]) for t in tables],
+                         [("layout", ["single-cell"]), ("layout", ["text-column"]), ("data", []),
+                          ("layout", ["borderless"])])
+        self.assertEqual(doc["counts"]["layoutTable"], 3)
+        unwrapped = [b for b in doc["blocks"] if b.get("fromLayoutTable")]
+        texts = [b["text"] for b in unwrapped]
+        self.assertIn("2026년 돌봄 확대 보도자료", texts)
+        self.assertIn("사업 개요", texts)
+        self.assertTrue(all(b["type"] == "paragraph" and b["id"].startswith(b["cellId"] + ".p") for b in unwrapped))
+        order = [b["id"] for b in doc["blocks"]]
+        first = tables[0]["id"]
+        self.assertEqual(order[order.index(first) + 1], f"{first}.r0c0.p0", "풀린 문단은 표 바로 뒤에 온다")
+
+        listed = json.loads((out / "tables.json").read_text(encoding="utf-8"))["tables"]
+        self.assertEqual([t["role"] for t in listed], ["layout", "layout", "data", "layout"])
+        self.assertEqual(sorted(p.name for p in (out / "tables").glob("*.csv")), ["T03.csv"], "CSV 는 데이터 표만")
+        items = json.loads((out / "data.json").read_text(encoding="utf-8"))["items"]
+        won = next(i for i in items if i["raw"] == "100원")
+        self.assertEqual(won["blockId"], f"{tables[2]['id']}.r1c1")
 
     def test_fields_link_to_cells(self):
         form = make_form(self.rhwp, self.project / "sources/form.hwpx", ["회사명", "대표자"])
