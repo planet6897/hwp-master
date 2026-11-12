@@ -176,6 +176,9 @@ class ConvertBuildTest(unittest.TestCase):
             report = json.loads((project / "validation/report.json").read_text(encoding="utf-8"))
             self.assertTrue(report["ok"])
             self.assertEqual(report["pageCount"], 1)
+            ai = report["steps"]["ai_readability"]
+            self.assertNotIn("error", ai)
+            self.assertGreaterEqual(ai["score"], 80, f"만든 문서도 AI 가독성을 지킨다: {ai}")
 
 
 if __name__ == "__main__":

@@ -392,12 +392,22 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
                 "parentHeadingId": heading_stack[-1][1] if heading_stack else None}
 
     last_page = 0
+    empty_runs: List[dict] = []  # 빈 문단 2개 이상 연속 — 빈 줄로 띄운 간격(AI 가독성 진단)
+    run: Optional[dict] = None
     for section, root in sections:
         top = [c for c in root if _tag(c) == "p"]
         for index, p in enumerate(top):
             pid = f"s{section}.p{index}"
             page = pages.get((section, index), last_page)
             last_page = page
+            if not _text_of(p).strip() and not any(True for _ in _controls(p)):
+                counts["emptyParagraph"] = counts.get("emptyParagraph", 0) + 1
+                if run and run["section"] == section and run["end"] == index - 1:
+                    run["end"], run["length"] = index, run["length"] + 1
+                else:
+                    run = {"start": pid, "section": section, "end": index, "length": 1, "page": page}
+                    empty_runs.append(run)
+                continue
             text = _text_of(p)
             kind, level = kinds.get(p.get("paraPrIDRef", ""), ("NONE", 0))
             base = {"section": section, "paragraph": index, "page": page}
@@ -450,7 +460,9 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
                     ordinal["note"] += 1
                     counts["note"] += 1
     counts["outlineItem"] = assign_outline(blocks)
-    return {"schemaVersion": SCHEMA_VERSION, "untrustedContent": True, "counts": counts, "blocks": blocks}
+    runs = [{k: r[k] for k in ("start", "length", "page")} for r in empty_runs if r["length"] >= 2]
+    return {"schemaVersion": SCHEMA_VERSION, "untrustedContent": True, "counts": counts, "blocks": blocks,
+            "emptyRuns": runs}
 
 
 def build_document(rhwp: str, src: Path, dump_pages: Optional[dict] = None) -> dict:

@@ -29,6 +29,8 @@ import native  # noqa: E402
 import receipt  # noqa: E402
 import rhwp_locate  # noqa: E402
 
+AI_READABILITY_MIN = 80  # 이 점수 미만이면 R108 경고 (ai_readability.py)
+
 
 def run_json(cmd: List[str], ok_codes=(0,)) -> dict:
     proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
@@ -168,6 +170,23 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
                 "warning", "R107", "PNG 미리보기를 만들지 못했습니다. 배포 rhwp 바이너리는 PNG 렌더(native-skia)를 "
                 "넣지 않았으니 미리보기 PDF 를 보세요. PNG 가 꼭 필요하면 --features native-skia 로 빌드한 rhwp 를 "
                 "RHWP_BIN 으로 지정합니다").to_dict())
+
+    # AI 가독성(행정문서 작성 가이드라인): 만든 문서도 AI 가 읽기 쉬운 구조인지 본다. 낮으면 경고 R108(막지 않음).
+    try:
+        import ai_readability
+        import docmodel
+        model = docmodel.build_document(rhwp, out_hwpx)
+        if "_error" not in model:
+            diag = ai_readability.diagnose(model)
+            steps["ai_readability"] = {"score": diag["score"], "grade": diag["grade"],
+                                       "checks": [c for c in diag["checks"] if c["count"]]}
+            if diag["score"] < AI_READABILITY_MIN:
+                worst = ", ".join(f"{c['title']} {c['count']}" for c in diag["checks"] if c["count"])
+                report["findings"].append(hds.Finding(
+                    "warning", "R108", f"AI 가독성 {diag['score']}점({diag['grade']}) — {worst}. "
+                    "ai_readability.py 결과의 고치는 법을 보세요").to_dict())
+    except Exception as exc:  # 진단 실패가 빌드를 막지 않는다
+        steps["ai_readability"] = {"error": str(exc)[:300]}
 
     errors = [f for f in report["findings"] if f["severity"] == "error"]
     report["ok"] = not errors
