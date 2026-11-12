@@ -178,6 +178,20 @@ def _section_names(names: List[str]) -> List[str]:
     return sorted(found, key=lambda n: int(re.search(r"(\d+)", n.rsplit("/", 1)[1]).group(1)))
 
 
+def control_indices(p) -> Dict[int, int]:
+    """문단 안 컨트롤의 rhwp control 번호: run 자식 가운데 글(t)을 뺀 순번. id(요소) → 번호."""
+    index, k = {}, 0
+    for run_el in (c for c in p if _tag(c) == "run"):
+        for child in run_el:
+            if _tag(child) == "t":
+                continue
+            index[id(child)] = k
+            for inner in child:
+                index.setdefault(id(inner), k)
+            k += 1
+    return index
+
+
 def _direct_tables(p) -> List:
     """칸 문단에 직접 든 표(그 안의 더 깊은 표는 빼고)."""
     return [c for c in _controls(p) if _tag(c) == "tbl"]
@@ -210,9 +224,11 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
             for k, sp in enumerate(_sub_paragraphs(tc)):
                 own = _text_of(sp)
                 inner = []
+                controls = control_indices(sp)
                 for tbl_el in _direct_tables(sp):
                     child = parse_table(tbl_el, f"{cid}.t{len(nested)}", counts, depth + 1, borders)
                     child["cellParagraph"] = k
+                    child["control"] = controls.get(id(tbl_el))
                     nested.append(child)
                     inner.append(child["id"])
                 paragraphs.append({"text": own, "tables": inner})
@@ -497,8 +513,10 @@ def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
                         if text.strip():
                             blocks.append({"id": f"{tbid}.p{j}", "type": "paragraph", "text": text,
                                            "fromTextBox": tbid, **base, **path_for()})
+                        controls = control_indices(sp)
                         for m, tbl_el in enumerate(_direct_tables(sp)):
                             table = parse_table(tbl_el, f"{tbid}.p{j}.t{m}", counts, borders=borders)
+                            table["control"] = controls.get(id(tbl_el))
                             counts["table"] += 1
                             blocks.append({"type": "table", **base, **table, "fromTextBox": tbid, **path_for()})
                         j += 1
@@ -603,33 +621,57 @@ class BlockIndex:
                   and norm in re.sub(r"\s+", "", c["text"])]
         return BlockIndex._innermost(deeper[0], -1, text) if len(deeper) == 1 and not hits else cell
 
-    def _follow(self, cell: dict, step: dict) -> Optional[dict]:
-        """fields location.nested 처럼 경로가 있으면 한 단계 안쪽 칸으로."""
-        tables = [t for t in cell.get("tables", []) if t.get("cellParagraph") == _int(step.get("paragraph"))]
-        tables = tables or cell.get("tables", [])
-        if len(tables) != 1:
-            return None
-        idx = _int(step.get("cell"), -1)
-        return tables[0]["cells"][idx] if 0 <= idx < len(tables[0]["cells"]) else None
+    @staticmethod
+    def _pick(tables: List[dict], control) -> Optional[dict]:
+        """같은 문단의 표 후보에서 control 번호로 고르고, 하나뿐이면 그것."""
+        exact = [t for t in tables if t.get("control") is not None and t.get("control") == _int(control, -1)]
+        if len(exact) == 1:
+            return exact[0]
+        return tables[0] if len(tables) == 1 else None
+
+    @staticmethod
+    def _cell_at(table: Optional[dict], index) -> Optional[dict]:
+        idx = _int(index, -1)
+        return table["cells"][idx] if table and 0 <= idx < len(table["cells"]) else None
+
+    def _follow(self, cell: dict, prev: dict, step: dict) -> Optional[dict]:
+        """한 단계 안쪽 칸으로. 경로 단계의 paragraph 는 '그 단계 칸 안의 문단'이라(fields location.nested·
+        rhwp#8991 cellPath), 안쪽 표는 앞 단계(prev) 칸의 그 문단에서 찾고 이번 단계 control 로 고른다."""
+        tables = [t for t in cell.get("tables", []) if t.get("cellParagraph") == _int(prev.get("paragraph"))]
+        return self._cell_at(self._pick(tables or cell.get("tables", []), step.get("control")), step.get("cell"))
 
     def locate(self, section, paragraph, cell: Optional[dict] = None, text: str = "",
                path: Optional[List[dict]] = None) -> Optional[str]:
         """본문 문단이면 문단 ID, 셀 주소({control, cell, paragraph})가 있으면 셀 ID.
 
-        path(바깥 → 안쪽 칸 주소 목록)를 주면 그 경로를 따라가고, 없고 text 가 있으면 글로 가장 안쪽 칸을 찾는다.
+        path(바깥 → 안쪽 칸 주소 목록: fields location.nested, rhwp#8991 의 cellPath)를 주면 그 경로를 따라간다.
+        중간에 끊기면 거기까지 찾은 가장 안쪽 칸을 준다. path 가 없고 text 가 있으면 글로 가장 안쪽 칸을 찾는다.
         """
-        if path and path[0].get("kind") == "textBox":
-            box = self.textboxes.get((_int(section), _int(paragraph), _int(path[0].get("control"), -1)))
-            if box is None:
-                return None
-            inner = f"{box['id']}.p{_int(path[0].get('paragraph'))}"
-            return inner if inner in self.ids else box["id"]
         if path:
-            found = self.cell(section, paragraph, path[0].get("control"), path[0].get("cell"))
-            for step in path[1:]:
+            first, rest = path[0], list(path[1:])
+            if first.get("kind") == "textBox":
+                box = self.textboxes.get((_int(section), _int(paragraph), _int(first.get("control"), -1)))
+                if box is None:
+                    return None
+                if not rest:
+                    inner = f"{box['id']}.p{_int(first.get('paragraph'))}"
+                    return inner if inner in self.ids else box["id"]
+                prefix = f"{box['id']}.p{_int(first.get('paragraph'))}.t"
+                candidates = [t for t in self.textbox_tables.get(box["id"], []) if t["id"].startswith(prefix)]
+                found = self._cell_at(self._pick(candidates, rest[0].get("control")), rest[0].get("cell"))
+                if found is None:
+                    return box["id"]
+                prev, rest = rest[0], rest[1:]
+            else:
+                found = self.cell(section, paragraph, first.get("control"), first.get("cell"))
+                prev = first
+            for step in rest:
                 if found is None:
                     break
-                found = self._follow(found, step)
+                deeper = self._follow(found, prev, step)
+                if deeper is None:
+                    break  # 경로가 끊기면 지금까지의 가장 안쪽 칸
+                found, prev = deeper, step
             return found["id"] if found else None
         if cell:
             found = self.cell(section, paragraph, cell.get("control"), cell.get("cell"))

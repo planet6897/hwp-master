@@ -75,7 +75,8 @@ python3 scripts/extract.py <프로젝트> "sources/신청서/*.hwpx"            
 **표 안의 표**는 `document.json` 칸의 `tables` 로 재귀해 들어간다(ID `s0.p5.t0.r1c2.t0.r0c0`). 바깥 칸 `text` 에는 칸 글 뒤에
 안쪽 표가 행마다 ` | ` 로 펼쳐진다. rhwp 는 중첩 표를 `export-tables` 에서 빼고(edwardkim/rhwp#8988), `search` 위치를
 최외곽 칸으로 주며 `extract-data` 는 중첩 칸 값을 놓친다(edwardkim/rhwp#8989). 그래서 hwp-master 가 HWPX 를 직접 읽어 표를 채우고,
-금액은 글로 가장 안쪽 칸을 찾아 잇는다. 중첩 칸 안의 날짜·수량은 rhwp 가 고쳐질 때까지 `data.json` 에 없을 수 있으니,
+금액은 글로 가장 안쪽 칸을 찾아 잇는다. rhwp 가 `cellPath`(바깥 → 안쪽 칸 경로, edwardkim/rhwp#8991)를 주면
+글 맞추기 대신 그 경로를 그대로 따라가 정확한 칸에 잇는다(그 rhwp 에서는 `extract-data` 가 중첩 칸 값도 뽑는다). 중첩 칸 안의 날짜·수량은 rhwp 가 고쳐질 때까지 `data.json` 에 없을 수 있으니,
 그런 값은 `document.json` 칸 글이나 `tables/T03-1.csv` 에서 찾는다.
 
 **여러 문서**를 한 번에 꺼내면 `exports/extract/_merged/` 에 다음이 생긴다.

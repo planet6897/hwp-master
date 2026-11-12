@@ -54,6 +54,12 @@ class DiagnoseTest(unittest.TestCase):
         doc = {"blocks": [para(0, "본문"), {"id": "s0.p1.g0", "type": "image", "page": 1}]}
         self.assertEqual(counts(doc)["A07"], 1)
 
+    def test_empty_document_scores_zero(self):
+        result = ai_readability.diagnose({"blocks": [{"id": "s0.p0.t0", "type": "table", "page": 0, "role": "layout",
+                                                     "rows": 1, "cols": 1, "cells": [{"id": "c", "text": " "}]}]})
+        self.assertEqual((result["score"], result["grade"]), (0.0, "D"))
+        self.assertEqual(next(c for c in result["checks"] if c["code"] == "A09")["count"], 1)
+
     def test_penalty_caps(self):
         doc = {"blocks": [para(i, f"가    나 {i}") for i in range(30)]}
         a04 = next(c for c in ai_readability.diagnose(doc)["checks"] if c["code"] == "A04")

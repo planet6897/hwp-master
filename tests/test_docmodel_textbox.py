@@ -38,6 +38,37 @@ def make_hwpx(path: Path, header=HEADER, section=SECTION):
     return path
 
 
+class CellPathTest(unittest.TestCase):
+    """rhwp#8991 cellPath·fields location.nested: 단계의 paragraph 는 '그 칸 안의 문단'이다."""
+
+    def setUp(self):
+        def cell(cid, row, col, paras, tables=()):
+            return {"id": cid, "row": row, "col": col, "rowSpan": 1, "colSpan": 1, "text": "",
+                    "paragraphs": paras, "tables": list(tables)}
+        inner_a = {"id": "s0.p1.t0.r0c1.t0", "rows": 1, "cols": 2, "control": 0, "cellParagraph": 0,
+                   "cells": [cell("s0.p1.t0.r0c1.t0.r0c0", 0, 0, []), cell("s0.p1.t0.r0c1.t0.r0c1", 0, 1, [])]}
+        inner_b = {"id": "s0.p1.t0.r0c1.t1", "rows": 1, "cols": 1, "control": 1, "cellParagraph": 2,
+                   "cells": [cell("s0.p1.t0.r0c1.t1.r0c0", 0, 0, [])]}
+        outer = {"id": "s0.p1.t0", "type": "table", "section": 0, "paragraph": 1, "page": 0, "control": 0,
+                 "rows": 1, "cols": 2, "cells": [cell("s0.p1.t0.r0c0", 0, 0, []),
+                                                 cell("s0.p1.t0.r0c1", 0, 1, [{"text": "", "tables": []}] * 3,
+                                                      [inner_a, inner_b])]}
+        self.index = docmodel.BlockIndex({"blocks": [outer]}, [{"section": 0, "paragraph": 1, "control": 0}])
+
+    def test_inner_table_is_chosen_by_previous_step_paragraph(self):
+        path = [{"kind": "tableCell", "control": 0, "cell": 1, "paragraph": 0},
+                {"kind": "tableCell", "control": 0, "cell": 1, "paragraph": 3}]
+        self.assertEqual(self.index.locate(0, 1, path=path), "s0.p1.t0.r0c1.t0.r0c1")
+        path2 = [{"kind": "tableCell", "control": 0, "cell": 1, "paragraph": 2},
+                 {"kind": "tableCell", "control": 1, "cell": 0, "paragraph": 0}]
+        self.assertEqual(self.index.locate(0, 1, path=path2), "s0.p1.t0.r0c1.t1.r0c0")
+
+    def test_broken_path_returns_deepest_cell(self):
+        path = [{"kind": "tableCell", "control": 0, "cell": 1, "paragraph": 0},
+                {"kind": "tableCell", "control": 0, "cell": 9, "paragraph": 0}]
+        self.assertEqual(self.index.locate(0, 1, path=path), "s0.p1.t0.r0c1")
+
+
 class TextBoxTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

@@ -109,6 +109,18 @@ python3 skills/hwp-master/scripts/install_mcp.py --remove           # 이 rhwp �
 항목마다 위치와 고치는 법을 알려 줍니다(`scripts/ai_readability.py`, [절차](skills/hwp-master/workflows/ai-readability.md)).
 hwp-master 가 만드는 문서도 빌드할 때 같은 점검을 거치고, 80점 미만이면 경고(R108)가 납니다.
 
+"AI 가 읽기 좋게 고쳐 줘"라고 하면 원본은 두고 **개선본**(`exports/ai/<문서>.hwpx`)을 새로 만듭니다(`scripts/ai_restructure.py`).
+- 레이아웃 표·글상자를 문단으로 풀고, 표 안의 표를 꺼내고, 병합을 풉니다.
+- 공백 정렬·빈 문단을 정리하고, 손 번호는 자동 번호 제목·목록으로, 주석은 각주로 바꿉니다.
+- 전후 점수와 원본 글 보존율(100% 가 아니면 오류)을 보고합니다.
+
+| 실제 문서 | 원본 | 개선본 |
+|---|---|---|
+| 사업계획서 | 86.2(B) | 100(A) |
+| HWP 3.0 문서 | 78.8(C) | 100(A) |
+
+개선본은 AI·검색·요약용 정리본이라 그림과 글자 모양은 옮기지 않습니다.
+
 ## 왜 바이너리인가 — 네트워크·시스템 비용 절감
 
 Claude·OpenAI·Gemini 등 AI 모델은 hwp/hwpx 를 처리할 때 흔히 GitHub 의 rhwp 소스를 받아 빌드해 씁니다.
