@@ -33,6 +33,7 @@ metadata:
 | `scripts/style_profile.py` | 문서 유형 프로필: `analyze`·`register`(실제 문서들의 서식 다수결 → `~/.hwp-master/profiles/`) · `list [--search 낱말] [--json]`(기본·내 프로필과 핵심 서식) · `show` · `lock`(spec_lock.json 에 적용). 기본 프로필 37종은 `profiles/` |
 | `scripts/template_fill.py` | Template Fill: `inspect`(서식 칸 조사·자료 틀) · `fill`(목록 반복 → 칸 채움 → 캡슐 사슬 → 판정) · `register`(기관 서식 등록) |
 | `scripts/docmodel.py` | Extract 가 쓰는 통합 문서 모델(`document.json`): 읽기 순서 블록과 고정 ID, 표·값·누름틀을 `blockId` 로 연결 |
+| `scripts/install_mcp.py` | (선택) 배포 rhwp `mcp-serve` 를 Claude Code·Desktop MCP 서버로 등록·제거, 연결 확인. 기존 다른 서버는 덮어쓰지 않음 |
 | `scripts/convert_hwpx.py` | HWP → HWPX 일괄 변환: 폴더·glob, rhwp verify·쪽 수·글 동일성·구조 개수 검증 보고서 |
 | `scripts/ai_readability.py` | AI 가독성 진단: 표 안의 표·복잡한 병합·레이아웃 표·공백 정렬·빈 문단·손 번호·그림만 쪽·단편 장 → 점수·고치는 법 |
 | `scripts/merge_extract.py` | Extract 여러 문서 합치기: `_merged/` documents·fields·kv·data CSV, 서식 비교(forms.json) |
