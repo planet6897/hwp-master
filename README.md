@@ -39,6 +39,7 @@
 | 입력 칸·항목 | 누름틀 이름·현재 값·안내문, 양식 표의 `라벨 \| 값`(보도시점 → 배포즉시)·`담당자: 홍길동` 문단 | `fields.json`, `kv.json`, `kv.csv` |
 | 기타 | 머리말/꼬리말, 차트 숫자 데이터 | `headers_footers.json`, `charts/*.csv` |
 | LLM 청크 | 제목 경계를 지키는 1500자 안팎 묶음 + 상위 항목 경로·쪽·출처 블록 ID·그 안의 값·표 레코드 | `chunks.jsonl` |
+| 여러 문서 | 폴더·glob 째 추출, 합친 표(행마다 출처), 서식이 다른 문서 경고 | `_merged/fields.csv`·`kv.csv`·`data.csv`·`forms.json` |
 | 신뢰 | 원본 SHA-256, 프롬프트 주입 신호, `untrustedContent` 표시 | `summary.json` |
 
 모든 값에는 위치가 붙습니다(쪽·구역·문단·문자 위치, 표 안이면 셀 주소). `blockId` 로 `document.json` 을 찾으면 그 값이 어느 장의 어느 표·셀에 있는지 압니다. AI 는 그 위치를 근거로

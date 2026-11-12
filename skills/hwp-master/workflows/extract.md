@@ -23,6 +23,8 @@ python3 scripts/project_manager.py import-sources <프로젝트> <문서.hwp|.hw
 ```bash
 python3 scripts/extract.py <프로젝트> sources/<문서> [sources/<문서2> ...]
 python3 scripts/extract.py <프로젝트> sources/<문서> --only tables,data      # 필요한 항목만
+python3 scripts/extract.py <프로젝트> sources/신청서                         # 폴더째(하위 폴더 포함)
+python3 scripts/extract.py <프로젝트> "sources/신청서/*.hwpx"               # glob
 ```
 
 항목(`--only`): `document`, `text`, `structure`, `tables`, `data`, `fields`, `kv`, `chunks`, `headers`, `charts`. 기본은 전부다.
@@ -73,6 +75,14 @@ python3 scripts/extract.py <프로젝트> sources/<문서> --only tables,data   
 금액은 글로 가장 안쪽 칸을 찾아 잇는다. 중첩 칸 안의 날짜·수량은 rhwp 가 고쳐질 때까지 `data.json` 에 없을 수 있으니,
 그런 값은 `document.json` 칸 글이나 `tables/T03-1.csv` 에서 찾는다.
 
+**여러 문서**를 한 번에 꺼내면 `exports/extract/_merged/` 에 다음이 생긴다.
+- `documents.csv`: 문서마다 한 줄, 개수·서식 묶음
+- `fields.csv`·`kv.csv`·`data.csv`: 행마다 `source`
+- `forms.json`: 같은 누름틀·항목 이름 집합끼리 묶은 서식 비교
+
+"신청서 30개에서 이름·연락처를 한 표로" 같은 요청은 `_merged/fields.csv`(누름틀이 없으면 `kv.csv`)로 답한다.
+다수와 다른 서식의 문서는 W307 로 알린다. 다른 폴더의 같은 이름 문서는 결과 폴더에 `-2` 가 붙는다.
+
 CSV 는 엑셀에서 바로 열리게 UTF-8 BOM 으로 쓴다. 병합된 표 칸은 왼쪽 위 칸에만 글을 두고 나머지는 비운다.
 
 ## 3. 답하기
@@ -101,5 +111,6 @@ CSV 는 엑셀에서 바로 열리게 UTF-8 BOM 으로 쓴다. 병합된 표 칸
 | W302 | 경고 | 날짜·금액·수량이 `--limit` 에서 잘림 | `--limit` 를 늘려 다시 꺼낸다 |
 | W303 | 경고 | 본문 글자가 없음 | 그림·스캔 문서다. 글자를 꺼낼 수 없다고 알린다 |
 | W304 | 경고 | 쪽 배치(`dump-pages`)를 얻지 못함 | `document.json` 의 쪽 번호를 믿지 말고 `pages.json` 으로 확인한다 |
+| W307 | 경고 | 여러 문서 가운데 다수와 다른 서식(누름틀·항목 이름) | `forms.json` 의 빠진·더 있는 이름을 보고, 합친 표에서 그 문서를 따로 다룬다 |
 | W306 | 경고 | 연락처(전화·이메일)가 있음 | 개인정보일 수 있다. 옮기거나 공유하기 전에 사용자에게 확인한다 |
 | W305 | 경고 | 일부 표·값·누름틀을 블록에 잇지 못함 | 그 항목은 `section`·`paragraph` 위치로 찾는다 |
