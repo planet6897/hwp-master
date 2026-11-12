@@ -9,6 +9,7 @@
   summary.json        문서 정보(형식·쪽·문단 수)·항목별 개수·주입 신호·파일 목록·원본 SHA-256
   document.json       통합 문서 모델 — 읽기 순서 블록(제목·문단·목록·표·셀·그림·각주)과 고정 ID
                       (s0.p12, s0.p5.t0, s0.p5.t0.r2c1), 쪽·상위 제목 경로. 표·값·누름틀은 blockId 로 이어진다
+  outline.json        개요 제목과 개조식·공문 항목(□ ○ - ·, 1. 가. 1) …, ※ 주석)의 계층 트리
   text.md             쪽마다 "<!-- page N -->" 를 붙인 본문 Markdown (rhwp export-markdown)
   pages.json          쪽별 평문 (rhwp export-text)
   structure.json      개요/조문 계층 트리 (rhwp export-structure)
@@ -264,6 +265,10 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             index = docmodel.BlockIndex(document, [] if "_error" in tenv else tenv.get("tables", []))
             save("document.json", {"source": rel, **document})
             counts["blocks"] = len(document["blocks"])
+            # 개요 제목 + 개조식·공문 항목(□ ○ - ·, 1. 가. 1)) 계층 트리. 주석(※ *)은 앞 항목의 자식이다.
+            save("outline.json", {"source": rel, "schemaVersion": docmodel.SCHEMA_VERSION, "untrustedContent": True,
+                                  "outline": docmodel.outline_tree(document["blocks"])})
+            counts["outlineItems"] = document["counts"].get("outlineItem", 0)
 
     if "text" in parts:
         pages = rhwp_json(rhwp, ["export-text", str(src)])
