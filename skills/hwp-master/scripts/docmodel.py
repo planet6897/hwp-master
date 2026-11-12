@@ -11,6 +11,9 @@
 
 블록 종류: heading(개요 문단, level 1~) · paragraph · list(번호·글머리표 문단) · table · image · note ·
 headerFooter(머리말/꼬리말).
+
+표에는 role 이 붙는다. layout(1×1 상자·투명 표·본문만 담은 한 열 표)이면 칸 문단을 바로 뒤에 일반 블록으로 풀어
+놓는다(fromLayoutTable·cellId, ID 는 s0.p3.t0.r0c0.p1). 표 블록과 칸 ID 는 그대로 남는다.
 글이 없는 빈 문단은 블록으로 만들지 않는다(ID 는 문단 번호라 그대로 유지된다).
 쪽(page)은 rhwp JSON 관례대로 0부터 센다.
 
@@ -119,6 +122,44 @@ def paragraph_kinds(header_xml: bytes) -> Dict[str, Tuple[str, int]]:
     return kinds
 
 
+def border_fills(header_xml: bytes) -> Dict[str, bool]:
+    """borderFill id → 테두리가 하나라도 보이는가 (네 변이 모두 NONE 이면 False = 투명)."""
+    visible = {}
+    root = ET.fromstring(header_xml)
+    for el in root.iter():
+        if _tag(el) == "borderFill":
+            sides = [c.get("type", "NONE") for c in el if _tag(c) in ("leftBorder", "rightBorder", "topBorder",
+                                                                      "bottomBorder")]
+            visible[el.get("id", "")] = any(s.upper() != "NONE" for s in sides)
+    return visible
+
+
+# 레이아웃 표 판정. 한글 문서는 제목 상자(1×1)·투명 표(테두리 없음)·본문만 담은 한 열 표로 모양을 잡는 일이 많다.
+# 이런 표는 데이터가 아니라 틀이라, 표로 다루면 AI 가 본문을 표 데이터로 오해한다(지디넷 2026-11-10, 행안부 가이드라인).
+LAYOUT_TEXT_MIN = 30  # 한 열 표의 칸이 이만큼 긴 글이면 본문으로 본다
+
+
+def classify_table(table: dict) -> Tuple[str, List[str]]:
+    """('layout' | 'data', 근거 목록)."""
+    reasons = []
+    cells = table["cells"]
+    if table["rows"] * table["cols"] <= 1 or len(cells) <= 1:
+        reasons.append("single-cell")
+    elif table["rows"] == 1:
+        # 한 행 표는 머리 행과 값 행이 없어 열 데이터가 아니다(번호 상자·로고 줄·"보도시점 | 배포즉시" 같은 항목-값 줄).
+        # 항목-값은 #13 이 역할과 상관없이 칸에서 꺼낸다.
+        reasons.append("single-row")
+    known = [c["border"] for c in cells if c.get("border") is not None]
+    if known and not any(known):
+        reasons.append("borderless")
+    texts = [c["text"] for c in cells if c["text"].strip()]
+    # 한 열·4행 이하에 긴 글(본문)이 든 칸이 있으면 제목+요약 상자로 본다. 짧은 항목만 있는 한 열 표는 데이터다.
+    if (table["cols"] == 1 and len(cells) > 1 and texts and table["rows"] <= 4
+            and max(len(t) for t in texts) >= LAYOUT_TEXT_MIN):
+        reasons.append("text-column")
+    return ("layout" if reasons else "data"), reasons
+
+
 def page_map(dump_pages: dict) -> Dict[Tuple[int, int], int]:
     """(구역, 문단) → 처음 나오는 쪽 (0부터)."""
     pages: Dict[Tuple[int, int], int] = {}
@@ -150,11 +191,14 @@ def table_lines(table: dict) -> List[str]:
     return [" | ".join(text for _, text in sorted(cols)) for _, cols in sorted(rows.items())]
 
 
-def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0) -> dict:
+def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
+                borders: Optional[Dict[str, bool]] = None) -> dict:
     """표 하나. 칸 안의 표(표 안의 표)는 칸의 tables 로 재귀해 넣고 ID 를 이어 붙인다(…r1c2.t0.r0c0).
 
     rhwp export-tables 는 중첩 표를 내보내지 않는다(edwardkim/rhwp#8988). 여기서는 HWPX 를 직접 읽어 잃지 않는다.
+    표마다 role(layout|data)·roleReasons 를 붙인다(classify_table).
     """
+    borders = borders or {}
     cells = []
     for tr in (c for c in tbl if _tag(c) == "tr"):
         for tc in (c for c in tr if _tag(c) == "tc"):
@@ -167,7 +211,7 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0) -> dict:
                 own = _text_of(sp)
                 inner = []
                 for tbl_el in _direct_tables(sp):
-                    child = parse_table(tbl_el, f"{cid}.t{len(nested)}", counts, depth + 1)
+                    child = parse_table(tbl_el, f"{cid}.t{len(nested)}", counts, depth + 1, borders)
                     child["cellParagraph"] = k
                     nested.append(child)
                     inner.append(child["id"])
@@ -181,18 +225,42 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0) -> dict:
                 "rowSpan": _int(span.get("rowSpan"), 1) if span is not None else 1,
                 "colSpan": _int(span.get("colSpan"), 1) if span is not None else 1,
                 "header": tc.get("header") == "1",
+                "border": borders.get(tc.get("borderFillIDRef", "")),
                 "text": "\n".join(lines).strip(),
                 "hasNestedTable": bool(nested),
+                "paragraphs": paragraphs,
             }
             if nested:
-                cell["paragraphs"] = paragraphs
                 cell["tables"] = nested
             cells.append(cell)
     counts["cell"] += len(cells)
     if depth:
         counts["nestedTable"] += 1
-    return {"id": tid, "rows": _int(tbl.get("rowCnt")), "cols": _int(tbl.get("colCnt")), "depth": depth,
-            "cells": cells}
+    table = {"id": tid, "rows": _int(tbl.get("rowCnt")), "cols": _int(tbl.get("colCnt")), "depth": depth,
+             "cells": cells}
+    table["role"], table["roleReasons"] = classify_table(table)
+    counts["layoutTable" if table["role"] == "layout" else "dataTable"] += 1
+    return table
+
+
+def unwrap_layout(table: dict, base: dict, path: dict) -> List[dict]:
+    """레이아웃 표의 칸 문단을 일반 블록으로 푼다(읽기 순서: 행 → 열 → 칸 문단).
+
+    풀린 문단 ID 는 칸 ID 뒤에 칸 문단 번호를 붙인다(s0.p3.t0.r0c0.p1). 칸 안의 표는 표 블록으로 내놓고,
+    그 표도 레이아웃이면 다시 푼다. 칸 ID 는 표 블록 안에 그대로 남아 값·누름틀의 blockId 가 계속 맞는다.
+    """
+    out = []
+    for cell in sorted(table["cells"], key=lambda c: (c["row"], c["col"])):
+        for k, para in enumerate(cell.get("paragraphs", [])):
+            if para["text"].strip():
+                out.append({"id": f"{cell['id']}.p{k}", "type": "paragraph", "text": para["text"],
+                            "fromLayoutTable": table["id"], "cellId": cell["id"], **base, **path})
+            for child_id in para["tables"]:
+                child = next(t for t in cell.get("tables", []) if t["id"] == child_id)
+                out.append({"type": "table", **base, **child, "fromLayoutTable": table["id"], **path})
+                if child["role"] == "layout":
+                    out.extend(unwrap_layout(child, base, path))
+    return out
 
 
 def iter_cells(table: dict) -> Iterator[dict]:
@@ -215,13 +283,15 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
     pages = pages or {}
     with zipfile.ZipFile(hwpx) as z:
         names = z.namelist()
-        kinds = paragraph_kinds(z.read("Contents/header.xml")) if "Contents/header.xml" in names else {}
+        header = z.read("Contents/header.xml") if "Contents/header.xml" in names else b""
+        kinds = paragraph_kinds(header) if header else {}
+        borders = border_fills(header) if header else {}
         sections = [(i, ET.fromstring(z.read(n))) for i, n in enumerate(_section_names(names))]
 
     blocks: List[dict] = []
     heading_stack: List[Tuple[int, str, str]] = []  # (level, id, text)
-    counts = {"heading": 0, "paragraph": 0, "list": 0, "table": 0, "nestedTable": 0, "image": 0, "note": 0,
-              "headerFooter": 0, "cell": 0}
+    counts = {"heading": 0, "paragraph": 0, "list": 0, "table": 0, "nestedTable": 0, "layoutTable": 0,
+              "dataTable": 0, "image": 0, "note": 0, "headerFooter": 0, "cell": 0}
 
     def path_for() -> dict:
         return {"headingPath": [t for _, _, t in heading_stack],
@@ -257,10 +327,12 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
             for ctrl in _controls(p):
                 name = _tag(ctrl)
                 if name == "tbl":
-                    table = parse_table(ctrl, f"{pid}.t{ordinal['tbl']}", counts)
+                    table = parse_table(ctrl, f"{pid}.t{ordinal['tbl']}", counts, borders=borders)
                     ordinal["tbl"] += 1
                     counts["table"] += 1
-                    blocks.append({"id": table.pop("id"), "type": "table", **base, **table, **path_for()})
+                    blocks.append({"type": "table", **base, **table, **path_for()})
+                    if table["role"] == "layout":
+                        blocks.extend(unwrap_layout(table, base, path_for()))
                 elif name == "pic":
                     blocks.append({"id": f"{pid}.g{ordinal['pic']}", "type": "image", **base, **path_for()})
                     ordinal["pic"] += 1
@@ -309,6 +381,8 @@ class BlockIndex:
         self.header_footers: Dict[Tuple[int, int], List[dict]] = {}
         for block in document.get("blocks", []):
             key = (block["section"], block["paragraph"])
+            if block.get("fromLayoutTable"):
+                continue  # 레이아웃 표에서 풀린 블록 — 위치는 바깥 표의 칸으로 찾는다
             if block["type"] == "table":
                 self.tables.setdefault(key, []).append(block)
             elif block["type"] in ("heading", "paragraph", "list"):

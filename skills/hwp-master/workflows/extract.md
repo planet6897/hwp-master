@@ -45,6 +45,15 @@ python3 scripts/extract.py <프로젝트> sources/<문서> --only tables,data   
 `tables.json` 의 표, `data.json` 의 값, `fields.json` 의 누름틀에는 `blockId` 가 붙는다. 이 ID 로 `document.json` 의 블록을 찾으면
 그 값이 어느 장(`headingPath`)의 어느 문단·표·셀에 있는지 알 수 있다. 표 셀 안 값은 셀 ID 로 이어진다.
 
+**레이아웃 표와 데이터 표.** 표마다 `role` 이 붙는다. `layout` 은 틀로 쓰인 표다.
+- 1×1 상자(`single-cell`)
+- 한 행 표(`single-row`)
+- 테두리 없는 투명 표(`borderless`)
+- 제목과 본문을 담은 한 열 표(`text-column`)
+
+레이아웃 표의 칸 문단은 `document.json` 에서 표 바로 뒤에 일반 문단 블록으로 풀린다(`fromLayoutTable`, ID `…r0c0.p1`).
+그래서 상자 안에 든 본문도 본문으로 읽힌다. CSV 는 데이터 표만 만든다. 표를 인용할 때는 `role: data` 인 표만 "표"로 다룬다.
+
 **표 안의 표**는 `document.json` 칸의 `tables` 로 재귀해 들어간다(ID `s0.p5.t0.r1c2.t0.r0c0`). 바깥 칸 `text` 에는 칸 글 뒤에
 안쪽 표가 행마다 ` | ` 로 펼쳐진다. rhwp 는 중첩 표를 `export-tables` 에서 빼고(edwardkim/rhwp#8988), `search` 위치를
 최외곽 칸으로 주며 `extract-data` 는 중첩 칸 값을 놓친다(edwardkim/rhwp#8989). 그래서 hwp-master 가 HWPX 를 직접 읽어 표를 채우고,
