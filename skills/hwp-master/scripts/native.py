@@ -559,6 +559,179 @@ def table_widths(hwpx: Path) -> List[int]:
     return [int(t.find(f"{{{HP}}}sz").get("width")) for t in _top_tables(root)]
 
 
+# #42: 같은 문단 서식을 묶음마다 rhwp 한 번으로(batched_para_format), 이미 맞는 표 속성은 건너뛰기.
+# False 면 예전처럼 한 단계씩 돈다(같은 결과인지 대조할 때 쓴다).
+BATCH_EDITS = True
+
+
+def tables_in_page(hwpx: Path) -> List[bool]:
+    """최상위 표마다 이미 쪽 영역 안으로 제한돼 있는가(hp:pos flowWithText="1"). 그렇다면 set-table-props
+    restrictInPage 는 산출 XML 을 바꾸지 않으므로 건너뛴다(rhwp 0.9 scaffold 는 처음부터 1 로 쓴다)."""
+    with zipfile.ZipFile(hwpx) as z:
+        root = ET.fromstring(z.read("Contents/section0.xml"))
+    out = []
+    for t in _top_tables(root):
+        pos = t.find(f"{{{HP}}}pos")
+        out.append(pos is not None and pos.get("flowWithText") == "1")
+    return out
+
+
+_P_TAG = re.compile(r"<hp:p\b[^>]*?/?>|</hp:p>")
+
+
+def _top_p_spans(xml: str) -> List[tuple]:
+    """구역 XML 에서 최상위 <hp:p ...> 시작 태그의 (시작, 끝) 위치 (표·글상자 안 문단은 빼고)."""
+    spans, depth = [], 0
+    for m in _P_TAG.finditer(xml):
+        tag = m.group(0)
+        if tag.startswith("</"):
+            depth -= 1
+        else:
+            if depth == 0:
+                spans.append(m.span())
+            if not tag.endswith("/>"):
+                depth += 1
+    return spans
+
+
+def para_pr_refs(hwpx: Path) -> List[Optional[str]]:
+    """구역 0 최상위 문단마다 paraPrIDRef."""
+    with zipfile.ZipFile(hwpx) as z:
+        xml = z.read("Contents/section0.xml").decode("utf-8")
+    out = []
+    for s, e in _top_p_spans(xml):
+        m = re.search(r'\sparaPrIDRef="(\d+)"', xml[s:e])
+        out.append(m.group(1) if m else None)
+    return out
+
+
+def set_para_pr_refs(src: Path, dst: Path, refs: Dict[int, str]) -> None:
+    """최상위 문단 paraPrIDRef 만 바꿔 dst 에 쓴다(다른 바이트는 그대로)."""
+    with zipfile.ZipFile(src) as z:
+        entries = [(info, z.read(info.filename)) for info in z.infolist()]
+    out = []
+    for info, data in entries:
+        if info.filename == "Contents/section0.xml":
+            xml = data.decode("utf-8")
+            pieces, last = [], 0
+            for k, (s, e) in enumerate(_top_p_spans(xml)):
+                if k in refs:
+                    tag = re.sub(r'(\sparaPrIDRef=")\d+(")', rf'\g<1>{refs[k]}\g<2>', xml[s:e], count=1)
+                    pieces += [xml[last:s], tag]
+                    last = e
+            data = ("".join(pieces) + xml[last:]).encode("utf-8")
+        out.append((info, data))
+    with zipfile.ZipFile(dst, "w") as z:
+        for info, data in out:
+            z.writestr(info, data, compress_type=info.compress_type)
+
+
+def _balanced(xml: str, start: int, tag: str) -> int:
+    """xml[start] 의 <hp:tag ...> 와 짝이 맞는 </hp:tag> 끝 위치(같은 태그 중첩을 센다)."""
+    pat = re.compile(rf"<hp:{tag}\b[^>]*?/?>|</hp:{tag}>")
+    depth = 0
+    for m in pat.finditer(xml, start):
+        t = m.group(0)
+        if t.startswith("</"):
+            depth -= 1
+            if depth == 0:
+                return m.end()
+        elif not t.endswith("/>"):
+            depth += 1
+    return len(xml)
+
+
+def _top_table_cells(xml: str) -> List[Dict[tuple, tuple]]:
+    """최상위 표마다 {(행, 열): (칸 시작, 칸 끝)} — rhwp --table 번호 순서. 안쪽 표의 칸은 빼고."""
+    tables = []
+    for ps, pe in _top_p_spans(xml):
+        p_end = _balanced(xml, ps, "p")
+        pos = pe
+        while True:
+            m = re.compile(r"<hp:tbl\b").search(xml, pos, p_end)
+            if not m:
+                break
+            t_end = _balanced(xml, m.start(), "tbl")
+            cells, k = {}, xml.index(">", m.start()) + 1
+            while True:
+                c = re.compile(r"<hp:tc\b|<hp:tbl\b").search(xml, k, t_end)
+                if not c:
+                    break
+                if c.group(0) == "<hp:tbl":  # 칸 안의 표는 건너뛴다
+                    k = _balanced(xml, c.start(), "tbl")
+                    continue
+                c_end = _balanced(xml, c.start(), "tc")
+                addr = re.search(r'<hp:cellAddr colAddr="(\d+)" rowAddr="(\d+)"', xml[c.start():c_end])
+                if addr:
+                    cells[(int(addr.group(2)), int(addr.group(1)))] = (c.start(), c_end)
+                k = c_end
+            tables.append(cells)
+            pos = t_end
+    return tables
+
+
+def _cell_state(xml: str, span: tuple) -> tuple:
+    """칸 하나의 서식 상태: (tc 시작 태그의 header·borderFillIDRef, 칸 문단 paraPrIDRef 들, run charPrIDRef 들).
+    안쪽 표 안의 것은 빼고 본다."""
+    s, e = span
+    body = xml[s:e]
+    inner = [m.span() for m in re.finditer(r"<hp:tbl\b", body)]
+    for k, (a, _) in enumerate(inner):
+        inner[k] = (a, _balanced(body, a, "tbl"))
+    def outside(i):
+        return not any(a <= i < b for a, b in inner)
+    head = re.match(r"<hp:tc\b[^>]*>", body).group(0)
+    tc = (re.search(r'\sheader="(\d)"', head).group(1) if 'header="' in head else None,
+          re.search(r'\sborderFillIDRef="(\d+)"', head).group(1) if "borderFillIDRef" in head else None)
+    paras = tuple(m.group(1) for m in re.finditer(r'<hp:p\b[^>]*?\sparaPrIDRef="(\d+)"', body) if outside(m.start()))
+    runs = tuple(m.group(1) for m in re.finditer(r'<hp:run\b[^>]*?\scharPrIDRef="(\d+)"', body) if outside(m.start()))
+    return tc, paras, runs
+
+
+def _rewrite_cell(body: str, want: tuple) -> str:
+    """칸 XML 을 want(= _cell_state 꼴) 대로 고친다. 안쪽 표 안은 건드리지 않는다."""
+    (header, fill), paras, runs = want
+    inner = []
+    for m in re.finditer(r"<hp:tbl\b", body):
+        inner.append((m.start(), _balanced(body, m.start(), "tbl")))
+    head_end = body.index(">") + 1
+    head = body[:head_end]
+    if header is not None:
+        head = re.sub(r'(\sheader=")\d(")', rf"\g<1>{header}\g<2>", head, count=1)
+    if fill is not None:
+        head = re.sub(r'(\sborderFillIDRef=")\d+(")', rf"\g<1>{fill}\g<2>", head, count=1)
+    out, last, pi, ri = [head], head_end, 0, 0
+    pat = re.compile(r'(<hp:p\b[^>]*?\sparaPrIDRef=")(\d+)(")|(<hp:run\b[^>]*?\scharPrIDRef=")(\d+)(")')
+    for m in pat.finditer(body, head_end):
+        if any(a <= m.start() < b for a, b in inner):
+            continue
+        out.append(body[last:m.start()])
+        if m.group(1):
+            out.append(f"{m.group(1)}{paras[pi] if pi < len(paras) else m.group(2)}{m.group(3)}")
+            pi += 1
+        else:
+            out.append(f"{m.group(4)}{runs[ri] if ri < len(runs) else m.group(5)}{m.group(6)}")
+            ri += 1
+        last = m.end()
+    out.append(body[last:])
+    return "".join(out)
+
+
+def read_section(hwpx: Path) -> str:
+    with zipfile.ZipFile(hwpx) as z:
+        return z.read("Contents/section0.xml").decode("utf-8")
+
+
+def write_section(src: Path, dst: Path, xml: str) -> None:
+    with zipfile.ZipFile(src) as z:
+        entries = [(info, z.read(info.filename)) for info in z.infolist()]
+    with zipfile.ZipFile(dst, "w") as z:
+        for info, data in entries:
+            if info.filename == "Contents/section0.xml":
+                data = xml.encode("utf-8")
+            z.writestr(info, data, compress_type=info.compress_type)
+
+
 def covered_cells(merges: List[dict]) -> set:
     """병합으로 가려지는 셀 (row, col) — 병합 첫 셀은 빠진다."""
     return {(r, c) for m in merges for r in range(m["row"], m["row"] + m["rowspan"])
@@ -844,6 +1017,103 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
             cur = nxt
         return ok
 
+    def batched_cell_edit(entries: List[tuple], label: str) -> bool:
+        """[(명령, 표, 행, 열, props JSON)] 칸 편집을 (명령, props, 칸 바탕 상태) 묶음마다 rhwp 한 번으로(#42).
+
+        대표 칸에만 rhwp 를 돌리고, 바로 전 상태가 대표 칸과 똑같은 칸에 대표 칸의 결과 상태(tc 의 header·
+        borderFillIDRef, 칸 문단 paraPrIDRef, run charPrIDRef)를 옮긴다. rhwp 가 대표 칸 말고 다른 칸을 바꾸거나,
+        문단·run 수가 달라지거나, 상태가 다른 칸은 한 단계씩 돈다.
+        """
+        nonlocal cur, n
+
+        def one(e):
+            cmd, t, r, c, pj = e
+            return step([cmd, "--table", str(t), "--row", str(r), "--col", str(c), "--props", pj])
+
+        if not BATCH_EDITS:
+            return all(one(e) for e in entries)
+
+        def states(xml):
+            return {(t, k): _cell_state(xml, sp) for t, cells in enumerate(_top_table_cells(xml)) for k, sp in cells.items()}
+
+        first = states(read_section(cur))
+        groups: Dict[tuple, List[tuple]] = {}
+        for k, e in enumerate(entries):
+            st = first.get((e[1], (e[2], e[3])))
+            groups.setdefault((e[0], e[4], st) if st else ("one", k), []).append(e)
+        for members in groups.values():
+            head, rest = members[0], members[1:]
+            before_xml = read_section(cur)
+            before = states(before_xml)
+            target = (head[1], (head[2], head[3]))
+            if not one(head):
+                return False
+            if not rest:
+                continue
+            after_xml = read_section(cur)
+            after = states(after_xml)
+            new = after.get(target)
+            safe = (new is not None and set(before) == set(after)
+                    and all(before[k] == after[k] for k in before if k != target)
+                    and len(new[1]) == len(before[target][1]) and len(new[2]) == len(before[target][2]))
+            copy_to = [e for e in rest if safe and before.get((e[1], (e[2], e[3]))) == before[target]]
+            for e in rest:
+                if e not in copy_to and not one(e):
+                    return False
+            if not copy_to:
+                continue
+            xml = read_section(cur)
+            spans = _top_table_cells(xml)
+            for s, e2 in sorted((spans[e[1]][(e[2], e[3])] for e in copy_to), reverse=True):
+                xml = xml[:s] + _rewrite_cell(xml[s:e2], new) + xml[e2:]
+            n += 1
+            nxt = work / f"e{n:02d}.hwpx"
+            write_section(cur, nxt, xml)
+            log.append({"cmd": ["batch-cell-edit", label, head[0], f"{len(copy_to)} 칸"], "exit": 0})
+            cur = nxt
+        return True
+
+    def batched_para_format(entries: List[tuple], label: str) -> bool:
+        """[(최상위 문단 번호, props JSON)] 를 (바탕 paraPr, props) 묶음마다 rhwp 한 번으로 적용한다(#42).
+
+        rhwp edit 는 부를 때마다 문서 전체를 읽고 저장해 긴 문서에서 한 번에 수 초가 든다. apply-para-format 은
+        바탕 paraPr 을 복제·수정해 새 번호로 붙이거나 같은 것을 재사용하므로, 같은 바탕·같은 props 의 문단은 결과
+        paraPr 이 같다. 묶음의 첫 문단에만 rhwp 를 돌리고 그 번호를 나머지 문단에 옮긴다. rhwp 가 그 문단 말고
+        다른 문단 번호까지 바꾸면 그 묶음은 안전하게 한 단계씩 돈다. 한 문단에 서식이 둘 이상이면 차례대로 돈다.
+        """
+        nonlocal cur, n
+        if not BATCH_EDITS:
+            return all(step(["apply-para-format", "--para", str(p), "--props", pj]) for p, pj in entries)
+        counts: Dict[int, int] = {}
+        for p, _ in entries:
+            counts[p] = counts.get(p, 0) + 1
+        refs = para_pr_refs(cur)
+        groups: Dict[tuple, List[tuple]] = {}
+        for k, (p, pj) in enumerate(entries):
+            key = ("one", k) if counts[p] > 1 else (refs[p] if p < len(refs) else None, pj)
+            groups.setdefault(key, []).append((p, pj))
+        for members in groups.values():
+            p0, pj = members[0]
+            before = para_pr_refs(cur)
+            if not step(["apply-para-format", "--para", str(p0), "--props", pj]):
+                return False
+            rest = [p for p, _ in members[1:]]
+            if not rest:
+                continue
+            after = para_pr_refs(cur)
+            if len(before) != len(after) or any(a != b for k, (a, b) in enumerate(zip(before, after)) if k != p0):
+                for p in rest:
+                    if not step(["apply-para-format", "--para", str(p), "--props", pj]):
+                        return False
+                continue
+            n += 1
+            nxt = work / f"e{n:02d}.hwpx"
+            set_para_pr_refs(cur, nxt, {p: after[p0] for p in rest})
+            log.append({"cmd": ["batch-para-format", label, f"paraPrIDRef={after[p0]}", f"{len(rest)} 문단"],
+                        "exit": 0})
+            cur = nxt
+        return True
+
     for bi in plan["page_breaks"]:
         if not step(["insert-page-break", "--para", str(paras[bi]), "--offset", "0"]):
             result["error"] = "쪽 나눔 삽입 실패"
@@ -860,25 +1130,31 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
                           "--props", '{"treatAsChar":true}'])):
             result["error"] = "그림 삽입 실패"
             return result
+    aligns = []
     for al in plan["aligns"]:
         props = {"alignment": al["align"]}
         if al.get("keep"):
             props["keepWithNext"] = True
-        if not step(["apply-para-format", "--para", str(paras[al["block"]]),
-                     "--props", json.dumps(props, separators=(",", ":"))]):
-            result["error"] = "문단 정렬 실패"
-            return result
+        aligns.append((paras[al["block"]], json.dumps(props, separators=(",", ":"))))
+    if not batched_para_format(aligns, "정렬"):
+        result["error"] = "문단 정렬 실패"
+        return result
     if plan["page"]:
         if not step(["set-page-def", "--props", json.dumps(plan["page"], separators=(",", ":"))]):
             result["error"] = "용지 설정 실패"
             return result
     widths = table_widths(cur) if plan["tables"] else []
     new_total = table_total_hu(doc) if plan["page"] else None
+    in_page = tables_in_page(cur) if plan["tables"] else []
+    any_emphasis = any(tb["cell_emphasis"] for tb in plan["tables"])
+    deferred: List[tuple] = []
     for tb in plan["tables"]:
         t = str(tb["table"])
-        # scaffold 표는 저장 시 flowWithText="0"(쪽 영역 밖으로 나갈 수 있음)이라 한컴이 쪽 끝 표를
-        # 각주 영역 위에 겹쳐 그린다. 한글에서 만든 표처럼 쪽 영역 안으로 제한한다.
-        if not step(["set-table-props", "--table", t, "--props", '{"restrictInPage":true}']):
+        entries: List[tuple] = []
+        # scaffold 표가 flowWithText="0"(쪽 영역 밖으로 나갈 수 있음)이면 한컴이 쪽 끝 표를 각주 영역 위에
+        # 겹쳐 그린다. 한글에서 만든 표처럼 쪽 영역 안으로 제한한다. 이미 "1" 이면 rhwp 를 부르지 않는다(#42).
+        already = BATCH_EDITS and tb["table"] < len(in_page) and in_page[tb["table"]]
+        if not already and not step(["set-table-props", "--table", t, "--props", '{"restrictInPage":true}']):
             result["error"] = "표 배치 속성 설정 실패"
             return result
         if tb["col_widths"] or new_total:
@@ -897,39 +1173,43 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
             props = json.dumps({**({"fontSize": int(round(tb["pt"] * 100))} if tb.get("pt") is not None else {}),
                                 **({"fontName": tb["font"]} if tb.get("font") else {})},
                                ensure_ascii=False, separators=(",", ":"))
-            for r in range(tb["rows"]):
-                for c in range(tb["cols"]):
-                    if (r, c) not in hidden and not step(["apply-char-format-in-cell", "--table", t, "--row", str(r),
-                                                          "--col", str(c), "--props", props]):
-                        result["error"] = "표 글자 크기·글꼴 적용 실패"
-                        return result
+            entries += [("apply-char-format-in-cell", tb["table"], r, c, props)
+                        for r in range(tb["rows"]) for c in range(tb["cols"]) if (r, c) not in hidden]
         if tb["header_fill"]:
             props = json.dumps({"fillType": "solid", "fillColor": tb["header_fill"], "isHeader": True},
                                separators=(",", ":"))
             for c in range(tb["cols"]):
                 if (0, c) in hidden:
                     continue
-                cell = ["--table", t, "--row", "0", "--col", str(c)]
-                if not (step(["set-cell-props"] + cell + ["--props", props])
-                        and step(["apply-char-format-in-cell"] + cell + ["--props", '{"bold":true}'])
-                        and step(["apply-para-format-in-cell"] + cell + ["--props", '{"alignment":"center"}'])):
-                    result["error"] = "표 머리 행 꾸밈 실패"
-                    return result
+                entries += [("set-cell-props", tb["table"], 0, c, props),
+                            ("apply-char-format-in-cell", tb["table"], 0, c, '{"bold":true}'),
+                            ("apply-para-format-in-cell", tb["table"], 0, c, '{"alignment":"center"}')]
+        # 칸 강조가 있으면 그 표의 꾸밈을 강조보다 먼저 끝내야 해서 표마다, 없으면 모든 표를 한 번에 묶는다(#42).
+        if any_emphasis:
+            if not batched_cell_edit(entries, f"표 {t}"):
+                result["error"] = "표 글자 크기·머리 행 꾸밈 실패"
+                return result
+        else:
+            deferred += entries
         for em in tb["cell_emphasis"]:
             if not step(["apply-char-format-in-cell", "--table", t, "--row", str(em["row"]),
                          "--col", str(em["col"]), "--start", str(em["start"]),
                          "--end", str(em["start"] + em["count"]), "--props", em["props"]]):
                 result["error"] = "표 셀 강조 실패"
                 return result
+    if deferred and not batched_cell_edit(deferred, "표 꾸밈"):
+        result["error"] = "표 글자 크기·머리 행 꾸밈 실패"
+        return result
     # apply-para-format 의 여백 값은 HWPUNIT 의 2배로 받는다(4000 → 저장 2000 = 20pt).
+    indents = []
     for ind in plan["indents"]:
         props = {"marginLeft": ind["left"] * 2, "indent": ind["indent"] * 2}
         if ind.get("tab_right"):
             props["tabAutoRight"] = True  # 목차 쪽 번호: 문단 오른쪽 끝 자동 탭
-        if not step(["apply-para-format", "--para", str(paras[ind["block"]]),
-                     "--props", json.dumps(props, separators=(",", ":"))]):
-            result["error"] = "목록 들여쓰기 실패"
-            return result
+        indents.append((paras[ind["block"]], json.dumps(props, separators=(",", ":"))))
+    if not batched_para_format(indents, "목록 들여쓰기"):
+        result["error"] = "목록 들여쓰기 실패"
+        return result
     # 문서 글자 크기·줄 간격은 강조보다 먼저: 강조의 size 가 문서 크기를 덮어쓴다.
     st = plan.get("style") or {}
     for target, role in targets:

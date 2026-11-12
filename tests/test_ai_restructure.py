@@ -36,16 +36,19 @@ class ToHdsTest(unittest.TestCase):
             para(4, "성명      홍길동"),
         ]}
         spec, notes = ai_restructure.to_hds(doc, "제목")
-        kinds = [b["type"] for b in spec["blocks"]]
-        self.assertEqual(kinds, ["heading", "list", "paragraph"])
+        self.assertEqual([b["type"] for b in spec["blocks"]], ["heading", "paragraph", "paragraph", "paragraph"])
         self.assertEqual(spec["blocks"][0], {"type": "heading", "level": 1, "text": "추진 배경"})
-        items = spec["blocks"][1]["items"]
-        self.assertEqual([(i["text"], i["level"]) for i in items], [("현황 분석", 1), ("세부 내용", 2)],
-                         "목록은 1단계에서 시작하고 공백 정렬을 푼다")
-        self.assertEqual(items[1]["footnotes"], [{"text": "근거 자료"}], "※·* 주석은 앞 항목의 각주")
-        self.assertEqual(spec["blocks"][1]["markers"], ["□", "○"])
-        self.assertEqual(spec["blocks"][2]["text"], "성명 홍길동")
+        self.assertEqual([b["text"] for b in spec["blocks"][1:]], ["□ 현황 분석", "○ 세부 내용", "성명 홍길동"],
+                         "개조식은 기호를 글에 둔 문단(들여쓰기 꾸밈 없음), 공백 정렬을 푼다")
+        self.assertEqual(spec["blocks"][2]["footnotes"], [{"text": "근거 자료"}], "※·* 주석은 앞 항목의 각주")
         self.assertEqual((notes["headingsFromNumbers"], notes["listItems"], notes["footnotes"]), (1, 2, 1))
+
+    def test_numbered_items_become_lists_starting_at_level_one(self):
+        doc = {"blocks": [para(0, "1) 가장 긴 세부 사항을 설명하는 숫자 항목이다", item("1)", 3, "가장 긴 세부 사항을 설명하는 숫자 항목이다")),
+                          para(1, "가) 그 아래 항목", item("가)", 4, "그 아래 항목", "s0.p0"))]}
+        spec, _ = ai_restructure.to_hds(doc, "t")
+        self.assertEqual(spec["blocks"][0]["type"], "list")
+        self.assertEqual([i["level"] for i in spec["blocks"][0]["items"]], [1, 2])
 
     def test_merges_are_filled_and_nested_tables_lifted(self):
         inner = {"id": "s0.p0.t0.r1c1.t0", "rows": 1, "cols": 2, "role": "data", "cells": [
