@@ -42,6 +42,12 @@ class DiagnoseTest(unittest.TestCase):
         c = counts(doc)
         self.assertEqual((c["A04"], c["A05"], c["A06"]), (1, 1, 1))
 
+    def test_toc_lines_are_not_hand_numbers(self):
+        toc = para(0, "1. 추진 배경	3", outline={"kind": "1.", "level": 1, "parentId": None, "body": "추진 배경	3"})
+        dots = para(1, "2. 추진 계획	…… 12", outline={"kind": "1.", "level": 1, "parentId": None, "body": "추진 계획"})
+        hand = para(2, "3. 손으로 친 번호", outline={"kind": "1.", "level": 1, "parentId": None, "body": "손으로 친 번호"})
+        self.assertEqual(counts({"blocks": [toc, dots, hand]})["A06"], 1, "목차 줄은 빼고 진짜 손 번호만 센다")
+
     def test_fragment_only_section(self):
         top = para(0, "□ 현황", outline={"kind": "□", "level": 1, "parentId": None, "body": "현황"})
         items = [para(i, f"○ 항목 {i}", outline={"kind": "○", "level": 2, "parentId": "s0.p0", "body": f"항목 {i}"})

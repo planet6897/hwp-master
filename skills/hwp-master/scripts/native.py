@@ -530,6 +530,8 @@ def _t_text(t) -> str:
     for child in t:
         if child.tag == f"{{{HP}}}tab":
             out.append("\t")
+        elif child.tag == f"{{{HP}}}lineBreak":
+            out.append("\n")  # HDS 글의 "\n" 은 scaffold 에서 줄 바꿈 요소가 된다 — 같은 글로 맞춘다
         out.append(child.tail or "")
     return "".join(out)
 
@@ -1358,8 +1360,12 @@ def check(out: Path, doc: dict, rhwp: Optional[str] = None) -> List[str]:
     got = xml.count("<hp:footNote ")
     if got != len(plan["footnotes"]):
         problems.append(f"각주 {got}개 (계획 {len(plan['footnotes'])}개)")
+    # rhwp 는 글 속 탭·줄 바꿈을 <hp:tab/>·<hp:lineBreak/> 요소로 쓴다. 글자로 바꿔 놓고 찾는다.
+    xml_text = re.sub(r"<hp:lineBreak\b[^>]*/>", "\n", re.sub(r"<hp:tab\b[^>]*/>", "\t", xml))
+    # rhwp 는 본문 글의 따옴표도 &quot;·&apos; 로 쓴다 — 풀어서 원래 글과 비교한다
+    xml_text = xml_text.replace("&quot;", '"').replace("&apos;", "'")
     for f in plan["footnotes"]:
-        if escape(f["text"]) not in xml:
+        if escape(f["text"]) not in xml_text:
             problems.append(f"각주 본문 누락: {f['text'][:30]!r}")
     got = sum('treatAsChar="1"' in seg.split("</hp:pic>")[0] for seg in xml.split("<hp:pic ")[1:])
     if got != len(plan["images"]):
