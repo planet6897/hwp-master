@@ -67,6 +67,20 @@ class ToHdsTest(unittest.TestCase):
         self.assertIn("아래 표 1", second["caption"])
         self.assertEqual(notes["nestedTablesLifted"], 1)
 
+    def test_coverage_with_numbered_lines_in_cells(self):
+        two_lines = "\n".join(["1. 설계 개요", "2. 공사비"])
+        cell = {"id": "c", "row": 0, "col": 0, "rowSpan": 1, "colSpan": 1, "text": two_lines,
+                "paragraphs": [{"text": "1. 설계 개요", "tables": []}, {"text": "2. 공사비", "tables": []}]}
+        before = {"blocks": [{"id": "s0.p0.t0", "type": "table", "role": "data", "rows": 1, "cols": 1, "cells": [cell]}]}
+        after = {"blocks": [{"id": "s0.p0.t0", "type": "table", "role": "data", "rows": 1, "cols": 1,
+                             "cells": [{**cell, "text": two_lines}]}]}
+        self.assertEqual(ai_restructure.coverage(before, after)["ratio"], 1.0)
+
+    def test_number_led_title_stays_paragraph(self):
+        doc = {"blocks": [para(0, "4. 2026년 계획", item("1.", 1, "2026년 계획"))]}
+        spec, notes = ai_restructure.to_hds(doc, "t")
+        self.assertNotEqual(spec["blocks"][0]["type"], "heading", "자동 번호와 이중 번호가 되는 제목은 만들지 않는다")
+
     def test_coverage_ignores_markers(self):
         before = {"blocks": [para(0, "□ 직접비용", item("□", 1, "직접비용")), para(1, "남은 글")]}
         after = {"blocks": [{"type": "list", "text": "직접비용"}, {"type": "paragraph", "text": "남은 글"}]}

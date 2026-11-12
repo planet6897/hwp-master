@@ -32,6 +32,7 @@ from typing import Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ai_readability  # noqa: E402
+import hds  # noqa: E402
 import docmodel  # noqa: E402
 import rhwp_locate  # noqa: E402
 
@@ -80,6 +81,7 @@ def to_hds(document: dict, title: str) -> dict:
     levels: Dict[int, str] = {}
     list_base = [1]
     last_target: Optional[dict] = None  # 각주를 달 문단·항목
+    hf: Dict[str, List[str]] = {}
 
     def flush():
         nonlocal current_list
@@ -126,6 +128,9 @@ def to_hds(document: dict, title: str) -> dict:
             continue
         if kind == "headerFooter":
             notes["headerFooters"] += 1
+            text = " ".join(clean(block.get("text", "")).splitlines())
+            if text:
+                hf.setdefault(block.get("kind", "header"), []).append(text)
             continue
         if kind == "textBox":
             notes["textBoxes"] += 1
@@ -151,7 +156,9 @@ def to_hds(document: dict, title: str) -> dict:
         if o and o["kind"] == "note":
             footnote(clean(o["body"]))
             continue
-        if o and o["kind"] in HEADING_NUMBERS and o["level"] <= 3 and _short_title(o["body"]):
+        # 개요 제목은 자동 번호가 붙으므로 글이 숫자로 시작하면(이중 번호, HDS E101) 제목으로 올리지 않는다
+        if (o and o["kind"] in HEADING_NUMBERS and o["level"] <= 3 and _short_title(o["body"])
+                and not re.match(r"[\d①-⑳ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]", clean(o["body"]))):
             flush()  # 손으로 친 "1. 추진 배경" → 개요 제목(한글 자동 번호)
             blocks.append({"type": "heading", "level": o["level"], "text": clean(o["body"])})
             notes["headingsFromNumbers"] += 1
@@ -188,7 +195,20 @@ def to_hds(document: dict, title: str) -> dict:
     flush()
     if not blocks:
         blocks.append({"type": "paragraph", "text": "(본문 글자가 없는 문서입니다)"})
-    return {"version": "1", "title": title, "blocks": blocks}, notes
+    spec = {"version": "1", "title": title, "blocks": blocks}
+    if any(b["type"] == "heading" for b in blocks):
+        # 제목 번호는 공문서 모양(1. → 가. → 1) …)으로. 기본값(1.1. 꼴)은 손 번호를 제목으로 올린 긴 문서에서
+        # "56.10." 처럼 길어져 들여쓰기를 넘고 본문과 겹친다(R103).
+        spec["outline_numbering"] = [{"text": t, "num_format": f} for t, f in hds.OUTLINE_DEFAULTS]
+    # 머리말·꼬리말: 첫 것은 개선본의 머리말·꼬리말로, 글이 다른 나머지는 잃지 않게 앞쪽 문단으로 옮긴다
+    extra = []
+    for kind, label in (("header", "머리말"), ("footer", "꼬리말")):
+        texts = list(dict.fromkeys(hf.get(kind, [])))
+        if texts:
+            spec[kind] = {"text": texts[0]}
+            extra += [{"type": "paragraph", "text": f"[{label}] {t}"} for t in texts[1:]]
+    spec["blocks"] = extra + blocks
+    return spec, notes
 
 
 def text_units(document: dict) -> List[str]:
@@ -201,7 +221,7 @@ def text_units(document: dict) -> List[str]:
             continue  # 칸 글은 뒤따르는 풀린 문단 블록(fromLayoutTable)으로 따로 센다
         if block["type"] == "table":
             for cell in docmodel.iter_cells(block):
-                own = "".join(p["text"] for p in cell.get("paragraphs", [])) if cell.get("paragraphs") else cell["text"]
+                own = "\n".join(p["text"] for p in cell.get("paragraphs", [])) if cell.get("paragraphs") else cell["text"]
                 units.append(own)
         elif block.get("text"):
             o = block.get("outline")
@@ -216,9 +236,19 @@ def text_units(document: dict) -> List[str]:
     return [u for u in out if u]
 
 
+def _strip_markers(text: str) -> str:
+    """줄마다 앞 항목 기호를 뺀다(원본·개선본을 같은 방식으로 맞춰 비교)."""
+    out = []
+    for line in (text or "").splitlines():
+        found = docmodel.outline_marker(line)
+        out.append(found[2] if found else line)
+    return "".join(out)
+
+
 def coverage(before: dict, after: dict) -> dict:
     target = _SPACE.sub("", "".join(
-        (b.get("text") or "") + "".join(c["text"] for c in (docmodel.iter_cells(b) if b["type"] == "table" else []))
+        _strip_markers(b.get("text") or "") + "".join(_strip_markers(c["text"]) for c in
+                                                       (docmodel.iter_cells(b) if b["type"] == "table" else []))
         for b in after["blocks"]))
     units = text_units(before)
     missing = [u for u in units if u not in target]

@@ -300,7 +300,8 @@ def iter_tables(table: dict) -> Iterator[dict]:
 _SP = r"[\s 　]"
 OUTLINE_MARKERS = [
     ("Ⅰ.", re.compile(rf"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\.?){_SP}"), 0),
-    ("1.", re.compile(rf"^(\d{{1,2}}\.)(?!\d){_SP}"), 1),
+    # "4. 23.~6. 15." 같은 날짜는 번호가 아니다: 번호 뒤에 바로 "NN." 이 오면 뺀다
+    ("1.", re.compile(rf"^(\d{{1,2}}\.)(?!\d)(?!{_SP}*\d{{1,2}}\.){_SP}"), 1),
     ("□", re.compile(rf"^([□■◆◇▣▶►]){_SP}?"), 2),
     ("가.", re.compile(rf"^([가나다라마바사아자차카타파하]\.){_SP}"), 3),
     ("○", re.compile(rf"^([○◦●◎]|ㅇ(?={_SP}|\()){_SP}?"), 4),

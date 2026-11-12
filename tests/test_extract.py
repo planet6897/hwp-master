@@ -334,6 +334,11 @@ class OutlineTest(unittest.TestCase):
         self.assertEqual([b["outline"]["level"] for b in blocks], [1, 2, 3, 4, 5, 2, 1])
         self.assertEqual(blocks[5]["outline"]["parentId"], "s0.p0")
 
+    def test_dates_are_not_numbered_items(self):
+        blocks = self.blocks(["4. 23.~6. 15. 접수 기간", "12. 31. 마감", "3. 10명 선발"])
+        extract.docmodel.assign_outline(blocks)
+        self.assertEqual(["outline" in b for b in blocks], [False, False, True])
+
     def test_lower_marker_first_then_higher(self):
         blocks = self.blocks(["○ 먼저 나온 하위", "□ 나중 나온 상위", "○ 그 아래"])
         extract.docmodel.assign_outline(blocks)

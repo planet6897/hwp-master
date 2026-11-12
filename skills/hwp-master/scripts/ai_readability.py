@@ -49,6 +49,7 @@ CHECKS = {
 HAND_NUMBER_KINDS = {"1.", "가.", "1)", "가)", "(1)", "(가)"}
 ALIGN = re.compile(r"\S(?: {4,}|\t{2,}|[ 　]{2,})\S")
 SENTENCE_END = re.compile(r"(다|요|음|함|임|됨|니다|습니다)[.。]?\s*$")
+TOC_LINE = re.compile(r"\t[\s.·…]*\d{1,4}\s*$")  # 목차 줄: 탭(채움 점) 뒤 쪽 번호로 끝난다
 
 
 def _merged_ratio(table: dict) -> float:
@@ -78,7 +79,9 @@ def diagnose(document: dict) -> dict:
             if ALIGN.search(block["text"]):
                 found["A04"].append(block["id"])
             o = block.get("outline")
-            if o and o["kind"] in HAND_NUMBER_KINDS and block["type"] == "paragraph":
+            # 목차 항목("1. 추진 배경 ⇥ 3")은 제목 번호를 글로 옮긴 것이라 손 번호가 아니다
+            if o and o["kind"] in HAND_NUMBER_KINDS and block["type"] == "paragraph" \
+                    and not TOC_LINE.search(block["text"]):
                 found["A06"].append(block["id"])
     found["A05"] = [r["start"] for r in document.get("emptyRuns", [])]
 

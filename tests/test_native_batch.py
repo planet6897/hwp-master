@@ -111,6 +111,30 @@ class BatchTest(unittest.TestCase):
         calls = self.compare_modes(doc)
         self.assertLess(calls[True], calls[False] / 3, calls)
 
+    def test_footnote_with_tab_passes_self_check(self):
+        """각주 글의 탭은 rhwp 가 <hp:tab/> 로 쓴다 — 자체 확인(check)이 누락으로 보지 않는다(재시험에서 R106)."""
+        rhwp = rhwp_locate.locate(None)["path"]
+        doc = {"version": "1", "title": "탭 각주", "blocks": [
+            {"type": "paragraph", "text": "본문", "footnotes": [{"text": "호랑이	인간의 사나움"}]}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "fn.hwpx"
+            result = native.produce(json.loads(json.dumps(doc)), out, rhwp, Path(tmp) / "w")
+            self.assertTrue(result["ok"], result.get("error"))
+            self.assertEqual(native.check(out, doc, rhwp), [])
+
+    def test_footnote_with_quotes_and_line_break_paragraph(self):
+        """따옴표 든 각주(&quot;)·줄 바꿈 든 문단 뒤의 블록도 자체 확인·블록 대응을 통과한다(재시험 R106·블록 누락)."""
+        rhwp = rhwp_locate.locate(None)["path"]
+        doc = {"version": "1", "title": "따옴표", "blocks": [
+            {"type": "paragraph", "text": "\n".join(["첫 줄", "둘째 줄"])},
+            {"type": "paragraph", "text": "본문", "footnotes": [{"text": '정의는 "전송상태값" 을 따른다'}]},
+            {"type": "list", "items": ["항목"]}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "q.hwpx"
+            result = native.produce(json.loads(json.dumps(doc)), out, rhwp, Path(tmp) / "w")
+            self.assertTrue(result["ok"], result.get("error"))
+            self.assertEqual(native.check(out, doc, rhwp), [])
+
     def test_para_pr_ref_rewrite_touches_only_top_level(self):
         xml = ('<hs:sec xmlns:hs="s" xmlns:hp="p"><hp:p id="0" paraPrIDRef="1"><hp:run><hp:tbl><hp:tr><hp:tc>'
                '<hp:subList><hp:p id="9" paraPrIDRef="1"/></hp:subList></hp:tc></hp:tr></hp:tbl></hp:run></hp:p>'
