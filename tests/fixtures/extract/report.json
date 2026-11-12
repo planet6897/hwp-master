@@ -112,6 +112,10 @@
         "normalized": -3.5
       },
       {
+        "kind": "change",
+        "normalized": 2.0
+      },
+      {
         "kind": "reference",
         "normalized": {
           "law": "관세법",

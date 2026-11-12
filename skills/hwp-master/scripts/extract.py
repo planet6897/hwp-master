@@ -320,6 +320,26 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
 
     index: Optional[docmodel.BlockIndex] = None
     document: dict = {}
+    semantics_cache: Dict[str, dict] = {}
+
+    def doc_semantics() -> Dict[str, dict]:
+        """document.json 데이터 표의 의미화 {표 ID: semantics} — kv(레코드 표 빼기)·data(증감률 레코드)가 함께 쓴다."""
+        if "done" in semantics_cache:
+            return semantics_cache["map"]
+        found = {}
+        blocks = document.get("blocks") or []
+        for pos, block in enumerate(blocks):
+            if block["type"] != "table" or block.get("fromLayoutTable"):
+                continue
+            for table in docmodel.iter_tables(block):
+                if table.get("role") == "data":
+                    caption, caption_id = tablesem.find_caption(blocks, pos, table)
+                    try:
+                        found[table["id"]] = tablesem.analyze(table, caption, caption_id, find_amounts)
+                    except Exception:
+                        pass  # tables 단계에서 W308 로 알린다
+        semantics_cache.update({"done": True, "map": found})
+        return found
     fields_found: List[dict] = []
     unlinked: Dict[str, int] = {}
 
@@ -496,6 +516,11 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                 i.pop("_text", None)
             # 의미 값 확장(#14): 기간·증감률·연락처·조문 참조 — document.json 글에서 바로 찾아 blockId 가 정확하다.
             more = valuesmod.extract_values(document["blocks"], docmodel.iter_cells) if document.get("blocks") else []
+            if document.get("blocks"):  # 증감률 행·열의 부호 없는 괄호 값 "(147.8)" — 표 레코드에서 보탠다(#55)
+                tables_by_id = {t["id"]: (b, {c["id"]: c for c in docmodel.iter_cells(t)})
+                                for b in document["blocks"] if b["type"] == "table" and not b.get("fromLayoutTable")
+                                for t in docmodel.iter_tables(b)}
+                more += valuesmod.record_changes(doc_semantics(), tables_by_id, items + more)
             for i in more:
                 data_counts[i["kind"]] = data_counts.get(i["kind"], 0) + 1
             items += more
@@ -567,17 +592,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
     if "kv" in parts and document.get("blocks"):
         # 항목-값: 양식형 표의 라벨|값 칸, "라벨: 값" 문단, 누름틀. 숫자 레코드 표·머리 행 있는 글 표는 뺀다.
         blocks = document["blocks"]
-        semantics = {}
-        for pos, block in enumerate(blocks):
-            if block["type"] != "table" or block.get("fromLayoutTable"):
-                continue
-            for table in docmodel.iter_tables(block):
-                if table.get("role") == "data":
-                    caption, caption_id = tablesem.find_caption(blocks, pos, table)
-                    try:
-                        semantics[table["id"]] = tablesem.analyze(table, caption, caption_id, find_amounts)
-                    except Exception:
-                        pass  # tables 단계에서 W308 로 알린다
+        semantics = doc_semantics()
         if "fields" not in parts:
             fenv = rhwp_json(rhwp, ["fields", str(src)])
             fields_found = [] if "_error" in fenv else fenv.get("fields", [])
