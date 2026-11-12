@@ -20,6 +20,7 @@
                       "580억 달러"·"$1.5 million"·"3억 5천만 원"·표 셀 안 금액은 rhwp search 로 문단을 모아
                       보탠다(detector=hwp-master, currency=USD·KRW·EUR·JPY·CNY)
   fields.json·fields.csv  누름틀 이름·현재값·안내문·위치 (rhwp fields)
+  kv.json·kv.csv      항목-값: 양식형 표의 "라벨 | 값" 칸, "라벨: 값" 문단, 누름틀 (같은 항목은 duplicateOf)
   headers_footers.json    머리말/꼬리말 (rhwp headers-footers)
   charts.json·charts/chart<N>.csv  차트 목록과 숫자 데이터 (rhwp charts·chart-to-csv)
 
@@ -55,10 +56,11 @@ from typing import Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import docmodel  # noqa: E402
 import rhwp_locate  # noqa: E402
+import kv as kvmod  # noqa: E402
 import tablesem  # noqa: E402
 
 READABLE = {".hwp", ".hwpx", ".hml"}
-PARTS = ("document", "text", "structure", "tables", "data", "fields", "headers", "charts")
+PARTS = ("document", "text", "structure", "tables", "data", "fields", "kv", "headers", "charts")
 
 
 def sha256(path: Path) -> str:
@@ -250,6 +252,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
 
     index: Optional[docmodel.BlockIndex] = None
     document: dict = {}
+    fields_found: List[dict] = []
     unlinked: Dict[str, int] = {}
 
     def link(kind: str, block_id: Optional[str]) -> Optional[str]:
@@ -425,6 +428,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
         env = rhwp_json(rhwp, ["fields", str(src)])
         if not failed("fields", env):
             fields = env.get("fields", [])
+            fields_found = fields
             if index is not None:
                 for f in fields:
                     loc = f.get("location") or {}
@@ -455,6 +459,33 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                 csv_env = rhwp_json(rhwp, ["chart-to-csv", str(src), "-o", str(out / "charts"), "--bom"])
                 if not failed("chart-to-csv", csv_env):
                     files += sorted(p.relative_to(out).as_posix() for p in (out / "charts").glob("*.csv"))
+
+    if "kv" in parts and document.get("blocks"):
+        # 항목-값: 양식형 표의 라벨|값 칸, "라벨: 값" 문단, 누름틀. 숫자 레코드 표·머리 행 있는 글 표는 뺀다.
+        blocks = document["blocks"]
+        semantics = {}
+        for pos, block in enumerate(blocks):
+            if block["type"] != "table" or block.get("fromLayoutTable"):
+                continue
+            for table in docmodel.iter_tables(block):
+                if table.get("role") == "data":
+                    caption, caption_id = tablesem.find_caption(blocks, pos, table)
+                    semantics[table["id"]] = tablesem.analyze(table, caption, caption_id, find_amounts)
+        if "fields" not in parts:
+            fenv = rhwp_json(rhwp, ["fields", str(src)])
+            fields_found = [] if "_error" in fenv else fenv.get("fields", [])
+            if index is not None:
+                for f in fields_found:
+                    loc = f.get("location") or {}
+                    path = [n for n in loc.get("nested", []) if n.get("kind") == "tableCell"]
+                    f["blockId"] = index.locate(loc.get("section"), loc.get("paragraph"), path=path)
+        items = kvmod.extract_kv(blocks, semantics, fields_found, docmodel.iter_tables)
+        save("kv.json", {"source": rel, "untrustedContent": True, "items": items})
+        head = ["key", "keyNorm", "value", "source", "page", "blockId", "keyBlockId", "duplicateOf"]
+        write_csv(out / "kv.csv", [head] + [[i.get(h, "") if i.get(h) is not None else "" for h in head]
+                                            for i in items])
+        files.append("kv.csv")
+        counts["kv"] = len(items)
 
     if unlinked:
         findings.append(finding("warning", "W305", "document.json 블록에 잇지 못한 항목: " +
