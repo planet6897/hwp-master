@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extract headers_footers.json",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "source",
+    "untrustedContent",
+    "headersFooters"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "source": {
+      "type": "string"
+    },
+    "untrustedContent": {
+      "const": true
+    },
+    "headersFooters": {
+      "type": "array"
+    }
+  }
+}

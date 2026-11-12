@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Extract tables.json",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "source",
+    "untrustedContent",
+    "tables"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "source": {
+      "type": "string"
+    },
+    "untrustedContent": {
+      "const": true
+    },
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "rows",
+          "cols",
+          "cells"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "pattern": "^T\\d{2,}(-\\d+)?$"
+          },
+          "blockId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parentCellId": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "layout",
+              "data"
+            ]
+          },
+          "rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cols": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cells": {
+            "type": "array"
+          },
+          "semantics": {
+            "type": "object",
+            "required": [
+              "headerRows",
+              "stubCols",
+              "kind",
+              "columns",
+              "records"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "numeric",
+                  "text"
+                ]
+              },
+              "headerRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stubCols": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "key",
+                    "col"
+                  ]
+                }
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "row",
+                    "label",
+                    "values",
+                    "units",
+                    "cellIds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

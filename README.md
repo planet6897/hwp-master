@@ -42,6 +42,8 @@
 | 여러 문서 | 폴더·glob 째 추출, 합친 표(행마다 출처), 서식이 다른 문서 경고 | `_merged/fields.csv`·`kv.csv`·`data.csv`·`forms.json` |
 | 신뢰 | 원본 SHA-256, 프롬프트 주입 신호, `untrustedContent` 표시 | `summary.json` |
 
+결과 형식은 JSON Schema(`skills/hwp-master/schemas/extract/`)로 고정돼 있고, 파일마다 `schemaVersion` 이 붙습니다. 다른 도구·에이전트도 믿고 읽을 수 있습니다.
+
 모든 값에는 위치가 붙습니다(쪽·구역·문단·문자 위치, 표 안이면 셀 주소). `blockId` 로 `document.json` 을 찾으면 그 값이 어느 장의 어느 표·셀에 있는지 압니다. AI 는 그 위치를 근거로
 "580억 달러 (1쪽, 표 1 셀 1)"처럼 출처를 밝혀 답합니다. 문서에 없는 값은 추측하지 않고 "찾지 못함"이라고 합니다.
 
