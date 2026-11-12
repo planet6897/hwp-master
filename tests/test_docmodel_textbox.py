@@ -38,6 +38,18 @@ def make_hwpx(path: Path, header=HEADER, section=SECTION):
     return path
 
 
+class EquationTest(unittest.TestCase):
+    def test_equation_script_inline_in_text(self):
+        eq = '<hp:equation id="1"><hp:shapeComment/><hp:script>x = {-b +- sqrt {b^2 -4ac}}  over {2a}</hp:script></hp:equation>'
+        section = (f'<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" {NS}>'
+                   + para(f'<hp:run charPrIDRef="0"><hp:t>근의 공식은 </hp:t>{eq}<hp:t> 이다.</hp:t></hp:run>')
+                   + "</hs:sec>")
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = docmodel.build_from_hwpx(make_hwpx(Path(tmp) / "e.hwpx", section=section))
+        self.assertEqual(doc["blocks"][0]["text"], "근의 공식은 [수식: x = {-b +- sqrt {b^2 -4ac}} over {2a}] 이다.")
+        self.assertEqual(doc["counts"]["equation"], 1)
+
+
 class CellPathTest(unittest.TestCase):
     """rhwp#8991 cellPath·fields location.nested: 단계의 paragraph 는 '그 칸 안의 문단'이다."""
 

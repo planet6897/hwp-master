@@ -63,11 +63,20 @@ def _text_of(p) -> str:
                 out.append("\n")
             elif name == "tab":
                 out.append("\t")
+            elif name == "equation":
+                # 수식은 원문(한글 수식 스크립트)을 제자리에 글로 넣는다 — AI 가 읽을 수 있고, 청크·개선본에도 남는다(#49)
+                script = next((x.text for x in child.iter() if _tag(x) == "script" and x.text), "")
+                if script.strip():
+                    out.append(f"{EQUATION_OPEN}{' '.join(script.split())}{EQUATION_CLOSE}")
             else:
                 walk(child)
 
     walk(p)
     return "".join(out)
+
+
+EQUATION_OPEN, EQUATION_CLOSE = "[수식: ", "]"
+EQUATION_RE = re.compile(r"\[수식: [^\]]*\]")
 
 
 def _controls(p) -> Iterator:
@@ -579,6 +588,7 @@ def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
                             blocks.append({"type": "table", **base, **table, "fromTextBox": tbid, **path_for()})
                         j += 1
     counts["outlineItem"] = assign_outline(blocks)
+    counts["equation"] = sum(1 for _, root in sections for el in root.iter() if _tag(el) == "equation")
     runs = [{k: r[k] for k in ("start", "length", "page")} for r in empty_runs if r["length"] >= 2]
     return {"schemaVersion": SCHEMA_VERSION, "untrustedContent": True, "counts": counts, "blocks": blocks,
             "emptyRuns": runs}
