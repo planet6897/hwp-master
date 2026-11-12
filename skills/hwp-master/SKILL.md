@@ -32,7 +32,8 @@ metadata:
 | `scripts/beautify.py` | Beautify: `propose`(손 번호 → 개요 번호 계획) · `apply`(적용 → 내용 보존·조판 판정, 문제 문단 자동 제외) |
 | `scripts/style_profile.py` | 문서 유형 프로필: `analyze`·`register`(실제 문서들의 서식 다수결 → `~/.hwp-master/profiles/`) · `list [--search 낱말] [--json]`(기본·내 프로필과 핵심 서식) · `show` · `lock`(spec_lock.json 에 적용). 기본 프로필 37종은 `profiles/` |
 | `scripts/template_fill.py` | Template Fill: `inspect`(서식 칸 조사·자료 틀) · `fill`(목록 반복 → 칸 채움 → 캡슐 사슬 → 판정) · `register`(기관 서식 등록) |
-| `scripts/extract.py` | Extract: 본문(MD)·개요·표(JSON·CSV)·날짜/금액/수량(위치 포함)·누름틀·머리말/꼬리말·차트를 `exports/extract/<문서>/` 로 (읽기 전용) |
+| `scripts/docmodel.py` | Extract 가 쓰는 통합 문서 모델(`document.json`): 읽기 순서 블록과 고정 ID, 표·값·누름틀을 `blockId` 로 연결 |
+| `scripts/extract.py` | Extract: 문서 모델·본문(MD)·개요·표(JSON·CSV)·날짜/금액/수량(위치 포함)·누름틀·머리말/꼬리말·차트를 `exports/extract/<문서>/` 로 (읽기 전용) |
 | `scripts/edit.py` | Edit Native: `inspect`(편집 대상 조사) · `apply`(dry-run → 실행 → 작업 캡슐 → 전후 렌더 비교) |
 
 ## 원칙

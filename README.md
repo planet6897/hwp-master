@@ -31,6 +31,7 @@
 
 | 층 | 가져오는 것 | 파일 |
 |---|---|---|
+| 문서 모델 | 읽기 순서 블록(제목·문단·목록·표·셀·그림·각주·머리말)과 고정 ID(`s0.p12`·`s0.p5.t0.r2c1`), 쪽, 상위 제목 경로. 아래 모든 값이 `blockId` 로 이어짐 | `document.json` |
 | 본문 | 쪽마다 `<!-- page N -->` 를 붙인 Markdown(그림 포함), 쪽별 평문 | `text.md`, `<문서>_assets/`, `pages.json` |
 | 구조 | 장·절·조 개요 계층 트리 | `structure.json` |
 | 표 | 행×열 격자, 셀 병합(rowSpan·colSpan), 표마다 CSV | `tables.json`, `tables/T01.csv` … |
@@ -39,13 +40,13 @@
 | 기타 | 머리말/꼬리말, 차트 숫자 데이터 | `headers_footers.json`, `charts/*.csv` |
 | 신뢰 | 원본 SHA-256, 프롬프트 주입 신호, `untrustedContent` 표시 | `summary.json` |
 
-모든 값에는 위치가 붙습니다(쪽·구역·문단·문자 위치, 표 안이면 셀 주소). AI 는 그 위치를 근거로
+모든 값에는 위치가 붙습니다(쪽·구역·문단·문자 위치, 표 안이면 셀 주소). `blockId` 로 `document.json` 을 찾으면 그 값이 어느 장의 어느 표·셀에 있는지 압니다. AI 는 그 위치를 근거로
 "580억 달러 (1쪽, 표 1 셀 1)"처럼 출처를 밝혀 답합니다. 문서에 없는 값은 추측하지 않고 "찾지 못함"이라고 합니다.
 
 ```json
 {"kind": "amount", "raw": "49억 달러", "normalized": 4900000000, "currency": "USD",
  "page": 0, "section": 0, "paragraph": 2, "cell": {"control": 0, "cell": 3, "paragraph": 0},
- "charOffset": 0, "detector": "hwp-master"}
+ "charOffset": 0, "detector": "hwp-master", "blockId": "s0.p2.t0.r1c1"}
 ```
 
 - **금액**은 원화(`1,200,000원`·`3억 5천만 원`·`2,000백만 원`), 달러(`580억 달러`·`$1.5 million`·`USD 25.5`),
