@@ -33,6 +33,7 @@ metadata:
 | `scripts/style_profile.py` | 문서 유형 프로필: `analyze`·`register`(실제 문서들의 서식 다수결 → `~/.hwp-master/profiles/`) · `list [--search 낱말] [--json]`(기본·내 프로필과 핵심 서식) · `show` · `lock`(spec_lock.json 에 적용). 기본 프로필 37종은 `profiles/` |
 | `scripts/template_fill.py` | Template Fill: `inspect`(서식 칸 조사·자료 틀) · `fill`(목록 반복 → 칸 채움 → 캡슐 사슬 → 판정) · `register`(기관 서식 등록) |
 | `scripts/docmodel.py` | Extract 가 쓰는 통합 문서 모델(`document.json`): 읽기 순서 블록과 고정 ID, 표·값·누름틀을 `blockId` 로 연결 |
+| `scripts/values.py` | Extract 의미 값 확장: 기간·증감률·연락처·조문 참조 → `data.json` |
 | `scripts/kv.py` | Extract 항목-값: 양식 표 라벨·값 칸, `라벨: 값` 문단, 누름틀 병합 → `kv.json` |
 | `scripts/tablesem.py` | Extract 표 의미화: 머리 행·행 이름 열·단위 캡션·값 타입(△ 음수·괄호 증감률·금액) → records |
 | `scripts/extract.py` | Extract: 문서 모델·본문(MD)·개요·표(JSON·CSV)·날짜/금액/수량(위치 포함)·누름틀·머리말/꼬리말·차트를 `exports/extract/<문서>/` 로 (읽기 전용) |
