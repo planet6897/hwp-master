@@ -1,7 +1,7 @@
 {
   "totals": {
     "kv": {
-      "precision": 0.6226,
+      "precision": 1.0,
       "recall": 1.0
     },
     "outline": {
@@ -18,7 +18,7 @@
     },
     "values": {
       "precision": 1.0,
-      "recall": 0.907
+      "recall": 1.0
     }
   }
 }

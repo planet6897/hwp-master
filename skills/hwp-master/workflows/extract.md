@@ -41,7 +41,7 @@ python3 scripts/extract.py <프로젝트> "sources/신청서/*.hwpx"            
 | `structure.json` | 개요/조문(장·절·조·항·호) 계층 트리 (rhwp) | 조문 찾기 |
 | `outline.json` | 개요 제목 + 개조식·공문 항목 계층 트리(`Ⅰ.`·`1.`·`□`·`가.`·`○`/`ㅇ`·`1)`·`-`·`·`·`(1)`·`①`, `※`·`*` 주석은 앞 항목의 자식). `document.json` 블록에도 `outline{marker, kind, level, parentId, body}` | 목차·요약·장별 질문 |
 | `tables.json`, `tables/T01.csv`…, `tables/T01.records.csv` | 표 격자(병합·위치 보존), 표마다 CSV. 표 안의 표는 `T03-1` 처럼 바깥 표 뒤에 붙고(`parentCellId`), 바깥 칸에는 `[표 T03-1]` 자리 표시가 들어간다 | 표 데이터 |
-| `data.json`, `data.csv` | 날짜·금액·수량, 정규화 값·단위·통화(USD·KRW·EUR·JPY·CNY)·쪽·구역·문단·표 셀·문자 위치. rhwp 가 놓친 금액(`580억 달러`·`$1.5 million`·`3억 5천만 원`·표 셀 안)은 `detector: hwp-master` 로 보탠다. 기간(`period` {start,end})·증감률(`change`, △ 음수)·연락처(`contact`, 개인정보 경고 W306)·조문 참조(`reference` {law,article,paragraph,item})도 보탠다 | 금액·기한·근거 질문 |
+| `data.json`, `data.csv` | 날짜·금액·수량, 정규화 값·단위·통화(USD·KRW·EUR·JPY·CNY)·쪽·구역·문단·표 셀·문자 위치. rhwp 가 놓친 금액(`580억 달러`·`$1.5 million`·`3억 5천만 원`·표 셀 안)은 `detector: hwp-master` 로 보탠다. 기간(`period` {start,end})·증감률(`change`, △ 음수. 숫자 표의 증감률 행·열 값은 표 레코드에서 `from: tableRecord` 로)·연락처(`contact`, 개인정보 경고 W306)·조문 참조(`reference` {law,article,paragraph,item})도 보탠다 | 금액·기한·근거 질문 |
 | `fields.json`, `fields.csv` | 누름틀 이름·현재값·안내문·위치 | 서식에 채워진 값 |
 | `kv.json`, `kv.csv` | 항목-값: 양식형 표의 `라벨 \| 값` 칸(가로·세로), `담당자: 홍길동` 꼴 문단, 누름틀. 같은 항목은 `duplicateOf`(누름틀이 먼저). 숫자 레코드 표와 머리 행 있는 글 표는 뺀다 | "보도일시는?" "담당자 연락처는?" |
 | `headers_footers.json` | 머리말/꼬리말 | 문서 번호·기관명 |
