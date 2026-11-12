@@ -15,6 +15,7 @@
   structure.json      개요/조문 계층 트리 (rhwp export-structure)
   tables.json         표 격자 — 병합(rowSpan/colSpan)·위치 보존 (rhwp export-tables), role(layout|data)·roleReasons
   tables/T01.csv …    데이터 표마다 CSV(레이아웃 표는 만들지 않음). 병합 칸은 왼쪽 위 칸에만 글을 두고 나머지는 비운다
+  tables/T01.records.csv  숫자 표의 레코드(행 이름 × 머리 경로 열, 정규화 값, 머리에 [단위]) — tables.json semantics
   data.json·data.csv  날짜·금액·수량과 구역·문단·표 셀·쪽·문자 위치 (rhwp extract-data). rhwp 가 놓치는
                       "580억 달러"·"$1.5 million"·"3억 5천만 원"·표 셀 안 금액은 rhwp search 로 문단을 모아
                       보탠다(detector=hwp-master, currency=USD·KRW·EUR·JPY·CNY)
@@ -54,6 +55,7 @@ from typing import Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import docmodel  # noqa: E402
 import rhwp_locate  # noqa: E402
+import tablesem  # noqa: E402
 
 READABLE = {".hwp", ".hwpx", ".hml"}
 PARTS = ("document", "text", "structure", "tables", "data", "fields", "headers", "charts")
@@ -247,6 +249,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
         return tables_cache["env"]
 
     index: Optional[docmodel.BlockIndex] = None
+    document: dict = {}
     unlinked: Dict[str, int] = {}
 
     def link(kind: str, block_id: Optional[str]) -> Optional[str]:
@@ -347,6 +350,20 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                         marks = " ".join(f"[표 {labels[t['id']]}]" for t in doc_cell["tables"])
                         cell["text"] = (own + "\n" + marks).strip()
                         cell["nestedTableIds"] = [t["id"] for t in doc_cell["tables"]]
+            # 데이터 표 의미화: 머리 행·행 이름 열·단위 캡션·값 타입 → semantics.records (tablesem)
+            if document.get("blocks"):
+                blocks = document["blocks"]
+                position = {b["id"]: k for k, b in enumerate(blocks) if b["type"] == "table"}
+                doc_tables = {t["id"]: (t, position[b["id"]]) for b in blocks if b["type"] == "table"
+                              and not b.get("fromLayoutTable") for t in docmodel.iter_tables(b)}
+                for entry in output:
+                    found = doc_tables.get(entry.get("blockId") or "")
+                    if not found or entry.get("role", "data") != "data":
+                        continue
+                    doc_table, pos = found
+                    caption, caption_id = tablesem.find_caption(blocks, pos, doc_table)
+                    entry["semantics"] = tablesem.analyze(doc_table, caption, caption_id, find_amounts)
+                    counts["semanticTables"] = counts.get("semanticTables", 0) + 1
             save("tables.json", {"source": rel, "tables": output})
             # CSV 는 데이터 표만 만든다. 레이아웃 표(제목 상자·투명 표)의 글은 document.json 에 문단으로 풀려 있다.
             for label, table in csv_jobs:
@@ -354,6 +371,11 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                     name = f"tables/{label}.csv"
                     write_csv(out / name, table_grid(table))
                     files.append(name)
+                    sem = table.get("semantics")
+                    if sem and sem["kind"] == "numeric" and sem["records"]:
+                        name = f"tables/{label}.records.csv"
+                        write_csv(out / name, tablesem.record_rows(sem))
+                        files.append(name)
                 if not table_area_ok(table):
                     findings.append(finding("error", "X103", f"표 {label} 격자 불일치(병합 면적 ≠ {table.get('rows')}×"
                                             f"{table.get('cols')})", f"{rel} 구역 {table.get('section')} "
