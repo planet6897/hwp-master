@@ -277,7 +277,8 @@ class ExtractTest(unittest.TestCase):
 
         listed = json.loads((out / "tables.json").read_text(encoding="utf-8"))["tables"]
         self.assertEqual([t["role"] for t in listed], ["layout", "layout", "data", "layout"])
-        self.assertEqual(sorted(p.name for p in (out / "tables").glob("*.csv")), ["T03.csv"], "CSV 는 데이터 표만")
+        self.assertEqual(sorted(p.name for p in (out / "tables").glob("*.csv")), ["T03.csv", "T03.records.csv"],
+                         "CSV(와 숫자 표 레코드 CSV)는 데이터 표만")
         items = json.loads((out / "data.json").read_text(encoding="utf-8"))["items"]
         won = next(i for i in items if i["raw"] == "100원")
         self.assertEqual(won["blockId"], f"{tables[2]['id']}.r1c1")
