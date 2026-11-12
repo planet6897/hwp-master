@@ -1,7 +1,7 @@
 {
   "name": "hwp-master",
   "version": "0.1.17",
-  "description": "자료(PDF·DOCX·MD·웹·기존 HWP)나 주제로 한컴에서 편집 가능한 네이티브 HWPX 문서를 rhwp로 만들고, 기관 서식 채우기·명단 메일머지·기존 문서 편집과 번호 정리까지 검사기로 판정하는 스킬",
+  "description": "rhwp 로 한글(HWP/HWPX) 문서를 읽고 쓰고 고치는 스킬. 수 GB 인 rhwp 소스 대신 devel 최신 rhwp 를 미리 빌드한 Windows·macOS·Linux 바이너리를 설치해 쓰고, 자료로 네이티브 HWPX 생성·기존 문서의 본문·표·날짜·금액·누름틀 값 추출·형식 변환·기관 서식 채우기·명단 메일머지·부분 수정·번호 정리를 검사기로 판정한다",
   "author": {
     "name": "planet6897"
   },

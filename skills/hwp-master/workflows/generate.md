@@ -42,6 +42,7 @@ python3 scripts/project_manager.py import-sources <프로젝트> <자료...>  # 
 | R103 | layout-anomaly | 넘침·겹침·화면 밖·빈 쪽 신호 | 예 |
 | R104 | 쪽수 | `spec_lock.max_pages`(Quick 은 `--max-pages`) 초과 | 예 |
 | R105 | 미리보기 | Linux 에서 한글 글꼴 파일을 찾지 못함 — HWPX 는 정상, 미리보기 PNG·PDF 의 한글이 빠짐 | 아니오 |
+| R107 | 미리보기 | `--png` 인데 PNG 를 만들지 못함 — 배포 rhwp 는 PNG 렌더(native-skia)가 없다. 미리보기 PDF 를 본다 | 아니오 |
 | C001·C002·C011 | 규약 검사 | `convention` 항목 단계 건너뜀·순서 어긋남 | 예 |
 | C101·C111 | 규약 검사 | 항목 기호 뒤 띄어쓰기, 개조식 서술형 종결 | 아니오 |
 | W2xx·W3xx | HDS 검사 | 셀 넘침 추정, 열 수 불일치, 빈 문단, 분량 계획 대비 ±30% | 아니오 |

@@ -54,6 +54,7 @@ rhwp 가 PATH 에 없으면 `export RHWP_BIN=/경로/rhwp` 로 지정합니다(�
 | MD·DOCX·PDF 를 한글 문서로 옮기기 | Convert-in | "이 워드 파일을 한글 문서로 바꿔 줘. 공문서 항목 기호로." |
 | 기관 서식에 내용 채우기 (목록 반복 포함) | Template Fill | "이 사업계획서 서식에 첨부 자료 내용을 채워 줘." |
 | 서식 하나 + 명단으로 여러 명분 만들기 | Mail-merge | "이 신청서 서식에 명단.csv 의 사람마다 한 부씩 만들어 줘." |
+| 기존 문서에서 내용·세부 정보 가져오기 (표·날짜·금액·누름틀 값·요약) | Extract | "이 계약서에서 계약 금액과 기간을 뽑아 줘.", "이 hwp 의 표를 CSV 로 줘." |
 | 기존 문서의 일부만 고치기 (누름틀·문구·표 셀·체크박스) | Edit Native | "이 문서의 2026년을 2027년으로, 표 첫 행 금액을 1,000으로 바꿔 줘." |
 | 손으로 친 번호를 한글 개요 번호로 정리 | Beautify | "이 문서의 1. 가. 1) 번호를 자동 개요 번호로 바꿔 줘." |
 | 시험지 자료를 한글 시험지로 | Exam (rhwp 스킬에 위임) | "이 시험지 PDF 를 HWPX 시험지로 만들어 줘." |
@@ -273,7 +274,22 @@ python3 $HM/scripts/beautify.py apply $P history/beautify_<시각>.plan.json
 - HWP 는 먼저 `rhwp export-hwpx 문서.hwp 문서.hwpx` 로 바꿉니다.
 - **바꾼 뒤 한글에서 꼭 열어 보세요.** 번호 뒤 간격이 달라져 줄바꿈·쪽 나눔이 바뀔 수 있습니다(B150 경고).
 
-### 4.8 시험지 (Exam)
+### 4.8 문서 내용 가져오기 (Extract)
+
+기존 HWP/HWPX/HML 에서 본문·개요·표·날짜·금액·수량·누름틀 값·머리말/꼬리말·차트를 꺼냅니다. 원본은 고치지 않습니다.
+
+```bash
+python3 $HM/scripts/project_manager.py import-sources $P 계약서.hwp
+python3 $HM/scripts/extract.py $P sources/계약서.hwp                 # 전부
+python3 $HM/scripts/extract.py $P sources/계약서.hwp --only tables,data
+#   → exports/extract/계약서/ : summary.json, text.md, structure.json, tables/T01.csv, data.csv, fields.csv …
+```
+
+Claude 는 꺼낸 파일에서 값을 찾아 쪽·표·문단 위치와 함께 답하고, 파일에 없는 값은 추측하지 않습니다.
+표와 데이터 CSV 는 엑셀에서 바로 열립니다(UTF-8 BOM). 스캔·그림으로 된 문서는 글자를 꺼낼 수 없습니다(W303).
+검사 코드는 `$HM/workflows/extract.md` 에 있습니다.
+
+### 4.9 시험지 (Exam)
 
 hwp-master 가 아니라 rhwp 의 `rhwp-exam-ingest` 스킬이 만듭니다. Claude 에게 요청하면 그 스킬로 넘깁니다.
 

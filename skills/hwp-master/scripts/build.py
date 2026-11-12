@@ -163,6 +163,11 @@ def build(doc: dict, out_hwpx: Path, workdir: Path, rhwp: str, preview: bool, pn
     if png:
         png_dir = workdir / "png"
         steps["png"] = run_json([rhwp, "export-png", str(out_hwpx), "-o", str(png_dir), "--json"] + font_args)
+        if steps["png"].get("exit", 0) != 0:
+            report["findings"].append(hds.Finding(
+                "warning", "R107", "PNG 미리보기를 만들지 못했습니다. 배포 rhwp 바이너리는 PNG 렌더(native-skia)를 "
+                "넣지 않았으니 미리보기 PDF 를 보세요. PNG 가 꼭 필요하면 --features native-skia 로 빌드한 rhwp 를 "
+                "RHWP_BIN 으로 지정합니다").to_dict())
 
     errors = [f for f in report["findings"] if f["severity"] == "error"]
     report["ok"] = not errors

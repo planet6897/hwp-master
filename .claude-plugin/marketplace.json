@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "hwp-master",
-  "description": "hwp-master — rhwp 기반 한글(HWP/HWPX) 문서 생성·편집 스킬",
+  "description": "hwp-master — rhwp 로 한글(HWP/HWPX)을 읽고 쓰고 고치는 스킬 (빌드된 rhwp 바이너리 제공)",
   "owner": {"name": "planet6897"},
   "plugins": [
     {

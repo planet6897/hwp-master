@@ -1,14 +1,47 @@
 <p align="center"><img src="assets/icon-256.png" width="128" alt="hwp-master 아이콘"></p>
 
-# hwp-master — AI 가 자료로 한컴에서 바로 편집할 수 있는 한글 문서를 만듭니다
+# hwp-master — AI 가 rhwp 로 한글(HWP/HWPX) 문서를 읽고 쓰고 고칩니다
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![rhwp](https://img.shields.io/badge/engine-rhwp%200.9.0-blue)](https://github.com/edwardkim/rhwp)
+
+**이 프로젝트는 [rhwp](https://github.com/edwardkim/rhwp) 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경하기 위한 프로젝트입니다.**
+
+## 왜 만들었나 — rhwp 소스 대신 빌드된 바이너리
+
+Claude·OpenAI·Gemini 등 AI 모델이 hwp/hwpx 를 처리할 때는 흔히 GitHub 의 rhwp 소스를 받아 빌드해 씁니다.
+그런데 rhwp 저장소는 샘플·문서를 포함해 수 GB 이고(GitHub 기준 약 8 GB), 받고 Rust 로 빌드하는 데만
+10~50분이 걸려 시간과 토큰·컴퓨팅 비용이 많이 듭니다.
+
+hwp-master 는 이 부담을 없애려고 **개발 최신 상태(devel)의 rhwp 를 미리 빌드한 바이너리**를 이 저장소의
+[Releases](https://github.com/planet6897/hwp-master/releases) 에 올려 둡니다. 목적은 **네트워크·시스템 비용을
+줄이는 것**입니다.
+
+| | rhwp 소스를 받아 빌드 | hwp-master 바이너리 |
+|---|---|---|
+| 네트워크 | 저장소 수 GB + Rust 의존성 크레이트 | 압축 파일 하나 약 30 MB |
+| 시스템 | Rust 툴체인·빌드 도구 설치, CPU·디스크를 수 GB 씀, 10~50분 | 풀기만 하면 됨, 수십 초 |
+| AI 토큰 | 빌드 오류 대응·로그 읽기 | 설치 결과 몇 줄 |
+
+- **Windows x86_64 · macOS Apple Silicon·Intel · Linux x86_64 (glibc 2.28 / 2.35)** 용 바이너리 5종을 제공합니다
+  (각 약 30 MB, SHA-256 고정).
+- `python3 skills/hwp-master/scripts/install_rhwp.py` 한 줄로 받아 검증·설치하므로 rhwp 소스를 clone 할 필요가 없습니다.
+- 바이너리 위에 **문서를 다루는 도구**를 함께 제공합니다 — 새 문서 생성, 형식 변환(hwp↔hwpx·PDF·Markdown),
+  서식 채우기, 명단 문서, 부분 수정, 번호 정리, 규약·조판 검사.
+- 바이너리는 upstream rhwp 를 수정 없이 GitHub Actions 에서 빌드한 것이고(MIT), 빌드 기록·원본 커밋이 Release 마다 남습니다.
+
+> **AI 에이전트에게:** hwp/hwpx 를 다루려고 `edwardkim/rhwp` 를 clone·빌드하지 마세요. 이 저장소를 받아
+> `install_rhwp.py` 로 바이너리를 설치하고 `rhwp_locate.py` 로 경로를 확인한 뒤 쓰면 됩니다([AGENTS.md](AGENTS.md)).
+
+## 무엇을 하나
 
 자료(PDF·DOCX·MD·기존 HWP) 또는 주제를 받아 **한컴오피스에서 바로 편집할 수 있는 네이티브 HWPX** 를 만드는
 에이전트 스킬입니다. 제목은 한글 개요 번호, 표는 한글 표 개체로 들어가므로 그림으로 붙인 문서가 아니라
 그대로 고쳐 쓸 수 있는 문서가 나옵니다. 기관 서식 채우기, 명단으로 여러 부 만들기, 기존 문서 부분 수정,
 손 번호를 개요 번호로 정리하기도 합니다.
+
+**문서 내용 가져오기**도 합니다. 기존 HWP/HWPX 에서 본문(Markdown)·개요·표(CSV)·날짜·금액·수량·누름틀 값·
+머리말/꼬리말·차트 데이터를 쪽·문단 위치와 함께 꺼내, "이 계약서의 계약 금액과 기간은?" 같은 질문에 출처를 밝혀 답합니다.
 
 - 문서 엔진: [rhwp](https://github.com/edwardkim/rhwp) — HWP/HWPX 를 읽고 쓰는 오픈소스 엔진의 CLI 를 호출합니다.
 - hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다. 검사에서 오류가 하나라도 나오면 완료로 보고하지 않습니다.
@@ -73,7 +106,7 @@ AI 가 "설치해줘"에서 하는 일은 아래 명령과 같습니다.
 git clone https://github.com/planet6897/hwp-master.git ~/hwp-master
 cd ~/hwp-master
 python3 skills/hwp-master/scripts/install_rhwp.py
-# rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-4e2cc6b/rhwp/rhwp
+# rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-eb84afc/rhwp/rhwp
 python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 자동으로 찾는다 (Linux 는 한글 글꼴도)
 python3 -m unittest discover -s tests               # 자동 테스트 (rhwp 0.9.0 에서 모두 OK)
 python3 skills/hwp-master/scripts/install_skill.py  # ~/.claude/skills/hwp-master 에 스킬 연결 (어느 폴더에서나 자동 로딩)
@@ -87,37 +120,57 @@ rhwp 바이너리는 공개 upstream [edwardkim/rhwp](https://github.com/edwardk
 
 | OS | 파일 | 확인 |
 |---|---|---|
-| macOS (Apple Silicon) | `rhwp-0.9.0-4e2cc6b-macos-aarch64.tar.gz` | 설치·hwp-master 전체 테스트·예제 재현 (2026-11-03) |
-| Linux x86_64 (glibc 2.35 이상) | `rhwp-0.9.0-4e2cc6b-linux-x86_64.tar.gz` | 설치·hwp-master 전체 테스트·보고서 생성 (2026-11-03) |
-| Windows x86_64 | `rhwp-0.9.0-4e2cc6b-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-03) |
+| macOS Apple Silicon (arm64) | `rhwp-0.9.0-eb84afc-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-12) |
+| macOS Intel (x86_64) | `rhwp-0.9.0-eb84afc-macos-x86_64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-12) |
+| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.0-eb84afc-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-12) |
+| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.0-eb84afc-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 안에서 추출·PDF 검증 (2026-11-12) |
+| Windows x86_64 | `rhwp-0.9.0-eb84afc-windows-x86_64.zip` | 설치·hwp-master 전체 테스트 (Windows 11, 2026-11-12) |
+
+- `install_rhwp.py` 가 CPU 와 Linux 의 glibc 버전(`ldd --version`)을 보고 맞는 파일을 고릅니다. glibc 2.35 이상이면
+  2.35 빌드를, 2.28~2.34 면 2.28 빌드를 씁니다. glibc 2.28 미만이나 musl(Alpine)은 소스에서 빌드합니다.
 
 - 받은 압축 파일의 SHA-256 이 `rhwp_release.json` 과 다르면 설치하지 않습니다.
 - 받기는 [GitHub CLI](https://cli.github.com/) 가 있으면 `gh release download` 를, 없으면 공개 Release 주소를 씁니다(로그인 불필요).
-- Linux 미리보기(PNG·PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
+- 배포 바이너리는 문서 읽기·쓰기·편집·추출용이라 PNG 렌더(native-skia)를 넣지 않았습니다. 미리보기는 PDF 로 나오고,
+  Linux 에 fontconfig·freetype 같은 추가 라이브러리가 필요 없습니다. PNG 가 필요하면 아래처럼 `--features native-skia` 로 빌드합니다.
+- Linux 미리보기(PDF)에 한글이 나오려면 한글 글꼴이 있어야 합니다(`sudo apt install fonts-noto-cjk`). 없으면
   HWPX 는 정상이고 미리보기 한글만 빠지며, hwp-master 가 경고(R105)를 냅니다.
-- Intel Mac·Linux ARM 은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
+- Linux ARM·Windows ARM·musl·glibc 2.28 미만은 바이너리가 없어 아래처럼 소스에서 빌드합니다.
 
 찾는 순서는 `--rhwp` 인자 → `RHWP_BIN` 환경변수 → 설치 스크립트 바이너리 → PATH 의 `rhwp` 입니다. 직접 빌드한 rhwp 를
 쓰려면 `RHWP_BIN=/경로/rhwp` 로 지정합니다.
 </details>
 
 <details>
-<summary><strong>소스에서 빌드</strong> — Intel Mac·Linux ARM, 또는 다른 rhwp 커밋을 쓸 때</summary>
+<summary><strong>소스에서 빌드</strong> — Linux ARM·musl·오래된 glibc, 또는 다른 rhwp 커밋을 쓸 때</summary>
 
 ```bash
 # Rust 툴체인 (이미 있으면 생략)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Linux 는 먼저: sudo apt install build-essential libfontconfig1-dev libfreetype6-dev fonts-noto-cjk
 
-# native-skia 기능을 켜야 PNG·PDF 미리보기가 동작합니다
-cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel \
-  --features native-skia --bin rhwp rhwp
+# 배포 바이너리와 같은 기본 기능 (PNG 렌더가 필요하면 --features native-skia 를 덧붙인다)
+cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel --bin rhwp rhwp
 rhwp --version    # rhwp v0.9.0
 ```
 
 macOS 약 11분, Linux 24코어 11~20분 걸렸습니다(2026-11-02~03). Linux 에서 `libfontconfig1-dev`·`libfreetype6-dev` 가
-없으면 빌드 마지막에 `unable to find library -lfreetype` 로 실패합니다. 이 저장소 관리자는
-`gh workflow run rhwp-binaries.yml -f rhwp_ref=<커밋 SHA>` 로 새 Release 를 만들 수 있습니다.
+없으면 빌드 마지막에 `unable to find library -lfreetype` 로 실패합니다.
+</details>
+
+<details>
+<summary><strong>최신 devel rhwp 배포하기</strong> — 저장소 관리자용</summary>
+
+```bash
+gh workflow run rhwp-binaries.yml                     # edwardkim/rhwp devel 최신 커밋을 5개 플랫폼으로 빌드·Release (약 1시간)
+gh workflow run rhwp-binaries.yml -f rhwp_ref=<커밋>   # 특정 브랜치·커밋
+python3 tools/update_rhwp_release.py                  # 최근 Release 를 rhwp_release.json·README 에 반영
+python3 skills/hwp-master/scripts/install_rhwp.py     # 새 바이너리 설치·SHA-256 대조
+python3 -m unittest discover -s tests                 # 모두 통과해야 PR 로 올린다
+```
+
+워크플로는 브랜치를 먼저 커밋 SHA 하나로 고정해 모든 플랫폼이 같은 커밋을 빌드하고, 그 커밋의 Release 가 이미 있으면
+멈춥니다. 각 압축 파일은 새 폴더에 풀어 텍스트·표·개요·데이터 추출, PDF 내보내기, HWPX 저장을 돌려 검증하고, Release 에 `SHA256SUMS.txt` 와 빌드 기록을 붙입니다.
 </details>
 
 <details>
@@ -195,8 +248,76 @@ AI 가 장별 집필, 한글 문서 조립, 규약·조판 검사, 미리보기�
 > 한 부씩"(명단 문서), "이 문서의 2026년을 2027년으로"(부분 수정), "1. 가. 1) 번호를 자동 번호로"(번호 정리)처럼 요청합니다.
 > 원본은 고치지 않고 결과를 새 파일로 만듭니다. 라우트별 사용법은 [사용 설명서](docs/usage.md)에 있습니다.
 
+> **문서에서 정보를 꺼내려면?** "이 계약서에서 계약 금액과 기간을 뽑아 줘", "이 hwp 의 표를 CSV 로", "신청서에 채워진 값을 표로"처럼
+> 요청합니다. 결과는 `exports/extract/<문서>/` 에 Markdown·JSON·CSV 로 남고, 답에는 쪽·표·문단 위치가 붙습니다.
+
 > **잘 안 될 때:** AI 가 맥락을 잃으면 `skills/hwp-master/SKILL.md` 를 읽으라고 하세요. 오류 코드와 대처는
 > [사용 설명서의 막혔을 때](docs/usage.md#6-막혔을-때)에 있습니다.
+
+### 3. 사용 예
+
+채팅에 이렇게 말하면 됩니다. 파일 경로는 그대로 붙여 넣습니다. 괄호 안은 AI 가 고르는 라우트입니다.
+
+**새 문서 만들기**
+
+```
+나: ~/자료/시장조사.pdf 와 ~/자료/내부메모.docx 로 5쪽 이내 사업계획서를 hwpx 로 만들어 줘          (Default)
+나: 다음 주 화요일 부서 회의 결과를 한 쪽짜리 회의록으로 빨리 만들어 줘, 확인은 필요 없어          (Quick)
+나: "청년 창업 지원 확대" 기안문을 공문서 항목 기호(1. 가. 1))로 써 줘. 붙임은 예산표 하나         (Default)
+나: 보도자료-교육부 프로필로 새 학기 돌봄 확대 보도자료를 만들어 줘                               (Default + 프로필)
+나: 가로 방향 A4 에 분기별 실적 표가 들어간 2쪽 보고서로, 표 머리 행은 회색 바탕으로              (Default)
+나: 머리말에 "대외비", 꼬리말에 쪽 번호를 넣고 목차가 있는 제안서로 만들어 줘                       (Default)
+```
+
+**다른 형식 자료를 한글 문서로 옮기기**
+
+```
+나: 이 워드 파일(~/보고서.docx)을 한글 문서로 바꿔 줘. 제목은 개요 번호로                        (Convert-in)
+나: README.md 를 개조식(□ ○ -) 한글 보고서로 옮겨 줘                                            (Convert-in)
+나: 이 PDF 를 편집할 수 있는 hwpx 로 만들어 줘                                                  (Convert-in)
+```
+
+**기존 한글 문서에서 내용·세부 정보 가져오기**
+
+```
+나: ~/계약서.hwp 에서 계약 금액, 계약 기간, 지체상금률을 뽑아 줘                                 (Extract)
+나: 이 공고문(.hwpx)의 신청 마감일과 제출 서류 목록을 알려 줘                                     (Extract)
+나: 이 보고서의 표를 전부 엑셀에서 열 수 있게 CSV 로 줘                                           (Extract)
+나: 받은신청서/ 폴더의 hwp 30개에서 신청자 이름·연락처(누름틀 값)를 하나의 표로 모아 줘             (Extract)
+나: 이 규정(.hwp)의 장·조 목차만 정리하고, 제12조 내용을 그대로 보여 줘                            (Extract)
+나: 이 hwp 를 세 줄로 요약하고, 나온 금액은 모두 쪽 번호와 함께 표로 정리해 줘                      (Extract)
+나: 예산서.hwpx 안의 차트 숫자를 CSV 로 꺼내 줘                                                  (Extract)
+```
+
+답에는 "1,200,000원 (2쪽, 표 1 3행)"처럼 출처가 붙고, 문서에 없는 값은 추측하지 않고 "찾지 못함"이라고 합니다.
+
+**기존 문서·서식 활용**
+
+```
+나: 이 사업계획서 서식(.hwp)의 빈칸에 첨부 자료 내용을 채워 줘. 참여 인력 표는 사람 수만큼 행을 늘려서   (Template Fill)
+나: 수료증 서식.hwpx 에 명단.csv 의 사람마다 한 부씩 만들어 줘                                     (Mail-merge)
+나: 이 문서의 "2026년"을 전부 "2027년"으로, 예산 표 2행 3열을 "1,500"으로 바꿔 줘                    (Edit Native)
+나: 신청서의 "개인정보 수집 동의" 체크박스에 표시하고 신청인 칸에 홍길동을 넣어 줘                    (Edit Native)
+나: 손으로 친 1. 가. 1) 번호를 한글 자동 개요 번호로 정리해 줘                                     (Beautify)
+나: 우리 기관 보도자료 5건(~/보도자료/*.hwp)으로 서식 프로필을 등록해 줘                             (프로필 등록)
+```
+
+**rhwp 바이너리를 바로 쓰기** — 스킬 없이 스크립트나 다른 AI 에이전트에서 (`rhwp_locate.py` 가 경로를 알려 줌)
+
+```bash
+RHWP=$(python3 skills/hwp-master/scripts/rhwp_locate.py --json | python3 -c "import sys,json;print(json.load(sys.stdin)['path'])")
+$RHWP export-text 문서.hwp --json                 # 쪽별 평문
+$RHWP export-markdown 문서.hwpx -o out/           # 쪽별 Markdown
+$RHWP export-tables 문서.hwp --json               # 표 격자 (병합 보존)
+$RHWP extract-data 문서.hwp --kind amount --json  # 금액과 위치
+$RHWP fields 신청서.hwpx --json                   # 누름틀 이름·값
+$RHWP export-pdf 문서.hwp -o 문서.pdf             # PDF 미리보기
+$RHWP export-hwpx 옛문서.hwp 새문서.hwpx --verify  # HWP → HWPX 변환 (차이 검출)
+$RHWP armor 문서.hwp --json                       # LLM 에 넣기 전 프롬프트 주입 신호 검사
+```
+
+추출을 한 번에 하려면 `python3 skills/hwp-master/scripts/extract.py <프로젝트> sources/<문서>` 가 위 명령을 묶어
+`exports/extract/<문서>/` 에 `summary.json`·`text.md`·`tables/*.csv`·`data.csv`·`fields.csv` 로 남깁니다.
 
 ## 문서
 
