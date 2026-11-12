@@ -1,0 +1,150 @@
+{
+ "source": "landscape-001.hwp",
+ "sha256": "892daaf0b36815730629b0ae11568b74b90922e4c3268c6791c917867e946798",
+ "genre": "다단 머리 수치 표",
+ "notes": "증감률 행은 괄호 안 값만 있다((147.8)·(△51.2)). △ 없는 값도 증감률이다.",
+ "gold": {
+  "kinds": [
+   "change",
+   "amount",
+   "period",
+   "date"
+  ],
+  "values": [
+   {
+    "kind": "change",
+    "normalized": 147.8
+   },
+   {
+    "kind": "change",
+    "normalized": 16.6
+   },
+   {
+    "kind": "change",
+    "normalized": 5.2
+   },
+   {
+    "kind": "change",
+    "normalized": -51.2
+   },
+   {
+    "kind": "change",
+    "normalized": -37.4
+   },
+   {
+    "kind": "change",
+    "normalized": -19.5
+   },
+   {
+    "kind": "change",
+    "normalized": -18.5
+   },
+   {
+    "kind": "change",
+    "normalized": 4.5
+   },
+   {
+    "kind": "change",
+    "normalized": -14.6
+   }
+  ],
+  "records": [
+   {
+    "label": "총투자",
+    "key": "2022년|1분기",
+    "value": 282.3
+   },
+   {
+    "label": "총투자",
+    "key": "2022년|2분기",
+    "value": 198.5
+   },
+   {
+    "label": "총투자",
+    "key": "2022년|3분기",
+    "value": 184.8
+   },
+   {
+    "label": "총투자",
+    "key": "2022년|4분기",
+    "value": 150.9
+   },
+   {
+    "label": "총투자",
+    "key": "2023년|1분기",
+    "value": 176.8
+   },
+   {
+    "label": "총투자",
+    "key": "2023년|2분기",
+    "value": 159.8
+   },
+   {
+    "label": "총투자",
+    "key": "2023년|3분기",
+    "value": 150.5
+   },
+   {
+    "label": "총투자",
+    "key": "2023년|4분기",
+    "value": 157.7
+   },
+   {
+    "label": "총투자",
+    "key": "2024년|1분기",
+    "value": 150.9
+   },
+   {
+    "label": "증감률",
+    "key": "2022년|1분기",
+    "value": 147.8
+   },
+   {
+    "label": "증감률",
+    "key": "2022년|2분기",
+    "value": 16.6
+   },
+   {
+    "label": "증감률",
+    "key": "2022년|3분기",
+    "value": 5.2
+   },
+   {
+    "label": "증감률",
+    "key": "2022년|4분기",
+    "value": -51.2
+   },
+   {
+    "label": "증감률",
+    "key": "2023년|1분기",
+    "value": -37.4
+   },
+   {
+    "label": "증감률",
+    "key": "2023년|2분기",
+    "value": -19.5
+   },
+   {
+    "label": "증감률",
+    "key": "2023년|3분기",
+    "value": -18.5
+   },
+   {
+    "label": "증감률",
+    "key": "2023년|4분기",
+    "value": 4.5
+   },
+   {
+    "label": "증감률",
+    "key": "2024년|1분기",
+    "value": -14.6
+   }
+  ],
+  "roles": [
+   {
+    "label": "T01",
+    "role": "data"
+   }
+  ]
+ }
+}

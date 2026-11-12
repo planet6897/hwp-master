@@ -90,6 +90,15 @@ def split_wide(spec: dict) -> List[dict]:
     return parts
 
 
+LONG_FOOTNOTE_LINES = 20  # 이보다 긴 각주(어림 줄 수)는 본문 주석 문단으로
+FOOTNOTE_LINE_CHARS = 45
+
+
+def footnote_lines(text: str) -> int:
+    """각주 글의 어림 줄 수: 줄 바꿈마다 한 줄 + 긴 줄은 45자마다 한 줄 더."""
+    return sum(1 + len(line) // FOOTNOTE_LINE_CHARS for line in text.split("\n"))
+
+
 IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")  # HDS image 가 받는 형식
 HU_PER_MM = 7200 / 25.4
 MAX_IMAGE_MM = 150
@@ -118,6 +127,13 @@ def to_hds(document: dict, title: str, media: Optional[Dict[str, Path]] = None) 
 
     def footnote(text: str):
         nonlocal last_target
+        # 쪽 하나를 넘는 긴 각주(시험지 풀이처럼 수십 줄)는 rhwp 가 다음 쪽 본문 위에 겹쳐 그린다(R103,
+        # edwardkim/rhwp#9014). 개선본에서는 본문 주석 문단으로 바로 뒤에 둔다 — 글은 그대로 남는다.
+        if footnote_lines(text) > LONG_FOOTNOTE_LINES:
+            flush()
+            blocks.append({"type": "paragraph", "text": f"※ {text}"})
+            notes["longFootnotesInBody"] = notes.get("longFootnotesInBody", 0) + 1
+            return
         if last_target is not None:
             last_target.setdefault("footnotes", []).append({"text": text})
             notes["footnotes"] += 1
@@ -228,7 +244,8 @@ def to_hds(document: dict, title: str, media: Optional[Dict[str, Path]] = None) 
             notes["listItems"] += 1
             last_target = para
             continue
-        if o:
+        # 자동 번호 문단(kind auto)은 글 문단으로 둔다 — 단계 목록은 글머리 기호만 받아 번호가 사라진다
+        if o and o["kind"] != "auto":
             # 숫자형 항목(1) 가) (1) …)은 단계 목록으로. HDS 목록은 1단계에서 시작하고 단계를 건너뛸 수 없다
             # → 목록 첫 항목을 1단계로 보고 상대 단계로, 한 칸씩만 깊게
             if current_list is None:

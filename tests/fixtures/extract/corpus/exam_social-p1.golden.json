@@ -1,0 +1,45 @@
+{
+ "source": "exam_social-p1.hwp",
+ "sha256": "1ece9410146beac57f30ca0089c616bbe1a9c712f54fd27fc0fa64868432d1e0",
+ "genre": "시험지",
+ "notes": "문항 번호 '1.밑줄…' 은 번호 뒤 빈칸이 없다. 선택지 ①~⑤ 는 표 칸에 있어 개조식이 아니다.",
+ "gold": {
+  "kinds": [
+   "date",
+   "amount",
+   "period",
+   "change",
+   "contact",
+   "reference"
+  ],
+  "values": [],
+  "kv": [],
+  "outline": [
+   {
+    "text": "밑줄 친 ㉠∼㉤과 같은 현상의",
+    "level": 1,
+    "type": "item"
+   },
+   {
+    "text": "다음 글에서 사회·문화 현상을",
+    "level": 1,
+    "type": "item"
+   },
+   {
+    "text": "A, B의 일반적인 특징에 대한",
+    "level": 1,
+    "type": "item"
+   },
+   {
+    "text": "다음 자료에 대한 옳은 설명만을",
+    "level": 1,
+    "type": "item"
+   },
+   {
+    "text": "다음 자료에 대한 설명으로 옳은",
+    "level": 1,
+    "type": "item"
+   }
+  ]
+ }
+}

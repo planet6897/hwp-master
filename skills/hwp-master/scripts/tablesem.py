@@ -23,6 +23,9 @@ UNIT_CAPTION = re.compile(r"[(\[<〈]?\s*단\s*위\s*[:：]\s*([^)\]>〉]*)[)\]>
 _NUM = r"\d[\d,]*(?:\.\d+)?"  # 숫자가 하나는 있어야 한다(쉼표만 있는 칸 "," 은 값이 아니다)
 VALUE = re.compile(rf"^(?P<s1>[△▽-]?)\s*(?P<n1>{_NUM})\s*(?P<p1>%)?\s*"
                    rf"(?:\(\s*(?P<s2>[△▽-]?)\s*(?P<n2>{_NUM})\s*(?P<p2>%)?\s*\))?$")
+# 괄호만 든 칸 "(147.8)"·"(△51.2)" — 주 값 아래 행에 증감률을 괄호로 적는 통계표 꼴(#51).
+# 회계표는 "(1,234)" 를 음수로 쓰므로, 표 안 괄호 칸 중 하나라도 괄호 안에 △·▽·- 가 있을 때만 괄호 안 값으로 읽는다.
+PAREN_ONLY = re.compile(rf"^\(\s*(?P<s>[△▽-]?)\s*(?P<n>{_NUM})\s*(?P<p>%)?\s*\)$")
 PERCENT_WORDS = ("증감", "률", "율", "비중", "대비", "%", "증가율", "감소율")
 UNIT_WORDS = re.compile(r"(원|달러|불|유로|엔|위안|톤|건|명|개|대|회|kg|㎏|㎡|m²|km|t|%|배|천|만|억|조|백만|시간|일|세대|가구|호)")
 
@@ -63,6 +66,13 @@ def parse_value(text: str, find_amounts: Optional[Callable[[str], List[dict]]] =
         if m.group("n2"):
             out["secondary"] = num(m.group("s2"), m.group("n2"))
         return out
+    m = PAREN_ONLY.match(raw)
+    if m:
+        digits = m.group("n").replace(",", "")
+        v = float(digits)
+        v = -v if m.group("s") else v
+        return {"raw": raw, "type": "percent" if m.group("p") else "number",
+                "value": int(v) if v == int(v) and "." not in digits else v, "paren": True, "parenSign": bool(m.group("s"))}
     if find_amounts:
         amounts = find_amounts(raw)
         if len(amounts) == 1 and len(amounts[0]["raw"]) >= len(raw) - 2:
@@ -123,6 +133,11 @@ def analyze(table: dict, caption: str = "", caption_id: Optional[str] = None,
             header_rows = 0
     values = {(r, c): parse_value(grid[(r, c)]["text"], find_amounts) if (r, c) in grid else None
               for r in range(header_rows, rows) for c in range(cols)}
+    parens = [v for v in values.values() if v and v.get("paren")]
+    if parens and not any(v["parenSign"] for v in parens):
+        for key, v in values.items():
+            if v and v.get("paren"):
+                values[key] = {"raw": v["raw"], "type": "text", "value": v["raw"]}
 
     stub_cols = max(1, corner["colSpan"]) if corner else 1
     stub_cols = min(stub_cols, max(cols - 1, 0))
@@ -166,6 +181,8 @@ def analyze(table: dict, caption: str = "", caption_id: Optional[str] = None,
             cell = grid.get((r, column["col"]))
             if v is None or cell is None or (cell["row"] != r and cell["col"] == column["col"]):
                 continue  # 위 행에서 내려온 병합 칸은 한 번만
+            if v["type"] == "empty":
+                continue  # 빈 칸·"-" 은 값이 없다(레코드에 None 을 남기지 않는다)
             record["values"][column["key"]] = v["value"]
             if v.get("currency"):
                 unit = v["currency"]

@@ -111,7 +111,11 @@ CSV 는 엑셀에서 바로 열리게 UTF-8 BOM 으로 쓴다. 병합된 표 칸
 `tools/eval_extract.py` 는 정답(gold) 대비 정밀도·재현율을 잽니다. 범주는 values·outline·records·kv·roles 입니다.
 - 픽스처 정답: `tests/fixtures/extract/*.json`
 - 기준: `baseline.json`. 이보다 떨어지면 테스트가 실패합니다.
-- 실제 문서: `EXTRACT_CORPUS` 폴더의 `<문서>.golden.json` 으로 따로 잽니다.
+- 실제 문서: 정답은 `tests/fixtures/extract/corpus/<문서>.golden.json` 에 있습니다(보도자료·기사·통계표·양식·시험지·HWP 3.0 등 10건).
+  - 원문은 라이선스 때문에 저장소에 넣지 않습니다. `EXTRACT_CORPUS=<문서 폴더>` 로 주면 하위 폴더까지 파일 이름으로 찾습니다.
+  - 정답에 적힌 SHA-256 과 다른 판본이면 평가하지 않고 오류로 봅니다.
+  - 기준은 `corpus_baseline.json` 이고, `EXTRACT_CORPUS` 가 있을 때만 비교합니다.
+  - 정답의 `ignore` 는 사람이 봐도 갈리는 항목입니다("7-10만 원" 같은 범위). 맞음·틀림 어느 쪽에도 세지 않습니다.
 
 ## 3. 답하기
 

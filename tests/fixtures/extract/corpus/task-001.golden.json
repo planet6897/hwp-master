@@ -1,0 +1,56 @@
+{
+ "source": "task-001.hwp",
+ "sha256": "fb88119a481d7b71b975172d88671060720dce92cb6d78d0cc1e887a5c452a4c",
+ "genre": "용역 표지·담당자",
+ "notes": "T01(제목 상자)·T02(기관명 상자)는 한 열 틀이다. '2021. 05.' 는 달까지만이라 date 를 세지 않는다.",
+ "gold": {
+  "kinds": [
+   "contact",
+   "amount",
+   "period",
+   "change",
+   "reference"
+  ],
+  "values": [
+   {
+    "kind": "contact",
+    "normalized": {
+     "type": "phone",
+     "value": "010-1234-4567"
+    }
+   },
+   {
+    "kind": "contact",
+    "normalized": {
+     "type": "phone",
+     "value": "010-0000-1121"
+    }
+   }
+  ],
+  "outline": [],
+  "kv": [
+   {
+    "key": "TEL",
+    "value": "010-1234-4567"
+   },
+   {
+    "key": "TEL",
+    "value": "010-0000-1121"
+   }
+  ],
+  "roles": [
+   {
+    "label": "T01",
+    "role": "layout"
+   },
+   {
+    "label": "T02",
+    "role": "layout"
+   },
+   {
+    "label": "T03",
+    "role": "data"
+   }
+  ]
+ }
+}

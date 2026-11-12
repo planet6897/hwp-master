@@ -1,0 +1,63 @@
+{
+ "source": "hwp3-table-caption.hwp",
+ "sha256": "e8ac29656b1ca41f96b1dd9f6ef88be294c61165e2daf40f75873814291795e1",
+ "genre": "HWP 3.0 서식",
+ "notes": "'동법시행령' 은 앞의 조세특례제한법 시행령이다. '[별지 제96호의2서식]' 은 서식 번호라 조문이 아니다.",
+ "gold": {
+  "kinds": [
+   "reference",
+   "date",
+   "amount",
+   "period",
+   "contact"
+  ],
+  "values": [
+   {
+    "kind": "reference",
+    "normalized": {
+     "law": "조세특례제한법",
+     "article": "제106조의3",
+     "paragraph": "제11항",
+     "item": null
+    }
+   },
+   {
+    "kind": "reference",
+    "normalized": {
+     "law": "조세특례제한법 시행령",
+     "article": "제106조의8",
+     "paragraph": "제2항",
+     "item": null
+    }
+   },
+   {
+    "kind": "reference",
+    "normalized": {
+     "law": "조세특례제한법",
+     "article": "제106조의3",
+     "paragraph": "제11항",
+     "item": null
+    }
+   },
+   {
+    "kind": "reference",
+    "normalized": {
+     "law": "조세특례제한법 시행령",
+     "article": "제106조의8",
+     "paragraph": "제2항",
+     "item": null
+    }
+   },
+   {
+    "kind": "reference",
+    "normalized": {
+     "law": "조세특례제한법 시행령",
+     "article": "제106조의8",
+     "paragraph": "제3항",
+     "item": null
+    }
+   }
+  ],
+  "kv": []
+ }
+}

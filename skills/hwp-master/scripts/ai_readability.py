@@ -100,7 +100,8 @@ def diagnose(document: dict) -> dict:
     sections: Dict[str, List[dict]] = {}
     for block in blocks:
         o = block.get("outline")
-        if o and o["kind"] != "note" and o["level"] >= 2 and o.get("parentId"):
+        # 자동 번호·글머리표(kind auto)는 이미 목록 구조라 손으로 친 개조식 단편이 아니다(시험지 선택지 등)
+        if o and o["kind"] not in ("note", "auto") and o["level"] >= 2 and o.get("parentId"):
             root = o["parentId"]
             while True:
                 parent = next((b for b in blocks if b["id"] == root), None)

@@ -1,0 +1,190 @@
+{
+ "source": "143E433F503322BD33.hwp",
+ "sha256": "1bcdc7a2de38680cdb715556f40c8477f8242131d28de949b09e945022bf35fa",
+ "genre": "신문 기사(글상자·다단)",
+ "notes": "'7-10만 원'(두 번)은 범위라 금액 하나로 정할 수 없어 ignore. 소제목 '1.중산층…'은 번호 뒤 빈칸이 없다. '연금 재정 전망' 뒤의 1) 은 각주 표시라 글이 아니다.",
+ "gold": {
+  "kinds": [
+   "date",
+   "amount",
+   "period",
+   "change",
+   "contact",
+   "reference"
+  ],
+  "values": [
+   {
+    "kind": "amount",
+    "normalized": 380000
+   },
+   {
+    "kind": "amount",
+    "normalized": 360000
+   },
+   {
+    "kind": "amount",
+    "normalized": 100000
+   },
+   {
+    "kind": "amount",
+    "normalized": 460000
+   },
+   {
+    "kind": "amount",
+    "normalized": 80000
+   },
+   {
+    "kind": "amount",
+    "normalized": 2000000
+   },
+   {
+    "kind": "amount",
+    "normalized": 60000
+   },
+   {
+    "kind": "amount",
+    "normalized": 620000
+   },
+   {
+    "kind": "amount",
+    "normalized": 1060000
+   },
+   {
+    "kind": "amount",
+    "normalized": 490000
+   },
+   {
+    "kind": "amount",
+    "normalized": 410000
+   },
+   {
+    "kind": "contact",
+    "normalized": {
+     "type": "email",
+     "value": "jcomm@sanggongnews.com"
+    }
+   }
+  ],
+  "outline": [
+   {
+    "text": "중산층 이상 연금 줄어",
+    "level": 1,
+    "type": "item"
+   },
+   {
+    "text": "연금 재정 전망",
+    "level": 2,
+    "type": "note"
+   },
+   {
+    "text": "재정 고갈(Running Low) 해결 안 돼",
+    "level": 1,
+    "type": "item"
+   }
+  ],
+  "records": [
+   {
+    "label": "2010년",
+    "key": "적립금",
+    "value": 328
+   },
+   {
+    "label": "2010년",
+    "key": "수입",
+    "value": 50
+   },
+   {
+    "label": "2010년",
+    "key": "지출",
+    "value": 11
+   },
+   {
+    "label": "2020년",
+    "key": "적립금",
+    "value": 812
+   },
+   {
+    "label": "2020년",
+    "key": "수입",
+    "value": 70
+   },
+   {
+    "label": "2020년",
+    "key": "지출",
+    "value": 15
+   },
+   {
+    "label": "2030년",
+    "key": "적립금",
+    "value": 1702
+   },
+   {
+    "label": "2030년",
+    "key": "수입",
+    "value": 189
+   },
+   {
+    "label": "2030년",
+    "key": "지출",
+    "value": 201
+   },
+   {
+    "label": "2040년",
+    "key": "적립금",
+    "value": 1477
+   },
+   {
+    "label": "2040년",
+    "key": "수입",
+    "value": 191
+   },
+   {
+    "label": "2040년",
+    "key": "지출",
+    "value": 289
+   },
+   {
+    "label": "합계",
+    "key": "적립금",
+    "value": 4319
+   },
+   {
+    "label": "합계",
+    "key": "수입",
+    "value": 500
+   },
+   {
+    "label": "합계",
+    "key": "지출",
+    "value": 516
+   }
+  ],
+  "kv": [],
+  "roles": [
+   {
+    "label": "T01",
+    "role": "data"
+   }
+  ],
+  "ignore": {
+   "values": [
+    {
+     "kind": "amount",
+     "normalized": 70000
+    },
+    {
+     "kind": "amount",
+     "normalized": 70000
+    },
+    {
+     "kind": "amount",
+     "normalized": 100000
+    },
+    {
+     "kind": "amount",
+     "normalized": 100000
+    }
+   ]
+  }
+ }
+}

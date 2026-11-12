@@ -140,17 +140,20 @@ def table_grid(table: dict) -> List[List[str]]:
 # (위치 포함) 아래 규칙으로 보탠다.
 CURRENCY_QUERIES = ("달러", "원", "엔", "유로", "위안", "$", "USD", "EUR", "JPY", "CNY", "KRW", "€", "¥", "₩", "￦")
 _NUM = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"
-_KSCALE = {"조": 10 ** 12, "억": 10 ** 8, "천만": 10 ** 7, "백만": 10 ** 6, "십만": 10 ** 5, "만": 10 ** 4, "천": 10 ** 3}
+_KSCALE = {"조": 10 ** 12, "천억": 10 ** 11, "백억": 10 ** 10, "십억": 10 ** 9, "억": 10 ** 8, "천만": 10 ** 7,
+           "백만": 10 ** 6, "십만": 10 ** 5, "만": 10 ** 4, "천": 10 ** 3}
+_SCALES = "조|천억|백억|십억|억|천만|백만|십만|만|천"  # 긴 것 먼저: 통계표의 "34,703십억원"
 _ESCALE = {"thousand": 10 ** 3, "million": 10 ** 6, "billion": 10 ** 9, "trillion": 10 ** 12}
 # "580억"·"3억 5천만"·"1억 2000" — 단위(조·억·만…) 뒤에서만 숫자를 이어 붙인다("¥100 25 EUR" 은 두 금액).
-_KAMT = (rf"(?:{_NUM})(?:\s?(?:조|억|천만|백만|십만|만|천)"
-         rf"(?:\s?(?:{_NUM})\s?(?:조|억|천만|백만|십만|만|천))*(?:\s?(?:{_NUM})(?![\d,.]))?)?")
+_KAMT = (rf"(?:{_NUM})(?:\s?(?:{_SCALES})"
+         rf"(?:\s?(?:{_NUM})\s?(?:{_SCALES}))*(?:\s?(?:{_NUM})(?![\d,.]))?)?")
 _SUFFIX_CUR = {"달러": "USD", "원": "KRW", "엔": "JPY", "유로": "EUR", "위안": "CNY",
                "USD": "USD", "KRW": "KRW", "JPY": "JPY", "EUR": "EUR", "CNY": "CNY"}
 _PREFIX_CUR = {"US$": "USD", "$": "USD", "USD": "USD", "€": "EUR", "EUR": "EUR", "¥": "JPY", "JPY": "JPY",
                "₩": "KRW", "￦": "KRW", "KRW": "KRW", "CNY": "CNY"}
 # 한글 통화 단어 뒤에는 조사·접미어만 온다("원칙"·"엔진"·"위원"은 금액이 아니다).
-_AFTER_KO = r"(?![가-힣])|(?=[은는이가을를의에과와로으도만씩화대정짜어권])"
+# "200만 원인 가입자"의 "인"(…이다)도 조사다 — 숫자 바로 뒤라 "원인(까닭)"과 헷갈리지 않는다.
+_AFTER_KO = r"(?![가-힣])|(?=[은는이가을를의에과와로으도만씩화대정짜어권인])"
 AMOUNT_RE = re.compile(
     rf"(?<![\w.,])(?P<a>{_KAMT})\s?(?P<sc>(?:{'|'.join(map(re.escape, sorted(_SUFFIX_CUR, key=len, reverse=True)))}))"
     rf"(?:(?<=[가-힣])(?:{_AFTER_KO})|(?<![가-힣])(?![A-Za-z]))"
@@ -161,7 +164,7 @@ AMOUNT_RE = re.compile(
 def amount_value(text: str, english_scale: str = "") -> Optional[float]:
     """"3억 5천만" → 350000000, "1.5" + million → 1500000. 숫자가 없으면 None."""
     total, rest = 0.0, text.replace(" ", "")
-    for num, scale in re.findall(rf"({_NUM})(조|억|천만|백만|십만|만|천)?", rest):
+    for num, scale in re.findall(rf"({_NUM})({_SCALES})?", rest):
         value = float(num.replace(",", ""))
         total += value * _KSCALE.get(scale, 1)
     if english_scale:
@@ -180,8 +183,14 @@ def find_amounts(text: str) -> List[dict]:
         if not re.search(r"\d", number):
             continue
         raw = m.group(0).rstrip()
-        found.append({"kind": "amount", "raw": raw, "normalized": amount_value(number, english),
-                      "currency": currency, "charOffset": m.start(), "length": len(raw)})
+        value = amount_value(number, english)
+        start = m.start()
+        # 통계표·재정 자료의 "△34,703십억원" 은 음수(△·▽ 는 감소·마이너스 표시)
+        sign = re.search(r"[△▽]\s?$", text[max(0, start - 2):start])
+        if sign and value is not None:
+            value, raw, start = -value, text[start - len(sign.group(0)):start] + raw, start - len(sign.group(0))
+        found.append({"kind": "amount", "raw": raw, "normalized": value,
+                      "currency": currency, "charOffset": start, "length": len(raw)})
     return found
 
 
