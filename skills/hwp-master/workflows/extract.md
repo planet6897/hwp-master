@@ -36,7 +36,7 @@ python3 scripts/extract.py <프로젝트> sources/<문서> --only tables,data   
 | `text.md` | 쪽마다 `<!-- page N -->` 를 붙인 본문 Markdown | 요약·질문 답변 |
 | `pages.json` | 쪽별 평문 | 쪽 번호로 인용 |
 | `structure.json` | 개요/조문(장·절·조·항·호) 계층 트리 | 목차·조문 찾기 |
-| `tables.json`, `tables/T01.csv`… | 표 격자(병합·위치 보존), 표마다 CSV | 표 데이터 |
+| `tables.json`, `tables/T01.csv`… | 표 격자(병합·위치 보존), 표마다 CSV. 표 안의 표는 `T03-1` 처럼 바깥 표 뒤에 붙고(`parentCellId`), 바깥 칸에는 `[표 T03-1]` 자리 표시가 들어간다 | 표 데이터 |
 | `data.json`, `data.csv` | 날짜·금액·수량, 정규화 값·단위·통화(USD·KRW·EUR·JPY·CNY)·쪽·구역·문단·표 셀·문자 위치. rhwp 가 놓친 금액(`580억 달러`·`$1.5 million`·`3억 5천만 원`·표 셀 안)은 `detector: hwp-master` 로 보탠다 | 금액·기한 질문 |
 | `fields.json`, `fields.csv` | 누름틀 이름·현재값·안내문·위치 | 서식에 채워진 값 |
 | `headers_footers.json` | 머리말/꼬리말 | 문서 번호·기관명 |
@@ -44,6 +44,12 @@ python3 scripts/extract.py <프로젝트> sources/<문서> --only tables,data   
 
 `tables.json` 의 표, `data.json` 의 값, `fields.json` 의 누름틀에는 `blockId` 가 붙는다. 이 ID 로 `document.json` 의 블록을 찾으면
 그 값이 어느 장(`headingPath`)의 어느 문단·표·셀에 있는지 알 수 있다. 표 셀 안 값은 셀 ID 로 이어진다.
+
+**표 안의 표**는 `document.json` 칸의 `tables` 로 재귀해 들어간다(ID `s0.p5.t0.r1c2.t0.r0c0`). 바깥 칸 `text` 에는 칸 글 뒤에
+안쪽 표가 행마다 ` | ` 로 펼쳐진다. rhwp 는 중첩 표를 `export-tables` 에서 빼고(edwardkim/rhwp#8988), `search` 위치를
+최외곽 칸으로 주며 `extract-data` 는 중첩 칸 값을 놓친다(edwardkim/rhwp#8989). 그래서 hwp-master 가 HWPX 를 직접 읽어 표를 채우고,
+금액은 글로 가장 안쪽 칸을 찾아 잇는다. 중첩 칸 안의 날짜·수량은 rhwp 가 고쳐질 때까지 `data.json` 에 없을 수 있으니,
+그런 값은 `document.json` 칸 글이나 `tables/T03-1.csv` 에서 찾는다.
 
 CSV 는 엑셀에서 바로 열리게 UTF-8 BOM 으로 쓴다. 병합된 표 칸은 왼쪽 위 칸에만 글을 두고 나머지는 비운다.
 

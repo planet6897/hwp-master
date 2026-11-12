@@ -137,6 +137,80 @@ def _section_names(names: List[str]) -> List[str]:
     return sorted(found, key=lambda n: int(re.search(r"(\d+)", n.rsplit("/", 1)[1]).group(1)))
 
 
+def _direct_tables(p) -> List:
+    """칸 문단에 직접 든 표(그 안의 더 깊은 표는 빼고)."""
+    return [c for c in _controls(p) if _tag(c) == "tbl"]
+
+
+def table_lines(table: dict) -> List[str]:
+    """표를 행마다 ' | ' 로 이은 줄들 (칸 글 안에 안쪽 표를 펼쳐 넣을 때)."""
+    rows: Dict[int, List[Tuple[int, str]]] = {}
+    for cell in table["cells"]:
+        rows.setdefault(cell["row"], []).append((cell["col"], cell["text"].replace("\n", " ")))
+    return [" | ".join(text for _, text in sorted(cols)) for _, cols in sorted(rows.items())]
+
+
+def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0) -> dict:
+    """표 하나. 칸 안의 표(표 안의 표)는 칸의 tables 로 재귀해 넣고 ID 를 이어 붙인다(…r1c2.t0.r0c0).
+
+    rhwp export-tables 는 중첩 표를 내보내지 않는다(edwardkim/rhwp#8988). 여기서는 HWPX 를 직접 읽어 잃지 않는다.
+    """
+    cells = []
+    for tr in (c for c in tbl if _tag(c) == "tr"):
+        for tc in (c for c in tr if _tag(c) == "tc"):
+            addr, span = _child(tc, "cellAddr"), _child(tc, "cellSpan")
+            row = _int(addr.get("rowAddr")) if addr is not None else 0
+            col = _int(addr.get("colAddr")) if addr is not None else 0
+            cid = f"{tid}.r{row}c{col}"
+            paragraphs, nested, lines = [], [], []
+            for k, sp in enumerate(_sub_paragraphs(tc)):
+                own = _text_of(sp)
+                inner = []
+                for tbl_el in _direct_tables(sp):
+                    child = parse_table(tbl_el, f"{cid}.t{len(nested)}", counts, depth + 1)
+                    child["cellParagraph"] = k
+                    nested.append(child)
+                    inner.append(child["id"])
+                paragraphs.append({"text": own, "tables": inner})
+                if own.strip():
+                    lines.append(own)
+                for child_id in inner:
+                    lines.extend(table_lines(next(t for t in nested if t["id"] == child_id)))
+            cell = {
+                "id": cid, "index": len(cells), "row": row, "col": col,
+                "rowSpan": _int(span.get("rowSpan"), 1) if span is not None else 1,
+                "colSpan": _int(span.get("colSpan"), 1) if span is not None else 1,
+                "header": tc.get("header") == "1",
+                "text": "\n".join(lines).strip(),
+                "hasNestedTable": bool(nested),
+            }
+            if nested:
+                cell["paragraphs"] = paragraphs
+                cell["tables"] = nested
+            cells.append(cell)
+    counts["cell"] += len(cells)
+    if depth:
+        counts["nestedTable"] += 1
+    return {"id": tid, "rows": _int(tbl.get("rowCnt")), "cols": _int(tbl.get("colCnt")), "depth": depth,
+            "cells": cells}
+
+
+def iter_cells(table: dict) -> Iterator[dict]:
+    """표의 모든 칸(안쪽 표의 칸까지)."""
+    for cell in table.get("cells", []):
+        yield cell
+        for child in cell.get("tables", []):
+            yield from iter_cells(child)
+
+
+def iter_tables(table: dict) -> Iterator[dict]:
+    """표 자신과 그 안의 모든 중첩 표."""
+    yield table
+    for cell in table.get("cells", []):
+        for child in cell.get("tables", []):
+            yield from iter_tables(child)
+
+
 def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = None) -> dict:
     pages = pages or {}
     with zipfile.ZipFile(hwpx) as z:
@@ -146,8 +220,8 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
 
     blocks: List[dict] = []
     heading_stack: List[Tuple[int, str, str]] = []  # (level, id, text)
-    counts = {"heading": 0, "paragraph": 0, "list": 0, "table": 0, "image": 0, "note": 0, "headerFooter": 0,
-              "cell": 0}
+    counts = {"heading": 0, "paragraph": 0, "list": 0, "table": 0, "nestedTable": 0, "image": 0, "note": 0,
+              "headerFooter": 0, "cell": 0}
 
     def path_for() -> dict:
         return {"headingPath": [t for _, _, t in heading_stack],
@@ -183,27 +257,10 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
             for ctrl in _controls(p):
                 name = _tag(ctrl)
                 if name == "tbl":
-                    tid = f"{pid}.t{ordinal['tbl']}"
+                    table = parse_table(ctrl, f"{pid}.t{ordinal['tbl']}", counts)
                     ordinal["tbl"] += 1
-                    cells = []
-                    for tr in (c for c in ctrl if _tag(c) == "tr"):
-                        for tc in (c for c in tr if _tag(c) == "tc"):
-                            addr, span = _child(tc, "cellAddr"), _child(tc, "cellSpan")
-                            row = _int(addr.get("rowAddr")) if addr is not None else 0
-                            col = _int(addr.get("colAddr")) if addr is not None else 0
-                            sub = _sub_paragraphs(tc)
-                            cells.append({
-                                "id": f"{tid}.r{row}c{col}", "index": len(cells), "row": row, "col": col,
-                                "rowSpan": _int(span.get("rowSpan"), 1) if span is not None else 1,
-                                "colSpan": _int(span.get("colSpan"), 1) if span is not None else 1,
-                                "header": tc.get("header") == "1",
-                                "text": "\n".join(_text_of(sp) for sp in sub).strip(),
-                                "hasNestedTable": any(_tag(e) == "tbl" for sp in sub for e in sp.iter()),
-                            })
                     counts["table"] += 1
-                    counts["cell"] += len(cells)
-                    blocks.append({"id": tid, "type": "table", **base, "rows": _int(ctrl.get("rowCnt")),
-                                   "cols": _int(ctrl.get("colCnt")), "cells": cells, **path_for()})
+                    blocks.append({"id": table.pop("id"), "type": "table", **base, **table, **path_for()})
                 elif name == "pic":
                     blocks.append({"id": f"{pid}.g{ordinal['pic']}", "type": "image", **base, **path_for()})
                     ordinal["pic"] += 1
@@ -286,10 +343,52 @@ class BlockIndex:
         idx = _int(cell_index, -1)
         return table["cells"][idx] if 0 <= idx < len(table["cells"]) else None
 
-    def locate(self, section, paragraph, cell: Optional[dict] = None) -> Optional[str]:
-        """본문 문단이면 문단 ID, 셀 주소({control, cell})가 있으면 셀 ID."""
+    @staticmethod
+    def _innermost(cell: dict, cell_paragraph, text: str) -> dict:
+        """바깥 칸 주소만 있을 때(rhwp search 는 중첩 칸도 최외곽 칸으로 준다, edwardkim/rhwp#8989)
+        그 칸 문단에 든 안쪽 표 가운데 글이 맞는 칸이 하나뿐이면 그 칸으로 내려간다."""
+        norm = re.sub(r"\s+", "", text or "")
+        if not norm or not cell.get("tables"):
+            return cell
+        own = cell.get("paragraphs", [])
+        k = _int(cell_paragraph, -1)
+        if 0 <= k < len(own) and norm in re.sub(r"\s+", "", own[k]["text"]):
+            return cell  # 바깥 칸 자기 글이다
+        candidates = [t for t in cell["tables"] if k < 0 or t.get("cellParagraph") == k] or cell["tables"]
+        hits = [c for t in candidates for c in iter_cells(t)
+                if not c.get("tables") and norm in re.sub(r"\s+", "", c["text"])]
+        if len(hits) == 1:
+            return hits[0]
+        deeper = [c for t in candidates for c in iter_cells(t) if c.get("tables")
+                  and norm in re.sub(r"\s+", "", c["text"])]
+        return BlockIndex._innermost(deeper[0], -1, text) if len(deeper) == 1 and not hits else cell
+
+    def _follow(self, cell: dict, step: dict) -> Optional[dict]:
+        """fields location.nested 처럼 경로가 있으면 한 단계 안쪽 칸으로."""
+        tables = [t for t in cell.get("tables", []) if t.get("cellParagraph") == _int(step.get("paragraph"))]
+        tables = tables or cell.get("tables", [])
+        if len(tables) != 1:
+            return None
+        idx = _int(step.get("cell"), -1)
+        return tables[0]["cells"][idx] if 0 <= idx < len(tables[0]["cells"]) else None
+
+    def locate(self, section, paragraph, cell: Optional[dict] = None, text: str = "",
+               path: Optional[List[dict]] = None) -> Optional[str]:
+        """본문 문단이면 문단 ID, 셀 주소({control, cell, paragraph})가 있으면 셀 ID.
+
+        path(바깥 → 안쪽 칸 주소 목록)를 주면 그 경로를 따라가고, 없고 text 가 있으면 글로 가장 안쪽 칸을 찾는다.
+        """
+        if path:
+            found = self.cell(section, paragraph, path[0].get("control"), path[0].get("cell"))
+            for step in path[1:]:
+                if found is None:
+                    break
+                found = self._follow(found, step)
+            return found["id"] if found else None
         if cell:
             found = self.cell(section, paragraph, cell.get("control"), cell.get("cell"))
+            if found and text:
+                found = self._innermost(found, cell.get("paragraph"), text)
             return found["id"] if found else None
         key = (_int(section), _int(paragraph))
         return f"s{key[0]}.p{key[1]}" if key in self.paragraphs else None
