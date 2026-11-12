@@ -178,6 +178,63 @@ class ExtractTest(unittest.TestCase):
         self.assertTrue((out / "fields.csv").is_file())
         self.assertFalse((out / "tables.json").exists(), "--only 로 고른 항목만 꺼낸다")
 
+    def test_document_model_links_values_tables_and_fields(self):
+        proc, report = self.run_extract("sources/doc.hwpx")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse([f for f in report["findings"] if f["code"] == "W305"], "모든 항목이 블록에 이어진다")
+        out = self.project / "exports/extract/doc"
+        doc = json.loads((out / "document.json").read_text(encoding="utf-8"))
+        self.assertTrue(doc["untrustedContent"])
+        blocks = {b["id"]: b for b in doc["blocks"]}
+        cells = {c["id"]: c for b in doc["blocks"] if b["type"] == "table" for c in b["cells"]}
+
+        headings = [(b["level"], b["text"]) for b in doc["blocks"] if b["type"] == "heading"]
+        self.assertEqual(headings, [(1, "사업 개요"), (1, "추진 일정")])
+        body = next(b for b in doc["blocks"] if "총사업비" in b.get("text", ""))
+        self.assertEqual(body["type"], "paragraph")
+        self.assertEqual(body["headingPath"], ["사업 개요"])
+        self.assertEqual(body["id"], f"s{body['section']}.p{body['paragraph']}")
+        table = next(b for b in doc["blocks"] if b["type"] == "table")
+        self.assertRegex(table["id"], r"^s0\.p\d+\.t0$")
+        self.assertEqual((table["rows"], table["cols"]), (3, 2))
+        self.assertEqual(cells[f"{table['id']}.r1c0"]["text"], "인건비")
+        order = [b["id"] for b in doc["blocks"]]
+        self.assertLess(order.index(body["id"]), order.index(table["id"]), "읽기 순서를 지킨다")
+
+        tables = json.loads((out / "tables.json").read_text(encoding="utf-8"))["tables"]
+        self.assertEqual(tables[0]["blockId"], table["id"])
+        items = json.loads((out / "data.json").read_text(encoding="utf-8"))["items"]
+        self.assertTrue(items)
+        for item in items:
+            target = blocks.get(item["blockId"]) or cells.get(item["blockId"])
+            self.assertIsNotNone(target, item)
+            self.assertIn(item["raw"].replace(" ", ""), target["text"].replace(" ", ""))
+        in_cell = next(i for i in items if i["raw"] == "800,000원")
+        self.assertEqual(in_cell["blockId"], f"{table['id']}.r1c1", "표 셀 안 값은 셀 ID 로 이어진다")
+
+    def test_document_model_from_hwp5(self):
+        hwp = self.project / "sources/doc5.hwp"
+        subprocess.run([self.rhwp, "convert", str(self.doc), str(hwp)], check=True, capture_output=True)
+        proc, report = self.run_extract("sources/doc5.hwp", extra=("--only", "document,data"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        out = self.project / "exports/extract/doc5"
+        doc = json.loads((out / "document.json").read_text(encoding="utf-8"))
+        self.assertEqual([b["text"] for b in doc["blocks"] if b["type"] == "heading"], ["사업 개요", "추진 일정"])
+        items = json.loads((out / "data.json").read_text(encoding="utf-8"))["items"]
+        self.assertTrue(items and all(i.get("blockId") for i in items))
+
+    def test_fields_link_to_cells(self):
+        form = make_form(self.rhwp, self.project / "sources/form.hwpx", ["회사명", "대표자"])
+        proc, report = self.run_extract(f"sources/{form.name}", extra=("--only", "document,fields"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        out = self.project / "exports/extract/form"
+        doc = json.loads((out / "document.json").read_text(encoding="utf-8"))
+        ids = {b["id"] for b in doc["blocks"]} | {c["id"] for b in doc["blocks"] if b["type"] == "table"
+                                                   for c in b["cells"]}
+        fields = json.loads((out / "fields.json").read_text(encoding="utf-8"))["fields"]
+        self.assertTrue(all(f.get("blockId") in ids for f in fields), fields)
+        self.assertIn("blockId", read_csv(out / "fields.csv")[0])
+
     def test_rejects_outside_sources(self):
         outside = self.project / "exports/copy.hwpx"
         outside.write_bytes(self.doc.read_bytes())
