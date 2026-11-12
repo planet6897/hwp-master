@@ -35,6 +35,7 @@ metadata:
 | `scripts/docmodel.py` | Extract 가 쓰는 통합 문서 모델(`document.json`): 읽기 순서 블록과 고정 ID, 표·값·누름틀을 `blockId` 로 연결 |
 | `scripts/install_mcp.py` | (선택) 배포 rhwp `mcp-serve` 를 Claude Code·Desktop MCP 서버로 등록·제거, 연결 확인. 기존 다른 서버는 덮어쓰지 않음 |
 | `scripts/convert_hwpx.py` | HWP → HWPX 일괄 변환: 폴더·glob, rhwp verify·쪽 수·글 동일성·구조 개수 검증 보고서 |
+| `scripts/ai_restructure.py` | AI 가독성 개선본: 레이아웃 표·글상자 풀기, 표 안의 표 꺼내기, 병합 풀기, 공백 정렬·빈 문단 정리, 손 번호→개요 제목·목록, 주석→각주. 전후 점수와 글 보존율 |
 | `scripts/ai_readability.py` | AI 가독성 진단: 표 안의 표·복잡한 병합·레이아웃 표·공백 정렬·빈 문단·손 번호·그림만 쪽·단편 장 → 점수·고치는 법 |
 | `scripts/schema_check.py` | Extract 결과를 `schemas/extract/*.schema.json`(JSON Schema, 표준 라이브러리 검사기)으로 확인 |
 | `scripts/merge_extract.py` | Extract 여러 문서 합치기: `_merged/` documents·fields·kv·data CSV, 서식 비교(forms.json) |
@@ -63,7 +64,7 @@ metadata:
 | 기관 서식의 `{{칸}}`·누름틀에 내용 채우기 (목록 반복 포함) | Template Fill | `workflows/template.md` |
 | 기존 HWP/HWPX 에서 내용·세부 정보 가져오기 (본문·표·날짜·금액·누름틀 값, 요약·질문 답변) | Extract | `workflows/extract.md` |
 | HWP 를 HWPX 로 일괄 변환하고 내용이 같은지 검증 (폴더째, 메일 첨부용) | HWP → HWPX 변환 | `workflows/convert-hwpx.md` |
-| 문서가 AI 가 읽기 쉬운 구조인지 점검 (표 안의 표·레이아웃 표·손 번호 등, 행정문서 AI 가이드라인) | AI 가독성 진단 | `workflows/ai-readability.md` |
+| 문서가 AI 가 읽기 쉬운 구조인지 점검 (표 안의 표·레이아웃 표·손 번호 등, 행정문서 AI 가이드라인) · AI 가 읽기 좋게 고친 개선본 만들기 | AI 가독성 진단·개선 | `workflows/ai-readability.md` |
 | 기존 HWP/HWPX 수정 (누름틀·문구·표 셀·체크박스) | Edit Native | `workflows/edit.md` |
 | 서식 하나에 명단 N행 → 문서 N개 | Mail-merge | `workflows/merge.md` |
 | 시험지 자료 → 한글 시험지 | Exam (위임) | `workflows/exam.md` → rhwp `rhwp-exam-ingest` |

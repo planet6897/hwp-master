@@ -15,6 +15,7 @@
   A06 손 번호               -0.2/개, 최대 -10 "1." "가." 를 글자로 친 문단. 한글 자동 번호(개요·문단 번호)를 쓴다
   A07 그림만 있는 쪽        -5/쪽, 최대 -10   글 없이 그림만 있는 쪽. 그림 속 글을 본문으로 옮기거나 대체 글을 단다
   A08 단편만 있는 장        -2/장, 최대 -10   개조식 항목 3개 이상이 모두 서술어 없는 단편. 핵심 문장을 서술형으로 쓴다
+  A09 본문 글자 없음        -100            글이 하나도 없는 스캔·그림 문서. AI 가 읽을 것이 없다
 
 결과: validation/ai_readability_<시각>.json (문서마다 score·grade·checks[code, count, penalty, blockIds, fix]).
 --min-score 를 주면 그보다 낮은 문서가 있을 때 exit 1.
@@ -43,6 +44,7 @@ CHECKS = {
     "A06": ("손 번호", 0.2, 10.0, "\"1.\" \"가.\" 를 글자로 치지 말고 한글 자동 번호(개요·문단 번호)를 쓰세요."),
     "A07": ("그림만 있는 쪽", 5.0, 10.0, "그림 속 글을 본문으로 옮기거나 그림 아래에 설명 문장을 다세요."),
     "A08": ("단편만 있는 장", 2.0, 10.0, "개조식 단편만 늘어놓지 말고 장마다 핵심을 서술형 문장으로 한 번 쓰세요."),
+    "A09": ("본문 글자 없음", 100.0, 100.0, "글자가 하나도 없습니다(스캔·그림 문서). 글을 입력하거나 OCR 로 본문을 만드세요."),
 }
 HAND_NUMBER_KINDS = {"1.", "가.", "1)", "가)", "(1)", "(가)"}
 ALIGN = re.compile(r"\S(?: {4,}|\t{2,}|[ 　]{2,})\S")
@@ -107,6 +109,10 @@ def diagnose(document: dict) -> dict:
     for root, items in sections.items():
         if len(items) >= 3 and not any(SENTENCE_END.search(i["outline"]["body"]) for i in items):
             found["A08"].append(root)
+
+    has_text = any((b.get("text") or "").strip() for b in blocks) or any(
+        c["text"].strip() for b in blocks if b["type"] == "table" for c in docmodel.iter_cells(b))
+    found["A09"] = [] if has_text else ["document"]
 
     checks, score = [], 100.0
     for code, (title, per, cap, fix) in CHECKS.items():

@@ -190,13 +190,15 @@ def supplement_amounts(rhwp: str, src: Path, items: List[dict]) -> List[dict]:
     for query in CURRENCY_QUERIES:
         env = rhwp_json(rhwp, ["search", str(src), query])
         for match in env.get("matches", []):
-            # 표 안의 표 칸은 rhwp 가 모두 최외곽 칸 주소로 주므로(edwardkim/rhwp#8989) 글까지 열쇠에 넣어 구별한다.
-            key = (match.get("section"), match.get("paragraph"), json.dumps(match.get("cell"), sort_keys=True),
-                   match.get("text", ""))
+            # 표 안의 표 칸은 cellPath(rhwp#8991 이후)로 구별한다. cellPath 가 없는 rhwp 는 모두 최외곽 칸 주소를 주므로
+            # (edwardkim/rhwp#8989) 글까지 열쇠에 넣는다.
+            key = (match.get("section"), match.get("paragraph"),
+                   json.dumps(match.get("cellPath") or match.get("cell"), sort_keys=True), match.get("text", ""))
             paragraphs.setdefault(key, match)
 
     def where(item):
-        return (item.get("section"), item.get("paragraph"), json.dumps(item.get("cell"), sort_keys=True))
+        return (item.get("section"), item.get("paragraph"),
+                json.dumps(item.get("cellPath") or item.get("cell"), sort_keys=True))
 
     taken = {}
     for item in items:
@@ -215,6 +217,8 @@ def supplement_amounts(rhwp: str, src: Path, items: List[dict]) -> List[dict]:
                            "_text": match.get("text", "")})
             if match.get("cell") is not None:
                 amount["cell"] = match["cell"]
+            if match.get("cellPath"):
+                amount["cellPath"] = match["cellPath"]
             extra.append(amount)
     return extra
 
@@ -422,8 +426,14 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             if index is not None:
                 for i in items:
                     # rhwp 의 칸 주소는 중첩 칸도 최외곽 칸이라(edwardkim/rhwp#8989) 글로 가장 안쪽 칸을 찾는다.
-                    i["blockId"] = link("data", index.locate(i.get("section"), i.get("paragraph"), i.get("cell"),
-                                                             text=i.get("_text") or str(i.get("raw", ""))))
+                    if i.get("cellPath"):  # rhwp#8991: 바깥 → 안쪽 칸 경로가 있으면 그대로 따라간다
+                        block_id = index.locate(i.get("section"), i.get("paragraph"), path=i["cellPath"])
+                    else:
+                        block_id = None
+                    if block_id is None:
+                        block_id = index.locate(i.get("section"), i.get("paragraph"), i.get("cell"),
+                                                text=i.get("_text") or str(i.get("raw", "")))
+                    i["blockId"] = link("data", block_id)
             for i in items:
                 i.pop("_text", None)
             # 의미 값 확장(#14): 기간·증감률·연락처·조문 참조 — document.json 글에서 바로 찾아 blockId 가 정확하다.
