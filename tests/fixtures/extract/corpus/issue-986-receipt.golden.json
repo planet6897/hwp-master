@@ -1,0 +1,87 @@
+{
+ "source": "issue-986-receipt.hwp",
+ "sha256": "38371563b4f9a53a1b7c2584eb5cd77b6cc2bb13dbf37294d0b797516b1c6715",
+ "genre": "영수증 양식(일부 기재)",
+ "notes": "기재된 칸만 항목-값이다. '요양기관 종류' 는 [■] 표시된 '종합병원'. 대표전화는 두 곳(같은 값)이라 한 번. 값이 든 누름틀 3개(maintable·night+yn·over_limit_price)는 누름틀 항목-값이다(값이 라벨 글이어도 문서가 그렇게 정의).",
+ "gold": {
+  "kinds": [
+   "date",
+   "contact",
+   "amount",
+   "reference"
+  ],
+  "values": [
+   {
+    "kind": "date",
+    "normalized": "2025-06-18"
+   },
+   {
+    "kind": "contact",
+    "normalized": {
+     "type": "phone",
+     "value": "000-000-0000"
+    }
+   },
+   {
+    "kind": "contact",
+    "normalized": {
+     "type": "phone",
+     "value": "000-000-0000"
+    }
+   },
+   {
+    "kind": "contact",
+    "normalized": {
+     "type": "phone",
+     "value": "000-000-0000"
+    }
+   }
+  ],
+  "kv": [
+   {
+    "key": "사업자등록번호",
+    "value": "000-00-00000"
+   },
+   {
+    "key": "상호",
+    "value": "한국대학교 대한민국병원"
+   },
+   {
+    "key": "전화번호",
+    "value": "000-000-0000"
+   },
+   {
+    "key": "사업장 소재지",
+    "value": "서울특별시"
+   },
+   {
+    "key": "대표자",
+    "value": "홍길동"
+   },
+   {
+    "key": "발행일",
+    "value": "2025년 06월 18일"
+   },
+   {
+    "key": "대표전화",
+    "value": "000-000-0000"
+   },
+   {
+    "key": "요양기관 종류",
+    "value": "종합병원"
+   },
+   {
+    "key": "maintable",
+    "value": "진료비 계산서 · 영수증"
+   },
+   {
+    "key": "night+yn",
+    "value": "야간  공휴일"
+   },
+   {
+    "key": "over_limit_price",
+    "value": "⑤"
+   }
+  ]
+ }
+}

@@ -27,7 +27,9 @@ def _date_pattern(p: str) -> str:
 _RANGE_SEP = r"\s*[~∼～〜]\s*"
 PERIOD = re.compile(_date_pattern("a") + _RANGE_SEP + _date_pattern("b"))
 YEAR_RANGE = re.compile(rf"(?P<a>{_Y4}|{_YQ})\s*년?{_RANGE_SEP}(?P<b>{_Y4}|{_YQ})\s*년")
-CHANGE_SIGN = re.compile(r"(?P<s>[△▽▲])\s?(?P<n>\d+(?:\.\d+)?)\s?(?P<p>%|%p|퍼센트)?")
+CHANGE_SIGN = re.compile(r"(?P<s>[△▽▲])\s?(?P<n>\d[\d,]*(?:\.\d+)?)\s?(?P<p>%p|%|퍼센트)?")
+# △ 뒤 숫자에 금액 단위가 붙으면 증감률이 아니라 음수 금액이다("△34,703십억원")
+_AMOUNT_TAIL = re.compile(r"\s?(?:조|천억|백억|십억|억|천만|백만|십만|만|천)?\s?원")
 CHANGE_WORD = re.compile(r"(?P<n>\d+(?:\.\d+)?)\s?(?P<p>%p?|퍼센트)\s?(?:포인트\s?)?(?P<w>증가|감소|상승|하락|늘|줄|확대|축소)")
 PHONE = re.compile(r"(?<![\d-])(?:0\d{1,2}[-)\s.]\s?\d{3,4}[-.\s]\d{4}|1[5-9]\d{2}-\d{4})(?![\d-])")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -82,10 +84,16 @@ def find_periods(text: str) -> Iterator[dict]:
                    "charOffset": m.start(), "length": len(m.group(0))}
 
 
-def find_changes(text: str) -> Iterator[dict]:
+def find_changes(text: str, cell: bool = False) -> Iterator[dict]:
+    """cell=True 는 표 칸 글: 칸의 "△2,006"·"△297" 처럼 % 도 소수점도 없는 값은 음수 수치이지 증감률이 아니다."""
     taken = []
     for m in CHANGE_SIGN.finditer(text):
-        value = float(m.group("n"))
+        number = m.group("n")
+        if not m.group("p") and ("," in number or _AMOUNT_TAIL.match(text, m.end())
+                                 or (cell and "." not in number)):
+            taken.append(m.span())
+            continue
+        value = float(number.replace(",", ""))
         value = value if m.group("s") == "▲" else -value
         unit = "%p" if (m.group("p") or "").startswith("%p") else ("%" if m.group("p") else None)
         taken.append(m.span())
@@ -111,13 +119,22 @@ def find_contacts(text: str) -> Iterator[dict]:
                "charOffset": m.start(), "length": len(m.group(0))}
 
 
+_SAME_LAW = re.compile(r"^(?:동법|같은\s?법)\s?(시행령|시행규칙|부칙)?$")
+
+
 def find_references(text: str) -> Iterator[dict]:
+    last = None  # 이 글에서 마지막으로 이름이 나온 법 — "동법 시행령"·"같은 법" 은 그 법을 가리킨다
     for m in ARTICLE.finditer(text):
         law = m.group("q") or m.group("w")
         if m.group("q"):
             tail = re.findall(r"(?<=[」\s])(시행령|시행규칙|부칙)", m.group(0).split("제")[0])
             law = " ".join([law] + tail) if tail else law
         law = re.sub(r"\s+", " ", law).strip() if law else None
+        same = _SAME_LAW.match(law or "")
+        if same and last:
+            law = " ".join(x for x in (last, same.group(1)) if x)
+        elif law and not same:
+            last = re.sub(r"\s?(?:시행령|시행규칙|부칙)$", "", law)
         article = f"제{m.group('a')}조" + (f"의{m.group('a2')}" if m.group("a2") else "")
         yield {"kind": "reference", "raw": m.group(0).strip(),
                "normalized": {"law": law, "article": article,
@@ -149,7 +166,8 @@ def extract_values(blocks: List[dict], iter_cells) -> List[dict]:
     items = []
     for block, block_id, text in text_units(blocks, iter_cells):
         for finder in FINDERS:
-            for item in finder(text):
+            found = finder(text, cell=True) if finder is find_changes and block["type"] == "table" else finder(text)
+            for item in found:
                 item.update({"page": block.get("page", 0), "section": block.get("section"),
                              "paragraph": block.get("paragraph"), "blockId": block_id, "detector": "hwp-master"})
                 items.append(item)

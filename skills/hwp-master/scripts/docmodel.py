@@ -230,7 +230,7 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
             row = _int(addr.get("rowAddr")) if addr is not None else 0
             col = _int(addr.get("colAddr")) if addr is not None else 0
             cid = f"{tid}.r{row}c{col}"
-            paragraphs, nested, lines, cell_images = [], [], [], []
+            paragraphs, nested, lines, cell_images, cell_notes = [], [], [], [], []
             for k, sp in enumerate(_sub_paragraphs(tc)):
                 own = _text_of(sp)
                 inner = []
@@ -242,6 +242,12 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
                     nested.append(child)
                     inner.append(child["id"])
                 pictures = [{"paragraph": k, **picture_info(pic, media)} for pic in _controls(sp) if _tag(pic) == "pic"]
+                # 칸 글에 붙은 각주·미주(통계표 머리 칸의 "경상수입1)" 풀이 같은 것). 칸 글에는 들어가지 않는다.
+                for note in (c for c in _controls(sp) if _tag(c) in ("footNote", "endNote")):
+                    text = "\n".join(_text_of(x) for x in _sub_paragraphs(note)).strip()
+                    if text:
+                        cell_notes.append({"paragraph": k, "text": text,
+                                           "noteType": "footnote" if _tag(note) == "footNote" else "endnote"})
                 if pictures:
                     cell_images.extend(pictures)
                     counts["cellImage"] = counts.get("cellImage", 0) + len(pictures)
@@ -264,6 +270,8 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
                 cell["tables"] = nested
             if cell_images:
                 cell["images"] = cell_images  # 칸 안의 그림(media·widthHU, 칸 문단 번호)
+            if cell_notes:
+                cell["notes"] = cell_notes  # 칸 안의 각주·미주(note 블록으로도 표 뒤에 낸다)
             cells.append(cell)
     counts["cell"] += len(cells)
     if depth:
@@ -273,6 +281,17 @@ def parse_table(tbl, tid: str, counts: Dict[str, int], depth: int = 0,
     table["role"], table["roleReasons"] = classify_table(table)
     counts["layoutTable" if table["role"] == "layout" else "dataTable"] += 1
     return table
+
+
+def cell_note_blocks(table: dict, base: dict, path: dict) -> List[dict]:
+    """표(안쪽 표 포함) 칸의 각주·미주 → note 블록(ID …r1c0.n0, cellId). 표 블록 바로 뒤에 둔다."""
+    out = []
+    for t in iter_tables(table):
+        for cell in t["cells"]:
+            for k, note in enumerate(cell.get("notes", [])):
+                out.append({"id": f"{cell['id']}.n{k}", "type": "note", "noteType": note["noteType"],
+                            "text": note["text"], "cellId": cell["id"], **base, **path})
+    return out
 
 
 def unwrap_layout(table: dict, base: dict, path: dict) -> List[dict]:
@@ -327,7 +346,7 @@ OUTLINE_MARKERS = [
     ("1)", re.compile(rf"^(\d{{1,2}}\)){_SP}"), 5),
     ("-", re.compile(rf"^([-‐–—―]){_SP}"), 6),
     ("가)", re.compile(rf"^([가나다라마바사아자차카타파하]\)){_SP}"), 7),
-    ("·", re.compile(rf"^([·∙•ㆍ]){_SP}?"), 8),
+    ("·", re.compile(rf"^([·∙•ㆍ․‧]){_SP}?"), 8),
     ("(1)", re.compile(rf"^(\(\d{{1,2}}\)){_SP}"), 9),
     ("(가)", re.compile(rf"^(\([가나다라마바사아자차카타파하]\)){_SP}"), 10),
     ("①", re.compile(rf"^([①-⑳]){_SP}?"), 11),
@@ -345,6 +364,9 @@ def outline_marker(text: str) -> Optional[Tuple[str, str, str]]:
     for name, pattern, _ in OUTLINE_MARKERS:
         m = pattern.match(stripped)
         if m:
+            # "○○ 신문사"·"□□ 동아리" 처럼 같은 기호를 겹쳐 쓰면 이름을 가린 자리 표시이지 글머리가 아니다
+            if len(m.group(1)) == 1 and stripped[len(m.group(1)):len(m.group(1)) + 1] == m.group(1):
+                return None
             body = stripped[m.end():].strip()
             return (name, m.group(1), body) if body else None
     return None
@@ -355,6 +377,9 @@ def assign_outline(blocks: List[dict]) -> int:
 
     새 기호 종류가 나오면 관례 순위로 자리를 찾는다(이미 쌓인 더 하위 종류는 닫는다). 개요 제목(heading)이 나오면
     계층을 새로 시작한다. ※·* 주석은 바로 앞 항목의 한 단계 아래에 붙고 계층을 쌓지 않는다.
+
+    글에 기호가 없는 자동 번호·글머리표 문단(list 블록)도 항목이다(kind "auto", 기호 ""). 시험지 문항·기사 소제목처럼
+    번호가 한글 문단 번호로만 있으면 글에는 "1." 이 없다(#51). 자동 번호 단계(level)로 쌓고, 글 기호 항목은 그 아래에 붙는다.
     """
     stack: List[Tuple[str, str]] = []  # (종류, 블록 ID)
     count = 0
@@ -366,6 +391,20 @@ def assign_outline(blocks: List[dict]) -> int:
         if block["type"] not in ("paragraph", "list") or not block.get("text"):
             continue
         found = outline_marker(block["text"])
+        if not found and block["type"] == "list":
+            kind = f"auto{block.get('level', 1)}"
+            names = [k for k, _ in stack]
+            # 같거나 깊은 자동 번호 단계부터 닫는다(그 아래 글 기호 항목도 함께)
+            cut = next((i for i, k in enumerate(names) if k.startswith("auto") and int(k[4:]) >= block.get("level", 1)),
+                       None)
+            if cut is not None:
+                del stack[cut:]
+            parent = stack[-1][1] if stack else heading_id
+            stack.append((kind, block["id"]))
+            block["outline"] = {"marker": "", "kind": "auto", "level": len(stack), "parentId": parent,
+                                "body": block["text"].strip()}
+            count += 1
+            continue
         if not found:
             continue
         kind, marker, body = found
@@ -379,7 +418,7 @@ def assign_outline(blocks: List[dict]) -> int:
         if kind in names:
             del stack[names.index(kind):]
         else:
-            while stack and _RANK[stack[-1][0]] > _RANK[kind]:
+            while stack and _RANK.get(stack[-1][0], -1) > _RANK[kind]:  # 자동 번호 단계는 닫지 않는다
                 stack.pop()
         parent = stack[-1][1] if stack else heading_id
         stack.append((kind, block["id"]))
@@ -542,6 +581,9 @@ def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
                     blocks.append({"type": "table", **cbase, **table, **path_for()})
                     if table["role"] == "layout":
                         blocks.extend(unwrap_layout(table, base, path_for()))
+                    notes_in_cells = cell_note_blocks(table, base, path_for())
+                    blocks.extend(notes_in_cells)
+                    counts["note"] += len(notes_in_cells)
                 elif name == "pic":
                     blocks.append({"id": f"{pid}.g{ordinal['pic']}", "type": "image", **cbase, **picture_info(ctrl, media),
                                    **path_for()})

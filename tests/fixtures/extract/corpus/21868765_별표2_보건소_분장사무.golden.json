@@ -1,0 +1,42 @@
+{
+ "source": "21868765_별표2_보건소_분장사무.hwp",
+ "sha256": "ae694583e739ac48af97cb12ce573c2da9f4cb637721fdf84e5af4bf7ca17c13",
+ "genre": "법규 별표(쪽을 넘는 긴 표)",
+ "notes": "표 칸의 '1.'~'60.' 은 표 안 번호라 개조식이 아니다.",
+ "gold": {
+  "kinds": [
+   "date",
+   "amount",
+   "period",
+   "change",
+   "contact",
+   "reference"
+  ],
+  "values": [
+   {
+    "kind": "date",
+    "normalized": "2025-12-31"
+   },
+   {
+    "kind": "reference",
+    "normalized": {
+     "law": null,
+     "article": "제13조",
+     "paragraph": null,
+     "item": null
+    }
+   },
+   {
+    "kind": "amount",
+    "normalized": 20000000
+   }
+  ],
+  "outline": [],
+  "roles": [
+   {
+    "label": "T01",
+    "role": "data"
+   }
+  ]
+ }
+}
