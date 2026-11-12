@@ -65,6 +65,20 @@
 나: 이 보고서의 표를 전부 CSV 로, 나온 금액은 쪽 번호와 함께 정리해 줘
 ```
 
+## Claude 에 MCP 로 연결 (선택)
+
+배포 rhwp 바이너리에는 MCP 서버(`mcp-serve`, hwp_* 도구 180여 개)가 들어 있습니다. 그래서 rhwp 소스 없이 Claude 에 바로 연결할 수 있습니다.
+
+```bash
+python3 skills/hwp-master/scripts/install_mcp.py --dry-run          # 할 일만 보기
+python3 skills/hwp-master/scripts/install_mcp.py                    # Claude Code 에 등록 (claude mcp add --scope user)
+python3 skills/hwp-master/scripts/install_mcp.py --desktop          # Claude Desktop 설정에도 (백업 후 병합)
+python3 skills/hwp-master/scripts/install_mcp.py --remove           # 이 rhwp 를 가리키는 등록만 제거
+```
+
+- 같은 이름(`rhwp`)이 다른 서버로 이미 있으면 덮어쓰지 않고 알립니다. `--name hwp-master-rhwp` 처럼 다른 이름을 쓸 수 있습니다.
+- 끝에 `initialize`·`tools/list` 로 연결을 확인합니다.
+
 ## HWP → HWPX 일괄 변환
 
 "이 폴더 hwp 를 전부 hwpx 로 바꿔 줘"라고 하면 폴더째 변환합니다. 공직자통합메일이 2026년 10월부터 HWPX 외 첨부를 막고 있습니다.
