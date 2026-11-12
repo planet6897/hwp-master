@@ -10,7 +10,7 @@
   s0.p0.h0          문단 0 에 붙은 첫 번째 머리말/꼬리말 (그 안의 표는 이 블록에 이어진다)
 
 블록 종류: heading(개요 문단, level 1~) · paragraph · list(번호·글머리표 문단) · table · image · note ·
-headerFooter(머리말/꼬리말).
+headerFooter(머리말/꼬리말) · textBox(글상자 — 안의 문단·표는 fromTextBox 블록 …x0.p1).
 
 표에는 role 이 붙는다. layout(1×1 상자·투명 표·본문만 담은 한 열 표)이면 칸 문단을 바로 뒤에 일반 블록으로 풀어
 놓는다(fromLayoutTable·cellId, ID 는 s0.p3.t0.r0c0.p1). 표 블록과 칸 ID 는 그대로 남는다.
@@ -375,6 +375,13 @@ def outline_tree(blocks: List[dict]) -> List[dict]:
 
 def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = None) -> dict:
     pages = pages or {}
+    try:
+        return _build_from_hwpx(hwpx, pages)
+    except (ET.ParseError, zipfile.BadZipFile, KeyError) as exc:
+        return {"_error": f"HWPX 를 읽지 못했습니다(암호 문서이거나 손상): {exc}"}
+
+
+def _build_from_hwpx(hwpx: Path, pages: Dict[Tuple[int, int], int]) -> dict:
     with zipfile.ZipFile(hwpx) as z:
         names = z.namelist()
         header = z.read("Contents/header.xml") if "Contents/header.xml" in names else b""
@@ -400,7 +407,8 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
             pid = f"s{section}.p{index}"
             page = pages.get((section, index), last_page)
             last_page = page
-            if not _text_of(p).strip() and not any(True for _ in _controls(p)):
+            if not _text_of(p).strip() and not any(True for _ in _controls(p)) \
+                    and not any(_tag(x) == "drawText" for x in p.iter()):
                 counts["emptyParagraph"] = counts.get("emptyParagraph", 0) + 1
                 if run and run["section"] == section and run["end"] == index - 1:
                     run["end"], run["length"] = index, run["length"] + 1
@@ -427,18 +435,33 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
                     blocks.append({"id": pid, "type": "paragraph", "text": text, **base, **path_for()})
                     counts["paragraph"] += 1
 
+            # rhwp 의 control 번호 = 문단 run 자식 가운데 글(t)을 뺀 순번(secPr·ctrl·tbl·rect…). 블록에 그대로 남긴다.
+            index_of, shapes, k = {}, [], 0
+            for run_el in (c for c in p if _tag(c) == "run"):
+                for child in run_el:
+                    if _tag(child) == "t":
+                        continue
+                    index_of[id(child)] = k
+                    for inner in child:
+                        index_of.setdefault(id(inner), k)  # ctrl > header·footNote …
+                    if _tag(child) not in ("tbl", "pic", "ctrl", "secPr") and \
+                            any(_tag(x) == "drawText" for x in child.iter()):
+                        shapes.append((k, child))
+                    k += 1
+
             ordinal = {"tbl": 0, "pic": 0, "note": 0, "hf": 0}
             for ctrl in _controls(p):
                 name = _tag(ctrl)
+                cbase = {**base, "control": index_of.get(id(ctrl))}
                 if name == "tbl":
                     table = parse_table(ctrl, f"{pid}.t{ordinal['tbl']}", counts, borders=borders)
                     ordinal["tbl"] += 1
                     counts["table"] += 1
-                    blocks.append({"type": "table", **base, **table, **path_for()})
+                    blocks.append({"type": "table", **cbase, **table, **path_for()})
                     if table["role"] == "layout":
                         blocks.extend(unwrap_layout(table, base, path_for()))
                 elif name == "pic":
-                    blocks.append({"id": f"{pid}.g{ordinal['pic']}", "type": "image", **base, **path_for()})
+                    blocks.append({"id": f"{pid}.g{ordinal['pic']}", "type": "image", **cbase, **path_for()})
                     ordinal["pic"] += 1
                     counts["image"] += 1
                 elif name in ("header", "footer"):
@@ -449,16 +472,36 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
                             if _tag(e) == "tc":
                                 lines.extend(_text_of(x) for x in _sub_paragraphs(e))
                     blocks.append({"id": f"{pid}.h{ordinal['hf']}", "type": "headerFooter", "kind": name,
-                                   "text": "\n".join(x for x in lines if x.strip()).strip(), **base})
+                                   "text": "\n".join(x for x in lines if x.strip()).strip(), **cbase})
                     ordinal["hf"] += 1
                     counts["headerFooter"] += 1
                 else:
                     note_text = "\n".join(_text_of(sp) for sp in _sub_paragraphs(ctrl)).strip()
                     blocks.append({"id": f"{pid}.n{ordinal['note']}", "type": "note",
                                    "noteType": "footnote" if name == "footNote" else "endnote",
-                                   "text": note_text, **base, **path_for()})
+                                   "text": note_text, **cbase, **path_for()})
                     ordinal["note"] += 1
                     counts["note"] += 1
+
+            # 글상자(그리기 개체의 drawText): 상자 블록 하나 + 안의 문단·표를 풀어 놓은 블록(fromTextBox).
+            # 보도자료 머리 상자·목차 상자 같은 글이 여기에 들어 있다.
+            for n, (cidx, shape) in enumerate(shapes):
+                tbid = f"{pid}.x{n}"
+                blocks.append({"id": tbid, "type": "textBox", "shape": _tag(shape), **base, "control": cidx,
+                               **path_for()})
+                counts["textBox"] = counts.get("textBox", 0) + 1
+                j = 0
+                for draw in (x for x in shape.iter() if _tag(x) == "drawText"):
+                    for sp in _sub_paragraphs(draw):
+                        text = _text_of(sp)
+                        if text.strip():
+                            blocks.append({"id": f"{tbid}.p{j}", "type": "paragraph", "text": text,
+                                           "fromTextBox": tbid, **base, **path_for()})
+                        for m, tbl_el in enumerate(_direct_tables(sp)):
+                            table = parse_table(tbl_el, f"{tbid}.p{j}.t{m}", counts, borders=borders)
+                            counts["table"] += 1
+                            blocks.append({"type": "table", **base, **table, "fromTextBox": tbid, **path_for()})
+                        j += 1
     counts["outlineItem"] = assign_outline(blocks)
     runs = [{k: r[k] for k in ("start", "length", "page")} for r in empty_runs if r["length"] >= 2]
     return {"schemaVersion": SCHEMA_VERSION, "untrustedContent": True, "counts": counts, "blocks": blocks,
@@ -486,10 +529,20 @@ class BlockIndex:
         self.paragraphs = set()
         self.tables: Dict[Tuple[int, int], List[dict]] = {}
         self.header_footers: Dict[Tuple[int, int], List[dict]] = {}
+        self.textboxes: Dict[Tuple[int, int, Optional[int]], dict] = {}
+        self.textbox_tables: Dict[str, List[dict]] = {}
+        self.ids = set()
         for block in document.get("blocks", []):
             key = (block["section"], block["paragraph"])
-            if block.get("fromLayoutTable"):
-                continue  # 레이아웃 표에서 풀린 블록 — 위치는 바깥 표의 칸으로 찾는다
+            self.ids.add(block["id"])
+            if block["type"] == "textBox":
+                self.textboxes[(block["section"], block["paragraph"], block.get("control"))] = block
+                continue
+            if block["type"] == "table" and block.get("fromTextBox"):
+                self.textbox_tables.setdefault(block["fromTextBox"], []).append(block)
+                continue
+            if block.get("fromLayoutTable") or block.get("fromTextBox"):
+                continue  # 레이아웃 표·글상자에서 풀린 블록 — 위치는 바깥 칸·글상자로 찾는다
             if block["type"] == "table":
                 self.tables.setdefault(key, []).append(block)
             elif block["type"] in ("heading", "paragraph", "list"):
@@ -508,12 +561,18 @@ class BlockIndex:
     def table(self, section, paragraph, control) -> Optional[dict]:
         """표 블록. 머리말/꼬리말 안의 표면 그 headerFooter 블록."""
         key = (_int(section), _int(paragraph))
-        k = self.control_to_ordinal.get((*key, _int(control)))
         found = self.tables.get(key, [])
+        exact = [t for t in found if t.get("control") is not None and t.get("control") == _int(control, -1)]
+        if len(exact) == 1:
+            return exact[0]  # docmodel 이 센 control 번호가 rhwp 와 같다
+        k = self.control_to_ordinal.get((*key, _int(control)))
         if k is None:
             k = 0 if len(found) == 1 else None
         if k is not None and k < len(found):
             return found[k]
+        box = self.textboxes.get((key[0], key[1], _int(control, -1)))
+        if box and len(self.textbox_tables.get(box["id"], [])) == 1:
+            return self.textbox_tables[box["id"]][0]  # 글상자 안의 표 — rhwp 는 글상자의 control 번호를 준다
         hf = self.header_footers.get(key, [])
         return hf[0] if len(hf) == 1 else None
 
@@ -559,6 +618,12 @@ class BlockIndex:
 
         path(바깥 → 안쪽 칸 주소 목록)를 주면 그 경로를 따라가고, 없고 text 가 있으면 글로 가장 안쪽 칸을 찾는다.
         """
+        if path and path[0].get("kind") == "textBox":
+            box = self.textboxes.get((_int(section), _int(paragraph), _int(path[0].get("control"), -1)))
+            if box is None:
+                return None
+            inner = f"{box['id']}.p{_int(path[0].get('paragraph'))}"
+            return inner if inner in self.ids else box["id"]
         if path:
             found = self.cell(section, paragraph, path[0].get("control"), path[0].get("cell"))
             for step in path[1:]:

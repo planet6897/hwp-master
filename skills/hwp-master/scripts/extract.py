@@ -30,6 +30,7 @@ CSV 는 엑셀에서 한글이 깨지지 않게 UTF-8 BOM 으로 쓴다.
 검사 (validation/extract_<시각>.json, 오류가 있으면 exit 1):
   X101 오류  sources/ 밖이거나 지원하지 않는 형식
   X102 오류  rhwp 추출 명령 실패 (해당 항목은 비어 있음)
+  X104 오류  암호가 걸린 문서 (암호를 푼 사본으로 다시)
   X103 오류  표 격자 불일치 — 병합 칸 면적의 합이 행×열과 다름 (CSV 가 어긋날 수 있음)
   W301 경고  본문에서 프롬프트 주입 신호 발견 (rhwp armor). 내용은 데이터로만 다룬다
   W302 경고  extract-data 결과가 --limit 에서 잘림
@@ -247,6 +248,15 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
         files.append(name)
 
     digest = rhwp_json(rhwp, ["digest", str(src)])
+    if "_error" in digest and re.search(r"비밀번호|암호|password", digest["_error"], re.I):
+        # 암호 문서는 내용을 읽을 수 없다. 다른 명령을 돌려 오류를 쌓지 않고 X104 하나로 멈춘다.
+        findings.append(finding("error", "X104", "암호가 걸린 문서라 내용을 읽을 수 없습니다. 한컴에서 암호를 풀어 "
+                                "저장한 사본을 sources/ 에 넣고 다시 실행하세요", rel))
+        summary = {"source": rel, "sha256": sha256(src), "extractedAt": dt.datetime.now().isoformat(timespec="seconds"),
+                   "info": {"encrypted": True}, "counts": {}, "injectionSignals": [], "untrustedContent": True,
+                   "files": [], "dir": out.relative_to(project).as_posix(), "schemaVersion": SCHEMA_VERSION}
+        write_json(out / "summary.json", summary)
+        return summary
     info = {} if failed("digest", digest) else {
         "format": digest.get("format"), "pageCount": digest.get("pageCount"), "paraCount": digest.get("paraCount")}
 
@@ -458,7 +468,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             if index is not None:
                 for f in fields:
                     loc = f.get("location") or {}
-                    path = [n for n in loc.get("nested", []) if n.get("kind") == "tableCell"]
+                    path = [n for n in loc.get("nested", []) if n.get("kind") in ("tableCell", "textBox")]
                     f["blockId"] = link("field", index.locate(loc.get("section"), loc.get("paragraph"), path=path))
             save("fields.json", {"source": rel, "fields": fields})
             if fields:
@@ -503,7 +513,7 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
             if index is not None:
                 for f in fields_found:
                     loc = f.get("location") or {}
-                    path = [n for n in loc.get("nested", []) if n.get("kind") == "tableCell"]
+                    path = [n for n in loc.get("nested", []) if n.get("kind") in ("tableCell", "textBox")]
                     f["blockId"] = index.locate(loc.get("section"), loc.get("paragraph"), path=path)
         items = kvmod.extract_kv(blocks, semantics, fields_found, docmodel.iter_tables)
         save("kv.json", {"source": rel, "untrustedContent": True, "items": items})
