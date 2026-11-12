@@ -24,8 +24,23 @@ DOC = {"version": "1", "title": "묶음 시험", "blocks": [
 
 
 def xml_parts(path):
+    """비교용 정규형: 서식 목록(paraPr·charPr·borderFill)은 id 를 뺀 내용으로 바꾸고, 본문의 서식 번호는 그 내용으로
+    바꾼다. rhwp 는 문서 style 처럼 같은 서식을 문단마다 새 번호로 덧붙이기도 해(중복), 묶음 적용은 중복 없이 하나를
+    나눠 쓴다. 문단·run·칸이 가리키는 서식 내용이 모두 같으면 같은 문서다. 나머지 XML 은 바이트까지 같아야 한다."""
+    import re
     with zipfile.ZipFile(path) as z:
-        return {n: z.read(n) for n in ("Contents/header.xml", "Contents/section0.xml")}
+        header = z.read("Contents/header.xml").decode("utf-8")
+        section = z.read("Contents/section0.xml").decode("utf-8")
+    table = {}
+    for kind, ref in (("paraPr", "paraPrIDRef"), ("charPr", "charPrIDRef"), ("borderFill", "borderFillIDRef")):
+        for m in re.finditer(rf'<hh:{kind} id="(\d+)"(.*?)</hh:{kind}>', header, re.S):
+            table[(ref, m.group(1))] = m.group(2)
+    def canon(m):
+        return f'{m.group(1)}="{table.get((m.group(1), m.group(2)), m.group(2))}"'
+    section = re.sub(r'(paraPrIDRef|charPrIDRef|borderFillIDRef)="(\d+)"', canon, section)
+    header = re.sub(r"<hh:(paraProperties|charProperties|borderFills)\b.*?</hh:\1>", "", header, flags=re.S)
+    header = re.sub(r'(paraPrIDRef|charPrIDRef|borderFillIDRef)="(\d+)"', canon, header)
+    return {"header(서식 목록 제외)": header, "section0(서식 내용으로)": section}
 
 
 class BatchTest(unittest.TestCase):
@@ -82,6 +97,19 @@ class BatchTest(unittest.TestCase):
             {"type": "table", "header_row": True, "rows": [["항목", "값", "비고"], ["a", "b", "c"]]},
         ]}
         self.compare_modes(doc)
+
+    def test_document_style_with_emphasis_and_footnotes(self):
+        blocks = []
+        for k in range(5):
+            blocks.append({"type": "heading", "level": 1 + k % 2, "text": f"{k + 1}. 추진 과제"})
+            blocks.append({"type": "paragraph", "text": f"과제 {k} 의 본문이다. 예산은 {k + 1}억 원이다."})
+            blocks.append({"type": "paragraph", "text": "두 번째 본문 문단이다."})
+        blocks[1]["emphasis"] = [{"text": "예산", "bold": True}]
+        blocks[2]["footnotes"] = [{"text": "근거 자료"}]
+        doc = {"version": "1", "title": "문서 서식", "blocks": blocks,
+               "style": {"body_pt": 11, "heading_pt": 14, "title_pt": 18, "line_spacing": 170}}
+        calls = self.compare_modes(doc)
+        self.assertLess(calls[True], calls[False] / 3, calls)
 
     def test_para_pr_ref_rewrite_touches_only_top_level(self):
         xml = ('<hs:sec xmlns:hs="s" xmlns:hp="p"><hp:p id="0" paraPrIDRef="1"><hp:run><hp:tbl><hp:tr><hp:tc>'
