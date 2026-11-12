@@ -17,6 +17,8 @@ from __future__ import annotations
 import re
 from typing import Callable, Dict, List, Optional, Tuple
 
+from kv import is_label
+
 UNIT_CAPTION = re.compile(r"[(\[<〈]?\s*단\s*위\s*[:：]\s*([^)\]>〉]*)[)\]>〉]?")
 _NUM = r"[\d,]+(?:\.\d+)?"
 VALUE = re.compile(rf"^(?P<s1>[△▽-]?)\s*(?P<n1>{_NUM})\s*(?P<p1>%)?\s*"
@@ -108,9 +110,17 @@ def analyze(table: dict, caption: str = "", caption_id: Optional[str] = None,
     def numeric(v):
         return v is not None and v["type"] in ("number", "percent", "amount")
 
-    if not any(numeric(parse_value(cell["text"], find_amounts)) for cell in table["cells"]):
-        header_rows = flagged  # 숫자가 하나도 없는 글 표는 머리 행을 짐작하지 않는다(머리 표시가 있을 때만)
-    textual = header_rows == 0
+    textual = not any(numeric(parse_value(cell["text"], find_amounts)) for cell in table["cells"])
+    if textual:
+        # 숫자가 하나도 없는 글 표: 머리 표시가 있거나, 3행 이상이고 첫 행이 모두 짧은 라벨일 때만 머리 행으로 본다.
+        top = [grid[(0, c)] for c in range(cols) if (0, c) in grid]
+        distinct = {id(c) for c in top}
+        if flagged:
+            header_rows = flagged
+        elif rows >= 3 and cols >= 2 and len(distinct) >= 2 and all(is_label(c["text"]) for c in top):
+            header_rows = max(1, corner["rowSpan"]) if corner else 1
+        else:
+            header_rows = 0
     values = {(r, c): parse_value(grid[(r, c)]["text"], find_amounts) if (r, c) in grid else None
               for r in range(header_rows, rows) for c in range(cols)}
 
