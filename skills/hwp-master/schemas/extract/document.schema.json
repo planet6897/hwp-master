@@ -68,7 +68,8 @@
             "table",
             "image",
             "note",
-            "headerFooter"
+            "headerFooter",
+            "textBox"
           ]
         },
         "section": {
@@ -122,6 +123,18 @@
           "items": {
             "$ref": "#/$defs/cell"
           }
+        },
+        "fromTextBox": {
+          "type": "string"
+        },
+        "control": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "shape": {
+          "type": "string"
         }
       }
     },
