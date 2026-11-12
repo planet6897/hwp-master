@@ -20,6 +20,7 @@
                       "580억 달러"·"$1.5 million"·"3억 5천만 원"·표 셀 안 금액은 rhwp search 로 문단을 모아
                       보탠다(detector=hwp-master, currency=USD·KRW·EUR·JPY·CNY)
   fields.json·fields.csv  누름틀 이름·현재값·안내문·위치 (rhwp fields)
+  chunks.jsonl        LLM 용 청크(제목 경계, 목표 --chunk-chars 자): headingPath·pages·blockIds·text(Markdown)·values·tables
   kv.json·kv.csv      항목-값: 양식형 표의 "라벨 | 값" 칸, "라벨: 값" 문단, 누름틀 (같은 항목은 duplicateOf)
   headers_footers.json    머리말/꼬리말 (rhwp headers-footers)
   charts.json·charts/chart<N>.csv  차트 목록과 숫자 데이터 (rhwp charts·chart-to-csv)
@@ -57,12 +58,13 @@ from typing import Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import docmodel  # noqa: E402
 import rhwp_locate  # noqa: E402
+import chunks as chunksmod  # noqa: E402
 import kv as kvmod  # noqa: E402
 import tablesem  # noqa: E402
 import values as valuesmod  # noqa: E402
 
 READABLE = {".hwp", ".hwpx", ".hml"}
-PARTS = ("document", "text", "structure", "tables", "data", "fields", "kv", "headers", "charts")
+PARTS = ("document", "text", "structure", "tables", "data", "fields", "kv", "headers", "charts", "chunks")
 
 
 def sha256(path: Path) -> str:
@@ -215,7 +217,8 @@ def table_area_ok(table: dict) -> bool:
 
 # ------------------------------------------------------------------ 문서 하나
 
-def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, findings: List[dict]) -> dict:
+def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, findings: List[dict],
+                chunk_chars: int = chunksmod.DEFAULT_CHARS) -> dict:
     rel = src.relative_to(project.resolve()).as_posix()
     out = project / "exports" / "extract" / src.stem
     if out.exists():
@@ -501,6 +504,18 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
         files.append("kv.csv")
         counts["kv"] = len(items)
 
+    if "chunks" in parts and document.get("blocks"):
+        # LLM 용 청크: 제목 경계를 지키는 묶음 + 출처 블록 ID·쪽·그 안의 의미 값·표 레코드
+        def load(name, key):
+            path = out / name
+            return json.loads(path.read_text(encoding="utf-8")).get(key, []) if path.exists() else []
+        tables_by_id = {t["blockId"]: t for t in load("tables.json", "tables") if t.get("blockId")}
+        chunk_list = chunksmod.build_chunks(document["blocks"], load("data.json", "items"), tables_by_id, chunk_chars)
+        (out / "chunks.jsonl").write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in chunk_list),
+                                          encoding="utf-8")
+        files.append("chunks.jsonl")
+        counts["chunks"] = len(chunk_list)
+
     if unlinked:
         findings.append(finding("warning", "W305", "document.json 블록에 잇지 못한 항목: " +
                                 ", ".join(f"{k} {v}건" for k, v in sorted(unlinked.items())), rel))
@@ -518,6 +533,8 @@ def main(argv=None) -> int:
     ap.add_argument("documents", nargs="+", help="sources/ 아래 HWP·HWPX·HML")
     ap.add_argument("--only", help=f"쉼표로 고른 항목 ({','.join(PARTS)}). 기본: 전부")
     ap.add_argument("--limit", type=int, default=2000, help="날짜·금액·수량 최대 개수 (기본 2000)")
+    ap.add_argument("--chunk-chars", type=int, default=chunksmod.DEFAULT_CHARS,
+                    help=f"chunks.jsonl 청크 목표 글자 수 (기본 {chunksmod.DEFAULT_CHARS})")
     ap.add_argument("--rhwp")
     args = ap.parse_args(argv)
 
@@ -539,7 +556,7 @@ def main(argv=None) -> int:
         if src is None or not src.is_file() or src.suffix.lower() not in READABLE:
             findings.append(finding("error", "X101", "sources/ 안의 HWP·HWPX·HML 문서가 아닙니다", doc))
             continue
-        summaries.append(extract_one(rhwp, project, src, parts, args.limit, findings))
+        summaries.append(extract_one(rhwp, project, src, parts, args.limit, findings, args.chunk_chars))
 
     errors = sum(1 for f in findings if f["severity"] == "error")
     stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
