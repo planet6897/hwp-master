@@ -40,6 +40,7 @@ CSV 는 엑셀에서 한글이 깨지지 않게 UTF-8 BOM 으로 쓴다.
   W306 경고  연락처(전화·이메일)가 있음 — 개인정보일 수 있다
   W308 경고  표 하나의 의미화(머리 행·값 해석)에 실패 — 그 표는 semantics 없이 격자만 남긴다
   W307 경고  여러 문서 가운데 다른 서식(누름틀·항목 이름 집합이 다수와 다름)
+  W309 경고  그림 파일을 결과 폴더로 옮기지 못함(Windows 260자 경로 한도 등) — text.md 그림 링크가 깨진다
 
 문서가 둘 이상이면 exports/extract/_merged/ 에 documents.csv·fields.csv·kv.csv·data.csv(행마다 source)와
 forms.json(서식 묶음·다른 문서)을 만든다(merge_extract.py).
@@ -138,6 +139,35 @@ def table_grid(table: dict) -> List[List[str]]:
 # rhwp extract-data 는 "1,200,000원" 꼴(본문·한 단계 표 칸)만 금액으로 잡고, "580억 달러"·"$1.5 million"·
 # "3억 5천만 원"과 표 안의 표 칸 값(edwardkim/rhwp#8989)은 놓친다. 통화 단어가 든 문단을 rhwp search 로 모아
 # (위치 포함) 아래 규칙으로 보탠다.
+ASSET_DIR = "assets"
+
+
+def asset_links(md_dir: Path) -> Dict[str, str]:
+    """export-markdown 이 낸 그림 → {원래 상대 경로: 짧은 상대 경로}.
+
+    `<stem>_assets/<stem>_p001_img001.png` → `assets/p001_img001.png`. 이름이 겹치면 원래 이름을 쓴다.
+    """
+    links: Dict[str, str] = {}
+    used = set()
+    for folder in sorted(p for p in md_dir.iterdir() if p.is_dir()):
+        prefix = folder.name[:-len("_assets")] + "_" if folder.name.endswith("_assets") else ""
+        for f in sorted(p for p in folder.rglob("*") if p.is_file()):
+            name = f.relative_to(folder).as_posix()
+            short = name[len(prefix):] if prefix and name.startswith(prefix) and len(name) > len(prefix) else name
+            if short in used:
+                short = name if name not in used else f"{folder.name}/{name}"
+            used.add(short)
+            links[f"{folder.name}/{name}"] = f"{ASSET_DIR}/{short}"
+    return links
+
+
+def relink(markdown: str, links: Dict[str, str]) -> str:
+    """Markdown 의 그림 링크 `](원래 경로` 를 짧은 경로로 바꾼다(긴 것 먼저)."""
+    for source in sorted(links, key=len, reverse=True):
+        markdown = markdown.replace(f"]({source}", f"]({links[source]}")
+    return markdown
+
+
 CURRENCY_QUERIES = ("달러", "원", "엔", "유로", "위안", "$", "USD", "EUR", "JPY", "CNY", "KRW", "€", "¥", "₩", "￦")
 _NUM = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"
 _KSCALE = {"조": 10 ** 12, "천억": 10 ** 11, "백억": 10 ** 10, "십억": 10 ** 9, "억": 10 ** 8, "천만": 10 ** 7,
@@ -326,18 +356,32 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
         with tempfile.TemporaryDirectory() as tmp:
             md = rhwp_json(rhwp, ["export-markdown", str(src), "-o", tmp])
             if not failed("export-markdown", md):
+                # rhwp 는 그림을 <stem>_assets/<stem>_p001_img001.png 로 낸다. 결과 폴더가 이미 <stem> 이라
+                # 이름이 세 번 겹쳐 Windows 260자 경로 한도를 넘기 쉽다 → assets/p001_img001.png 로 줄여 옮기고 링크도 고친다.
+                links = asset_links(Path(tmp))
                 chunks = []
                 for page in sorted(md.get("pages", []), key=lambda p: p.get("page", 0)):
                     body = Path(page["path"]).read_text(encoding="utf-8", errors="replace").strip()
-                    chunks.append(f"<!-- page {int(page.get('page', 0)) + 1} -->\n\n{body}\n")
+                    chunks.append(f"<!-- page {int(page.get('page', 0)) + 1} -->\n\n{relink(body, links)}\n")
                 (out / "text.md").write_text("\n".join(chunks), encoding="utf-8")
                 files.append("text.md")
-                # text.md 의 그림 링크(<stem>_assets/...)가 깨지지 않도록 그림 폴더도 함께 옮긴다.
-                for asset_dir in sorted(p for p in Path(tmp).iterdir() if p.is_dir()):
-                    target = out / asset_dir.name
-                    shutil.rmtree(target, ignore_errors=True)
-                    shutil.copytree(asset_dir, target)
-                    files.extend(f"{asset_dir.name}/{f.name}" for f in sorted(target.iterdir()) if f.is_file())
+                target = out / ASSET_DIR
+                shutil.rmtree(target, ignore_errors=True)
+                failed_copies = []
+                for source, short in sorted(links.items()):
+                    try:
+                        (out / short).parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(Path(tmp) / source, out / short)
+                        files.append(short)
+                    except OSError as e:
+                        failed_copies.append((short, e))
+                if failed_copies:
+                    short, err = failed_copies[0]
+                    findings.append(finding(
+                        "warning", "W309",
+                        f"그림 {len(failed_copies)}개를 옮기지 못했습니다(text.md 의 그림 링크가 깨집니다). "
+                        f"경로가 너무 길 수 있습니다({len(str(out / short))}자): 프로젝트 폴더를 짧은 경로로 옮기거나 "
+                        f"Windows 긴 경로 사용(LongPathsEnabled)을 켭니다. {type(err).__name__}: {err}", rel))
 
     if "structure" in parts:
         env = rhwp_json(rhwp, ["export-structure", str(src)])
