@@ -310,3 +310,74 @@ class ExtractTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OutlineTest(unittest.TestCase):
+    @staticmethod
+    def blocks(texts):
+        return [{"id": f"s0.p{i}", "type": "paragraph", "text": t, "page": 0} for i, t in enumerate(texts)]
+
+    def test_gaejosik_levels_and_notes(self):
+        blocks = self.blocks(["□ 추진 배경", " ○ 현황 분석", "   - 세부 내용", "     * 근거 자료", "  ○ 문제점",
+                              "□ 추진 계획", "  - 바로 아래 하위 기호", "본문 이어짐"])
+        extract.docmodel.assign_outline(blocks)
+        got = [(b["outline"]["kind"], b["outline"]["level"], b["outline"]["parentId"]) if "outline" in b else None
+               for b in blocks]
+        self.assertEqual(got, [("□", 1, None), ("○", 2, "s0.p0"), ("-", 3, "s0.p1"), ("note", 4, "s0.p2"),
+                               ("○", 2, "s0.p0"), ("□", 1, None), ("-", 2, "s0.p5"), None])
+        self.assertEqual(blocks[1]["outline"]["body"], "현황 분석")
+
+    def test_gongmun_numbering_and_rank(self):
+        blocks = self.blocks(["1. 목적", "가. 배경", "1) 세부", "가) 더 세부", "(1) 항목", "나. 둘째", "2. 방법"])
+        extract.docmodel.assign_outline(blocks)
+        self.assertEqual([b["outline"]["level"] for b in blocks], [1, 2, 3, 4, 5, 2, 1])
+        self.assertEqual(blocks[5]["outline"]["parentId"], "s0.p0")
+
+    def test_lower_marker_first_then_higher(self):
+        blocks = self.blocks(["○ 먼저 나온 하위", "□ 나중 나온 상위", "○ 그 아래"])
+        extract.docmodel.assign_outline(blocks)
+        self.assertEqual([b["outline"]["level"] for b in blocks], [1, 1, 2])
+
+    def test_no_false_markers(self):
+        blocks = self.blocks(["2024. 6. 17.(월) 배포", "-5% 감소했다", "1.5배 늘었다", "ㅇㅇ기관 보고", "□", "가나다 순"])
+        extract.docmodel.assign_outline(blocks)
+        self.assertFalse([b for b in blocks if "outline" in b], [b.get("outline") for b in blocks])
+
+    def test_heading_resets_and_tree(self):
+        blocks = self.blocks(["□ 첫 장 항목", "○ 하위"])
+        blocks.insert(0, {"id": "s0.h", "type": "heading", "level": 1, "text": "1장", "page": 0,
+                          "parentHeadingId": None})
+        extract.docmodel.assign_outline(blocks)
+        self.assertEqual(blocks[1]["outline"]["parentId"], "s0.h")
+        tree = extract.docmodel.outline_tree(blocks)
+        self.assertEqual(tree[0]["text"], "1장")
+        self.assertEqual(tree[0]["children"][0]["children"][0]["text"], "하위")
+
+
+class OutlineExtractTest(unittest.TestCase):
+    def test_outline_json_from_document(self):
+        rhwp = rhwp_locate.locate(None)["path"]
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            for sub in ("sources", "exports", "validation"):
+                (project / sub).mkdir(parents=True)
+            spec = Path(tmp) / "spec.json"
+            spec.write_text(json.dumps({"version": "1", "title": "개조식", "blocks": [
+                {"type": "heading", "level": 1, "text": "추진 배경"},
+                {"type": "paragraph", "text": "□ 현황"},
+                {"type": "paragraph", "text": " ○ 수출 580억 달러로 증가"},
+                {"type": "paragraph", "text": "   * 전년 대비 11.5%"},
+                {"type": "paragraph", "text": "□ 과제"},
+            ]}, ensure_ascii=False), encoding="utf-8")
+            doc = project / "sources/g.hwpx"
+            subprocess.run([rhwp, "scaffold", str(spec), "-o", str(doc)], check=True, capture_output=True)
+            proc = subprocess.run([sys.executable, str(SCRIPTS / "extract.py"), str(project), "sources/g.hwpx",
+                                   "--rhwp", rhwp, "--only", "document"], capture_output=True, text=True,
+                                  encoding="utf-8", errors="replace", timeout=600)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            tree = json.loads((project / "exports/extract/g/outline.json").read_text(encoding="utf-8"))["outline"]
+            self.assertEqual(tree[0]["text"], "추진 배경")
+            items = tree[0]["children"]
+            self.assertEqual([(n["marker"], n["text"]) for n in items], [("□", "현황"), ("□", "과제")])
+            self.assertEqual(items[0]["children"][0]["text"], "수출 580억 달러로 증가")
+            self.assertEqual(items[0]["children"][0]["children"][0]["kind"], "note")

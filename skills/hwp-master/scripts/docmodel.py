@@ -279,6 +279,100 @@ def iter_tables(table: dict) -> Iterator[dict]:
             yield from iter_tables(child)
 
 
+# 개조식·공문 항목 기호. (종류, 정규식, 관례 순위) — 순위가 작을수록 상위다.
+# 공문서 항목은 1. → 가. → 1) → 가) → (1) → (가) → ① 순이고, 개조식 보고서는 □ → ○ → - → · 순이다.
+_SP = r"[\s 　]"
+OUTLINE_MARKERS = [
+    ("Ⅰ.", re.compile(rf"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+\.?){_SP}"), 0),
+    ("1.", re.compile(rf"^(\d{{1,2}}\.)(?!\d){_SP}"), 1),
+    ("□", re.compile(rf"^([□■◆◇▣▶►]){_SP}?"), 2),
+    ("가.", re.compile(rf"^([가나다라마바사아자차카타파하]\.){_SP}"), 3),
+    ("○", re.compile(rf"^([○◦●◎]|ㅇ(?={_SP}|\()){_SP}?"), 4),
+    ("1)", re.compile(rf"^(\d{{1,2}}\)){_SP}"), 5),
+    ("-", re.compile(rf"^([-‐–—―]){_SP}"), 6),
+    ("가)", re.compile(rf"^([가나다라마바사아자차카타파하]\)){_SP}"), 7),
+    ("·", re.compile(rf"^([·∙•ㆍ]){_SP}?"), 8),
+    ("(1)", re.compile(rf"^(\(\d{{1,2}}\)){_SP}"), 9),
+    ("(가)", re.compile(rf"^(\([가나다라마바사아자차카타파하]\)){_SP}"), 10),
+    ("①", re.compile(rf"^([①-⑳]){_SP}?"), 11),
+]
+NOTE_MARKER = re.compile(rf"^(※|\*{{1,3}}){_SP}?")
+_RANK = {name: rank for name, _, rank in OUTLINE_MARKERS}
+
+
+def outline_marker(text: str) -> Optional[Tuple[str, str, str]]:
+    """문단 앞 항목 기호 → (종류, 기호 원문, 기호 뒤 글). 주석(※·*)은 종류 'note'."""
+    stripped = text.lstrip(" \t 　")
+    m = NOTE_MARKER.match(stripped)
+    if m:
+        return "note", m.group(1), stripped[m.end():].strip()
+    for name, pattern, _ in OUTLINE_MARKERS:
+        m = pattern.match(stripped)
+        if m:
+            body = stripped[m.end():].strip()
+            return (name, m.group(1), body) if body else None
+    return None
+
+
+def assign_outline(blocks: List[dict]) -> int:
+    """개조식·공문 기호로 문단 계층을 매긴다. 블록에 outline{marker, kind, level, parentId, body} 를 붙인다.
+
+    새 기호 종류가 나오면 관례 순위로 자리를 찾는다(이미 쌓인 더 하위 종류는 닫는다). 개요 제목(heading)이 나오면
+    계층을 새로 시작한다. ※·* 주석은 바로 앞 항목의 한 단계 아래에 붙고 계층을 쌓지 않는다.
+    """
+    stack: List[Tuple[str, str]] = []  # (종류, 블록 ID)
+    count = 0
+    heading_id: Optional[str] = None
+    for block in blocks:
+        if block["type"] == "heading":
+            stack, heading_id = [], block["id"]
+            continue
+        if block["type"] not in ("paragraph", "list") or not block.get("text"):
+            continue
+        found = outline_marker(block["text"])
+        if not found:
+            continue
+        kind, marker, body = found
+        if kind == "note":
+            parent = stack[-1][1] if stack else heading_id
+            block["outline"] = {"marker": marker, "kind": "note", "level": len(stack) + 1, "parentId": parent,
+                                "body": body}
+            count += 1
+            continue
+        names = [k for k, _ in stack]
+        if kind in names:
+            del stack[names.index(kind):]
+        else:
+            while stack and _RANK[stack[-1][0]] > _RANK[kind]:
+                stack.pop()
+        parent = stack[-1][1] if stack else heading_id
+        stack.append((kind, block["id"]))
+        block["outline"] = {"marker": marker, "kind": kind, "level": len(stack), "parentId": parent, "body": body}
+        count += 1
+    return count
+
+
+def outline_tree(blocks: List[dict]) -> List[dict]:
+    """개요 제목과 개조식 항목을 부모-자식 트리로 (outline.json)."""
+    nodes: Dict[str, dict] = {}
+    roots: List[dict] = []
+    for block in blocks:
+        if block["type"] == "heading":
+            node = {"id": block["id"], "kind": "heading", "level": block["level"], "text": block["text"].strip(),
+                    "page": block["page"], "children": []}
+            parent = nodes.get(block.get("parentHeadingId") or "")
+        elif block.get("outline"):
+            o = block["outline"]
+            node = {"id": block["id"], "kind": o["kind"], "marker": o["marker"], "level": o["level"],
+                    "text": o["body"], "page": block["page"], "children": []}
+            parent = nodes.get(o.get("parentId") or "")
+        else:
+            continue
+        nodes[node["id"]] = node
+        (parent["children"] if parent else roots).append(node)
+    return roots
+
+
 def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = None) -> dict:
     pages = pages or {}
     with zipfile.ZipFile(hwpx) as z:
@@ -355,6 +449,7 @@ def build_from_hwpx(hwpx: Path, pages: Optional[Dict[Tuple[int, int], int]] = No
                                    "text": note_text, **base, **path_for()})
                     ordinal["note"] += 1
                     counts["note"] += 1
+    counts["outlineItem"] = assign_outline(blocks)
     return {"schemaVersion": SCHEMA_VERSION, "untrustedContent": True, "counts": counts, "blocks": blocks}
 
 
