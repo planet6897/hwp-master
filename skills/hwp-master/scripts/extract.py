@@ -164,6 +164,12 @@ def extract_one(rhwp: str, project: Path, src: Path, parts: tuple, limit: int, f
                     chunks.append(f"<!-- page {int(page.get('page', 0)) + 1} -->\n\n{body}\n")
                 (out / "text.md").write_text("\n".join(chunks), encoding="utf-8")
                 files.append("text.md")
+                # text.md 의 그림 링크(<stem>_assets/...)가 깨지지 않도록 그림 폴더도 함께 옮긴다.
+                for asset_dir in sorted(p for p in Path(tmp).iterdir() if p.is_dir()):
+                    target = out / asset_dir.name
+                    shutil.rmtree(target, ignore_errors=True)
+                    shutil.copytree(asset_dir, target)
+                    files.extend(f"{asset_dir.name}/{f.name}" for f in sorted(target.iterdir()) if f.is_file())
 
     if "structure" in parts:
         env = rhwp_json(rhwp, ["export-structure", str(src)])

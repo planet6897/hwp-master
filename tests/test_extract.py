@@ -75,6 +75,28 @@ class ExtractTest(unittest.TestCase):
         report = json.loads(Path(summary["report"]).read_text(encoding="utf-8"))
         return proc, report
 
+    def test_text_md_image_links_resolve(self):
+        import re
+        import struct
+        import zlib
+
+        def chunk(kind, data):
+            return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+
+        png = Path(self.tmp.name) / "dot.png"
+        png.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 4, 8, 2, 0, 0, 0))
+                        + chunk(b"IDAT", zlib.compress((b"\x00" + b"\xff\x00\x00" * 4) * 4))
+                        + chunk(b"IEND", b""))
+        subprocess.run([self.rhwp, "edit", "insert-image", str(self.doc), "--image", str(png), "-o", str(self.doc)],
+                       check=True, capture_output=True)
+        proc, report = self.run_extract("sources/doc.hwpx", extra=("--only", "text"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        out = self.project / "exports/extract/doc"
+        links = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", (out / "text.md").read_text(encoding="utf-8"))
+        self.assertTrue(links, "그림이 들어간 문서인데 text.md 에 그림 링크가 없다")
+        for link in links:
+            self.assertTrue((out / link).is_file(), f"깨진 그림 링크: {link}")
+
     def test_extracts_text_tables_data_and_keeps_source(self):
         before = sha(self.doc)
         proc, report = self.run_extract("sources/doc.hwpx")
