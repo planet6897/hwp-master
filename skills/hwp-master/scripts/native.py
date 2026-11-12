@@ -670,6 +670,45 @@ def _top_table_cells(xml: str) -> List[Dict[tuple, tuple]]:
     return tables
 
 
+def _inner_regions(body: str, tags: tuple) -> List[tuple]:
+    """body 안에서 tags(예: tbl·subList)로 감싼 구역들 — 그 안의 문단·run 은 바깥 것이 아니다."""
+    regions = []
+    for tag in tags:
+        for m in re.finditer(rf"<hp:{tag}\b", body):
+            regions.append((m.start(), _balanced(body, m.start(), tag)))
+    return regions
+
+
+def top_para_runs(xml: str) -> List[tuple]:
+    """최상위 문단마다 자기 run 의 charPrIDRef 들(표·글상자·각주 안 run 은 빼고)."""
+    out = []
+    for s, _ in _top_p_spans(xml):
+        e = _balanced(xml, s, "p")
+        body = xml[s:e]
+        inner = _inner_regions(body, ("tbl", "subList"))
+        out.append(tuple(m.group(1) for m in re.finditer(r'<hp:run\b[^>]*?\scharPrIDRef="(\d+)"', body)
+                         if not any(a <= m.start() < b for a, b in inner)))
+    return out
+
+
+def set_top_para_runs(xml: str, runs: Dict[int, tuple]) -> str:
+    """최상위 문단 k 의 자기 run charPrIDRef 를 runs[k] 차례대로 바꾼다."""
+    spans = _top_p_spans(xml)
+    for k in sorted(runs, reverse=True):
+        s = spans[k][0]
+        e = _balanced(xml, s, "p")
+        body = xml[s:e]
+        inner = _inner_regions(body, ("tbl", "subList"))
+        want, pieces, last, i = runs[k], [], 0, 0
+        for m in re.finditer(r'(<hp:run\b[^>]*?\scharPrIDRef=")(\d+)(")', body):
+            if any(a <= m.start() < b for a, b in inner):
+                continue
+            pieces += [body[last:m.start()], f"{m.group(1)}{want[i] if i < len(want) else m.group(2)}{m.group(3)}"]
+            last, i = m.end(), i + 1
+        xml = xml[:s] + "".join(pieces) + body[last:] + xml[e:]
+    return xml
+
+
 def _cell_state(xml: str, span: tuple) -> tuple:
     """칸 하나의 서식 상태: (tc 시작 태그의 header·borderFillIDRef, 칸 문단 paraPrIDRef 들, run charPrIDRef 들).
     안쪽 표 안의 것은 빼고 본다."""
@@ -1073,6 +1112,51 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
             cur = nxt
         return True
 
+    def batched_char_format(entries: List[tuple], label: str) -> bool:
+        """[(최상위 문단 번호, props JSON)] 문단 전체 글자 서식(apply-char-format, 범위 없음)을 묶음마다 rhwp 한 번으로(#44).
+
+        묶음 열쇠는 (문단 자기 run 들의 바탕 charPrIDRef, props). 대표 문단에만 rhwp 를 돌리고, rhwp 가 그 문단 말고는
+        아무 run 도 바꾸지 않았고 run 수도 그대로면 결과 charPrIDRef 들을 바로 전 상태가 같은 문단에 옮긴다.
+        """
+        nonlocal cur, n
+
+        def one(p, pj):
+            return step(["apply-char-format", "--para", str(p), "--props", pj])
+
+        if not BATCH_EDITS:
+            return all(one(p, pj) for p, pj in entries)
+        counts: Dict[int, int] = {}
+        for p, _ in entries:
+            counts[p] = counts.get(p, 0) + 1
+        first = top_para_runs(read_section(cur))
+        groups: Dict[tuple, List[tuple]] = {}
+        for k, (p, pj) in enumerate(entries):
+            key = ("one", k) if counts[p] > 1 or p >= len(first) else (first[p], pj)
+            groups.setdefault(key, []).append((p, pj))
+        for members in groups.values():
+            (p0, pj), rest = members[0], members[1:]
+            before = top_para_runs(read_section(cur))
+            if not one(p0, pj):
+                return False
+            if not rest:
+                continue
+            xml = read_section(cur)
+            after = top_para_runs(xml)
+            safe = (len(before) == len(after) and len(after[p0]) == len(before[p0])
+                    and all(a == b for k, (a, b) in enumerate(zip(before, after)) if k != p0))
+            copy_to = [p for p, _ in rest if safe and before[p] == before[p0]]
+            for p, pj2 in rest:
+                if p not in copy_to and not one(p, pj2):
+                    return False
+            if not copy_to:
+                continue
+            n += 1
+            nxt = work / f"e{n:02d}.hwpx"
+            write_section(cur, nxt, set_top_para_runs(xml, {p: after[p0] for p in copy_to}))
+            log.append({"cmd": ["batch-char-format", label, f"{len(copy_to)} 문단"], "exit": 0})
+            cur = nxt
+        return True
+
     def batched_para_format(entries: List[tuple], label: str) -> bool:
         """[(최상위 문단 번호, props JSON)] 를 (바탕 paraPr, props) 묶음마다 rhwp 한 번으로 적용한다(#42).
 
@@ -1212,15 +1296,21 @@ def _produce_once(doc: dict, out: Path, rhwp: str, work: Path, toc_pages: Option
         return result
     # 문서 글자 크기·줄 간격은 강조보다 먼저: 강조의 size 가 문서 크기를 덮어쓴다.
     st = plan.get("style") or {}
+    # 글자 서식과 문단 서식은 서로 다른 목록(charPr·paraPr)이라 문단마다 번갈아 하지 않고 묶음으로 나눠도 같다(#44).
+    char_entries, para_entries = [], []
     for target, role in targets:
-        para = "0" if target == "title" else str(paras[target])
+        para = 0 if target == "title" else paras[target]
         cprops, pprops = role_char_props(st, role), role_para_props(st, role)
-        if cprops and not step(["apply-char-format", "--para", para, "--props", cprops]):
-            result["error"] = "문서 글자 크기·글꼴 적용 실패"
-            return result
-        if pprops and not step(["apply-para-format", "--para", para, "--props", pprops]):
-            result["error"] = "문서 줄 간격·문단 간격 적용 실패"
-            return result
+        if cprops:
+            char_entries.append((para, cprops))
+        if pprops:
+            para_entries.append((para, pprops))
+    if not batched_char_format(char_entries, "문서 글자 크기·글꼴"):
+        result["error"] = "문서 글자 크기·글꼴 적용 실패"
+        return result
+    if not batched_para_format(para_entries, "문서 줄 간격·문단 간격"):
+        result["error"] = "문서 줄 간격·문단 간격 적용 실패"
+        return result
     # 강조는 각주보다 먼저: 각주 컨트롤이 들어가기 전이라 오프셋이 HDS 글자 위치 그대로다.
     for em in plan["emphasis"]:
         if not step(["apply-char-format", "--para", str(paras[em["block"]]), "--offset", str(em["offset"]),
