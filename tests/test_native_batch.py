@@ -40,6 +40,9 @@ def xml_parts(path):
     section = re.sub(r'(paraPrIDRef|charPrIDRef|borderFillIDRef)="(\d+)"', canon, section)
     header = re.sub(r"<hh:(paraProperties|charProperties|borderFills)\b.*?</hh:\1>", "", header, flags=re.S)
     header = re.sub(r'(paraPrIDRef|charPrIDRef|borderFillIDRef)="(\d+)"', canon, header)
+    # 각주 안 문단의 줄 배치(linesegarray)는 묶음 삽입이 쓰지 않는다 — 한컴·rhwp 가 열 때 다시 계산한다(#50)
+    section = re.sub(r"(<hp:footNote\b.*?</hp:footNote>)",
+                     lambda m: re.sub(r"<hp:linesegarray>.*?</hp:linesegarray>", "", m.group(1)), section, flags=re.S)
     return {"header(서식 목록 제외)": header, "section0(서식 내용으로)": section}
 
 
@@ -131,6 +134,34 @@ class BatchTest(unittest.TestCase):
             {"type": "list", "items": ["항목"]}]}
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "q.hwpx"
+            result = native.produce(json.loads(json.dumps(doc)), out, rhwp, Path(tmp) / "w")
+            self.assertTrue(result["ok"], result.get("error"))
+            self.assertEqual(native.check(out, doc, rhwp), [])
+
+    def test_many_footnotes_written_directly_equal_step_by_step(self):
+        """#50: 각주 여러 개를 XML 로 바로 넣은 결과가 rhwp 로 하나씩 넣은 결과와 같고, 자체 확인을 통과한다.
+        run 경계(강조 바로 뒤)·탭·따옴표·&·<·표 뒤 문단을 섞고, 같은 자리 각주·줄 바꿈 문단은 rhwp 로 돈다."""
+        blocks = [
+            {"type": "paragraph", "text": "첫째 문단에 각주가 있다.", "footnotes": [{"text": "첫 각주", "after": "첫째"}]},
+            {"type": "table", "rows": [["구분", "금액"], ["장비", "100원"]], "header_row": True},
+            {"type": "paragraph", "text": "둘째 문단에는 각주가 여럿 있는 긴 문장이다.",
+             "emphasis": [{"text": "각주가", "bold": True}],
+             "footnotes": [{"text": "둘 & <a>", "after": "둘째"}, {"text": "경계", "after": "문단에는 "},
+                           {"text": "강조 끝", "after": "각주가"}, {"text": '셋 "q" \'s\''}]},
+            {"type": "paragraph", "text": "탭\t들어간 문단", "footnotes": [{"text": "탭 뒤", "after": "탭\t"},
+                                                                     {"text": "넷\t탭"}]},
+            {"type": "paragraph", "text": "같은 자리", "footnotes": [{"text": "가"}, {"text": "나"}]},
+            {"type": "paragraph", "text": "줄\n바꿈", "footnotes": [{"text": "줄 바꿈 문단", "after": "줄"}]},
+        ]
+        blocks += [{"type": "paragraph", "text": f"{k}번 본문.", "footnotes": [{"text": f"{k}번 근거"}]}
+                   for k in range(6)]
+        doc = {"version": "1", "title": "각주 묶음", "blocks": blocks, "footer": {"text": "쪽"},
+               "style": {"body_pt": 11}}
+        calls = self.compare_modes(doc)
+        self.assertLess(calls[True], calls[False] / 2, calls)
+        rhwp = rhwp_locate.locate(None)["path"]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "fn.hwpx"
             result = native.produce(json.loads(json.dumps(doc)), out, rhwp, Path(tmp) / "w")
             self.assertTrue(result["ok"], result.get("error"))
             self.assertEqual(native.check(out, doc, rhwp), [])
