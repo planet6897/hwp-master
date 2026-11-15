@@ -38,7 +38,9 @@ def _is_link(p: Path) -> bool:
     if is_junction is not None:
         return is_junction()
     try:
-        return os.path.realpath(p) != os.path.abspath(p) and p.is_dir()
+        # 부모 경로에 낀 심볼릭 링크(macOS 의 /var -> /private/var)를 링크로 잘못 보지 않게 부모는 풀어서 비교한다.
+        parent = os.path.realpath(os.path.dirname(os.path.abspath(p)))
+        return os.path.realpath(p) != os.path.join(parent, os.path.basename(os.path.abspath(p))) and p.is_dir()
     except OSError:
         return False
 
