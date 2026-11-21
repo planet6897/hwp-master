@@ -3,7 +3,7 @@
 # hwp-master — AI 가 rhwp 로 한글(HWP/HWPX) 문서를 읽고 쓰고 고칩니다
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![rhwp](https://img.shields.io/badge/engine-rhwp%200.9.0-blue)](https://github.com/edwardkim/rhwp)
+[![rhwp](https://img.shields.io/badge/engine-rhwp%200.9.1-blue)](https://github.com/edwardkim/rhwp)
 
 **이 프로젝트는 [rhwp](https://github.com/edwardkim/rhwp) 를 사용해 hwp/hwpx 를 읽고, 쓰고, 변경하기 위한 프로젝트입니다.**
 
@@ -65,9 +65,9 @@ AI 가 하는 일은 다음과 같습니다.
 git clone https://github.com/planet6897/hwp-master.git ~/hwp-master
 cd ~/hwp-master
 python3 skills/hwp-master/scripts/install_rhwp.py
-# rhwp v0.9.0 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.0-e7ee272/rhwp/rhwp
+# rhwp v0.9.1 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.1-d7b5286/rhwp/rhwp
 python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 찾는다 (Linux 는 한글 글꼴도 확인)
-python3 -m unittest discover -s tests               # 자동 테스트 (rhwp 0.9.0 에서 모두 OK)
+python3 -m unittest discover -s tests               # 자동 테스트 (rhwp 0.9.1 에서 모두 OK)
 python3 skills/hwp-master/scripts/install_skill.py  # ~/.claude/skills/hwp-master 에 스킬 연결
 ```
 
@@ -349,11 +349,11 @@ $RHWP export-hwpx 옛문서.hwp 새문서.hwpx --verify  # HWP → HWPX 변환 (
 
 | OS | 파일 | 확인 |
 |---|---|---|
-| macOS Apple Silicon (arm64) | `rhwp-0.9.0-e7ee272-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증, 설치·hwp-master 전체 테스트 (macOS, 2026-11-15) |
-| macOS Intel (x86_64) | `rhwp-0.9.0-e7ee272-macos-x86_64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-15) |
-| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.0-e7ee272-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-15) |
-| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.0-e7ee272-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 안에서 추출·PDF 검증 (2026-11-15) |
-| Windows x86_64 | `rhwp-0.9.0-e7ee272-windows-x86_64.zip` | CI 빌드·추출·PDF 검증 (2026-11-15) |
+| macOS Apple Silicon (arm64) | `rhwp-0.9.1-d7b5286-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증, 설치·hwp-master 전체 테스트 (macOS, 2026-11-21) |
+| macOS Intel (x86_64) | `rhwp-0.9.1-d7b5286-macos-x86_64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-21) |
+| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.1-d7b5286-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-21) |
+| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.1-d7b5286-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 안에서 추출·PDF 검증 (2026-11-21) |
+| Windows x86_64 | `rhwp-0.9.1-d7b5286-windows-x86_64.zip` | CI 빌드·추출·PDF 검증 (2026-11-21) |
 
 - **파일 고르기:** `install_rhwp.py` 가 CPU 와 Linux 의 glibc 버전을 보고 고릅니다.
   - glibc 2.35 이상이면 2.35 빌드
@@ -380,7 +380,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # 배포 바이너리와 같은 기본 기능 (PNG 렌더가 필요하면 --features native-skia 를 덧붙인다)
 cargo install --locked --git https://github.com/edwardkim/rhwp --branch devel --bin rhwp rhwp
-rhwp --version    # rhwp v0.9.0
+rhwp --version    # rhwp v0.9.1
 ```
 
 - 걸린 시간: macOS 약 11분, Linux 24코어 11~20분(2026-11-02~03).
