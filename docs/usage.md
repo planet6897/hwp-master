@@ -12,7 +12,7 @@ hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다.
 ## 1. 처음 한 번 — 설치와 확인
 
 설치는 [README](../README.md#빠른-설치)를 따릅니다. Claude Code 에 "https://github.com/planet6897/hwp-master 설치해줘"라고
-하면 AI 가 `~/hwp-master` 에 저장소 받기·rhwp 0.9.0 설치·확인·자동 테스트를 하고, 스킬을
+하면 AI 가 `~/hwp-master` 에 저장소 받기·rhwp 0.9.1 설치·확인·자동 테스트를 하고, 스킬을
 `~/.claude/skills/hwp-master` 에 링크로 연결합니다.
 
 - **설치한 그 창에서 바로** 문서를 요청해도 됩니다. 설치한 AI 가 지침(`AGENTS.md`·`SKILL.md`)을 읽어 둡니다.
@@ -313,7 +313,7 @@ hwp-master 가 아니라 rhwp 의 `rhwp-exam-ingest` 스킬이 만듭니다. Cla
 | "rhwp 바이너리를 찾지 못했습니다" | rhwp 를 설치하고 PATH 에 두거나 `RHWP_BIN` 을 지정합니다. |
 | 다른 폴더에서 연 Claude 가 hwp-master 를 모름 | 스킬이 연결되지 않았습니다. `python3 ~/hwp-master/skills/hwp-master/scripts/install_skill.py` 를 실행하고 Claude Code 를 다시 엽니다. |
 | install_skill.py "이미 있고 이 저장소를 가리키지 않는다" | `~/.claude/skills/hwp-master` 에 다른 복사본이나 이전 설치가 있습니다. 필요 없으면 그 폴더를 직접 지운 뒤 다시 실행합니다. 플러그인 설치와 함께 쓰면 스킬이 둘 보이니 하나만 남깁니다. |
-| "최소 버전 0.9.0 미만" | 릴리스 v0.8.7 은 지원하지 않습니다. `python3 skills/hwp-master/scripts/install_rhwp.py` 로 이 저장소 Release 의 0.9.0 을 설치합니다. |
+| "최소 버전 0.9.0 미만" | 릴리스 v0.8.7 은 지원하지 않습니다. `python3 skills/hwp-master/scripts/install_rhwp.py` 로 이 저장소 Release 의 0.9.1 을 설치합니다. |
 | 제목이 "1. 1. 추진 배경" 처럼 이중 번호 | 제목에 번호를 직접 썼습니다(E101). 번호를 지웁니다. |
 | 표 셀 글이 미리보기에서 잘림 (W201) | 한컴에서는 줄바꿈됩니다. 셀 문장을 줄이거나 열 수를 줄입니다. |
 | 쪽수 초과 (R104) | 분량을 줄이거나 쪽 한도를 늘립니다. |
