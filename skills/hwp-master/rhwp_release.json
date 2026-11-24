@@ -1,14 +1,14 @@
 {
   "repo": "planet6897/hwp-master",
-  "tag": "rhwp-0.9.1-d7b5286",
+  "tag": "rhwp-0.9.1-0fbee2c",
   "rhwp_version": "0.9.1",
-  "rhwp_commit": "d7b5286cbf6401678a70eed3d66236a68dd2a72c",
+  "rhwp_commit": "0fbee2c04ecee63cf526a9a7e61b38b32608bc3c",
   "features": [],
   "assets": {
-    "rhwp-0.9.1-d7b5286-linux-x86_64-glibc2.28.tar.gz": "06fae709e460bf4d7c30da81081a72d68902178e6b66dd628f92d71cc6b43eb3",
-    "rhwp-0.9.1-d7b5286-linux-x86_64-glibc2.35.tar.gz": "db45c4f413b8f5b97403f2c38a3e4d21c88b0613d75ca0099ada90c61f2a216a",
-    "rhwp-0.9.1-d7b5286-macos-aarch64.tar.gz": "5a76dba8fcdebb83bd62c32bd9d5337342ff2e9ea325c4697fec259926ac16cc",
-    "rhwp-0.9.1-d7b5286-macos-x86_64.tar.gz": "e0e5a1591e218f8ade95c4c23390f0c8d38f8785418213a83a64f97d6f490b04",
-    "rhwp-0.9.1-d7b5286-windows-x86_64.zip": "3df0876e6a44d649ee5163bbce5be126a6b88a411467d4c804069994d8aa3369"
+    "rhwp-0.9.1-0fbee2c-linux-x86_64-glibc2.28.tar.gz": "7784231b54deb700a7f3da9ed34e2e7195f5d758768e5c566faf68b6f13ee5c2",
+    "rhwp-0.9.1-0fbee2c-linux-x86_64-glibc2.35.tar.gz": "1e9f37a2a40008cb315a56ab0fa6f0ce4c0ee563a0290bfebaa19a7aac56c591",
+    "rhwp-0.9.1-0fbee2c-macos-aarch64.tar.gz": "2b06993cf9415aeaf29c74c25b2307e7cb46b8d5cd9b995bb98be59ddb1ccaf6",
+    "rhwp-0.9.1-0fbee2c-macos-x86_64.tar.gz": "57de13adb564beb1fdfb167f2e1f1cc2a0f72cb48e6623012eaa4e88f9b4b0fd",
+    "rhwp-0.9.1-0fbee2c-windows-x86_64.zip": "eaef776d37973297203d524f65d1eb284dfe39d63e46618362d23ec06cc66ea2"
   }
 }
