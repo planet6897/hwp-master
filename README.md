@@ -65,7 +65,7 @@ AI 가 하는 일은 다음과 같습니다.
 git clone https://github.com/planet6897/hwp-master.git ~/hwp-master
 cd ~/hwp-master
 python3 skills/hwp-master/scripts/install_rhwp.py
-# rhwp v0.9.1 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.1-0fbee2c/rhwp/rhwp
+# rhwp v0.9.1 설치 — ~/.local/share/hwp-master/rhwp/rhwp-0.9.1-5fa8ced/rhwp/rhwp
 python3 skills/hwp-master/scripts/rhwp_locate.py    # 설치한 바이너리를 찾는다 (Linux 는 한글 글꼴도 확인)
 python3 -m unittest discover -s tests               # 자동 테스트 (rhwp 0.9.1 에서 모두 OK)
 python3 skills/hwp-master/scripts/install_skill.py  # ~/.claude/skills/hwp-master 에 스킬 연결
@@ -349,11 +349,11 @@ $RHWP export-hwpx 옛문서.hwp 새문서.hwpx --verify  # HWP → HWPX 변환 (
 
 | OS | 파일 | 확인 |
 |---|---|---|
-| macOS Apple Silicon (arm64) | `rhwp-0.9.1-0fbee2c-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증, 설치·hwp-master 전체 테스트 (macOS, 2026-11-25) |
-| macOS Intel (x86_64) | `rhwp-0.9.1-0fbee2c-macos-x86_64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-25) |
-| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.1-0fbee2c-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-25) |
-| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.1-0fbee2c-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 안에서 추출·PDF 검증 (2026-11-25) |
-| Windows x86_64 | `rhwp-0.9.1-0fbee2c-windows-x86_64.zip` | CI 빌드·추출·PDF 검증 (2026-11-25) |
+| macOS Apple Silicon (arm64) | `rhwp-0.9.1-5fa8ced-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증, 설치·hwp-master 전체 테스트 (macOS, 2026-11-26) |
+| macOS Intel (x86_64) | `rhwp-0.9.1-5fa8ced-macos-x86_64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-26) |
+| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.1-5fa8ced-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-26) |
+| Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.1-5fa8ced-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 안에서 추출·PDF 검증 (2026-11-26) |
+| Windows x86_64 | `rhwp-0.9.1-5fa8ced-windows-x86_64.zip` | CI 빌드·추출·PDF 검증 (2026-11-26) |
 
 - **파일 고르기:** `install_rhwp.py` 가 CPU 와 Linux 의 glibc 버전을 보고 고릅니다.
   - glibc 2.35 이상이면 2.35 빌드
