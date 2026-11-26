@@ -1,0 +1,44 @@
+name: rhwp binaries retry
+
+# "rhwp binaries" 가 러너를 잡지 못해 실패했을 때 그 작업만 다시 돌린다.
+# GitHub 가 macOS arm64 러너를 배정하지 못하면("The job was not acquired by Runner of type hosted")
+# 작업은 cancelled, 실행은 failure 로 끝난다. 실제로 실패(failure)한 작업이 하나라도 있으면 다시 돌리지 않는다.
+# 사람이 실행을 취소하면 실행 결과가 cancelled 라서 여기에 걸리지 않는다. 한 실행에 두 번까지만 다시 돌린다.
+
+on:
+  workflow_run:
+    workflows: ['rhwp binaries']
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  rerun:
+    name: Rerun cancelled jobs
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Rerun when jobs were cancelled, not failed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          conclusions=$(gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/$ATTEMPT/jobs" --paginate \
+            --jq '.jobs[] | "\(.conclusion)\t\(.name)"')
+          echo "$conclusions"
+          if grep -q '^failure' <<<"$conclusions"; then
+            echo "::notice::실패한 작업이 있어 다시 돌리지 않습니다."
+            exit 0
+          fi
+          if ! grep -q '^cancelled' <<<"$conclusions"; then
+            echo "::notice::취소된 작업이 없어 다시 돌리지 않습니다."
+            exit 0
+          fi
+          echo "::notice::취소된 작업만 다시 돌립니다 (시도 $ATTEMPT → $((ATTEMPT + 1)))."
+          gh run rerun "$RUN_ID" --repo "$REPO" --failed
