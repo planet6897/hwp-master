@@ -19,6 +19,8 @@ hwp-master 는 기획·집필 절차와 결과 검사를 맡습니다.
 - **다음부터는 어느 폴더에서 `claude` 를 실행해도** hwp-master 스킬이 자동으로 로딩됩니다. 자료가 있는 폴더에서
   실행하면 작업 폴더 `projects/` 도 그 아래에 생겨 찾기 쉽습니다.
 - 연결은 복사가 아니라 링크라서 `~/hwp-master` 에서 `git pull` 하면 스킬도 함께 갱신됩니다.
+- hwp-master 나 rhwp 바이너리의 새 버전이 나오면 작업을 시작할 때 AI 가 알려 주고 받을지 묻습니다.
+  직접 받으려면 `python3 ~/hwp-master/skills/hwp-master/scripts/update.py --apply` 를 실행합니다(확인만 하려면 `--apply` 없이).
   연결을 풀려면 `python3 ~/hwp-master/skills/hwp-master/scripts/install_skill.py --remove` 합니다.
 
 직접 확인하려면:

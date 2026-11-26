@@ -19,6 +19,9 @@
   init 이 출력한 경로를 그대로 이어 쓴다.
 - 처음에 `python3 skills/hwp-master/scripts/rhwp_locate.py` 로 rhwp(0.9.0 이상)를 확인한다. 실패하면 멈추고
   README 의 설치를 안내한다.
+- `rhwp_locate.py` 가 `알림: 업데이트가 있습니다 …` 를 내면 사용자에게 전하고 받을지 묻는다. 받겠다고 하면
+  `python3 skills/hwp-master/scripts/update.py --apply` 를 실행한다(`git pull --ff-only` 와 고정된 rhwp 바이너리 설치).
+  묻지 않고 받지 않는다. 하던 요청은 알림과 상관없이 이어서 처리한다.
 - 사용자가 "설치해줘"처럼 설치를 요청하면 그것이 설치 동의다. 저장소 루트에서 차례로 실행하고 결과를 알린다.
   1. `python3 skills/hwp-master/scripts/install_rhwp.py` — 지원하지 않는 플랫폼이면 README 의 소스 빌드를 안내하고 멈춘다.
   2. `python3 skills/hwp-master/scripts/rhwp_locate.py` — 경로·버전 확인 (Linux 는 한글 글꼴 경고도 전한다).

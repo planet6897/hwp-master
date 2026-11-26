@@ -56,7 +56,10 @@ AI 가 하는 일은 다음과 같습니다.
 - 공개 저장소라 GitHub 계정이나 로그인 없이 설치할 수 있습니다.
 - Claude Code 는 VS Code / JetBrains 확장으로 써도 됩니다. 설치가 끝나면 **File → Open Folder** 로 `~/hwp-master` 를 엽니다.
 - `AGENTS.md` 를 읽는 다른 에이전트(Codex CLI, Cursor, Gemini CLI 등)도 동작할 수 있으나 확인하지 않았습니다.
-- **업데이트:** `~/hwp-master` 에서 "업데이트해줘"라고 하거나 `git pull` 합니다. rhwp 버전이 바뀌었으면 다시 "설치해줘"라고 합니다.
+- **업데이트:** hwp-master 나 rhwp 바이너리의 새 버전이 나오면 작업을 시작할 때 AI 가 알려 주고 받을지 묻습니다(하루 한 번까지 확인).
+  직접 하려면 "업데이트해줘"라고 하거나 `python3 skills/hwp-master/scripts/update.py --apply` 를 실행합니다.
+  `git pull --ff-only` 로 hwp-master 를 받고 새로 고정된 rhwp 바이너리를 설치합니다. 확인만 하려면 `--apply` 없이 실행하고,
+  알림을 끄려면 환경변수 `HWP_MASTER_NO_UPDATE_CHECK=1` 을 줍니다.
 
 <details>
 <summary><strong>직접 설치하기</strong> — AI 없이 터미널에서, 또는 설치가 막혔을 때</summary>
@@ -349,9 +352,9 @@ $RHWP export-hwpx 옛문서.hwp 새문서.hwpx --verify  # HWP → HWPX 변환 (
 
 | OS | 파일 | 확인 |
 |---|---|---|
-| macOS Apple Silicon (arm64) | `rhwp-0.9.1-5fa8ced-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증, 설치·hwp-master 전체 테스트 (macOS, 2026-11-26) |
+| macOS Apple Silicon (arm64) | `rhwp-0.9.1-5fa8ced-macos-aarch64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-26) |
 | macOS Intel (x86_64) | `rhwp-0.9.1-5fa8ced-macos-x86_64.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-26) |
-| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.1-5fa8ced-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증 (2026-11-26) |
+| Linux x86_64, glibc 2.35 이상 (Ubuntu 22.04+, Debian 12+, RHEL 10) | `rhwp-0.9.1-5fa8ced-linux-x86_64-glibc2.35.tar.gz` | CI 빌드·추출·PDF 검증, 설치·hwp-master 전체 테스트 (CI Ubuntu, 2026-11-26) |
 | Linux x86_64, glibc 2.28 이상 (RHEL/Rocky 8·9, Debian 10·11, Ubuntu 20.04) | `rhwp-0.9.1-5fa8ced-linux-x86_64-glibc2.28.tar.gz` | CI 빌드·glibc 2.28 컨테이너 안에서 추출·PDF 검증 (2026-11-26) |
 | Windows x86_64 | `rhwp-0.9.1-5fa8ced-windows-x86_64.zip` | CI 빌드·추출·PDF 검증 (2026-11-26) |
 
@@ -399,6 +402,10 @@ python3 skills/hwp-master/scripts/install_rhwp.py     # 새 바이너리 설치�
 python3 -m unittest discover -s tests                 # 모두 통과해야 PR 로 올린다
 ```
 
+- **자동 배포:** 워크플로가 매일 06:17(KST)에 스스로 돌아 devel 에 새 커밋이 있으면 빌드·Release 하고,
+  `rhwp_release.json`·README 를 맞춘 뒤 새 바이너리로 전체 테스트와 `eval_extract.py` 를 돌립니다. 통과하면
+  `devel` → `main` PR 을 열어 머지합니다(`devel` 이 `main` 과 다르면 `auto/rhwp-<커밋>` 브랜치로). 실패하면 아무것도 올리지 않습니다.
+  위 명령은 손으로 할 때 쓰고, `gh workflow run` 만 해도 반영·PR·머지까지 합니다(`-f update=false` 로 끔).
 - 워크플로는 먼저 브랜치를 커밋 SHA 하나로 고정합니다. 그래서 모든 플랫폼이 같은 커밋을 빌드합니다.
 - 그 커밋의 Release 가 이미 있으면 멈춥니다.
 - 각 압축 파일은 새 폴더에 풀어 다음을 돌려 봅니다.

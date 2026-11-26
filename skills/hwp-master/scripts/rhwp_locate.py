@@ -4,6 +4,7 @@
 탐색 순서: --rhwp 인자 → 환경변수 RHWP_BIN → install_rhwp.py 가 설치한 고정 Release 바이너리 → PATH 의 `rhwp`.
 최소 버전 미만이거나 찾지 못하면 exit 2 와 설치 안내를 낸다.
 Linux 에서 한글 글꼴 파일이 보이지 않으면 경고한다(미리보기 PNG·PDF 의 한글이 빠짐). 경고는 exit 0.
+hwp-master 나 rhwp 바이너리의 업데이트가 있으면 알린다(하루 한 번까지 확인, update.py 참고). 알림도 exit 0.
 
     python3 rhwp_locate.py [--rhwp PATH] [--json]
 """
@@ -61,6 +62,15 @@ def korean_font_status(extra_dirs: Iterable[str] = ()) -> dict:
     return {"ok": False, "checked": True, "platform": sys.platform, "searched": dirs, "hint": FONT_HINT}
 
 
+def update_notice() -> Optional[str]:
+    """업데이트 알림 한 줄. 없거나 확인하지 못하면 None (오류를 올리지 않는다)."""
+    try:
+        import update
+        return update.quiet_notice()
+    except Exception:
+        return None
+
+
 class RhwpNotFound(RuntimeError):
     pass
 
@@ -112,12 +122,15 @@ def main() -> int:
             print(str(exc), file=sys.stderr)
         return 2
     font = korean_font_status()
+    update = update_notice()
     if args.json:
-        print(json.dumps({"ok": True, **info, "koreanFont": font}, ensure_ascii=False))
+        print(json.dumps({"ok": True, **info, "koreanFont": font, "updateNotice": update}, ensure_ascii=False))
     else:
         print(f"rhwp {info['version']} — {info['path']}")
         if not font["ok"]:
             print(f"경고: {FONT_HINT}", file=sys.stderr)
+        if update:
+            print(f"알림: {update}", file=sys.stderr)
     return 0
 
 
