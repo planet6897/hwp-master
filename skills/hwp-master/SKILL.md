@@ -31,7 +31,7 @@ metadata:
 | `scripts/convert.py` | Convert-in: MD·DOCX·PDF → `outline.json`·`units/` (정규화·손실 보고) |
 | `scripts/merge.py` | Mail-merge: 서식·명단 대조 → `batch fill --dry-run` → `batch fill --verify` → 행 수 보존 판정 |
 | `scripts/beautify.py` | Beautify: `propose`(손 번호 → 개요 번호 계획) · `apply`(적용 → 내용 보존·조판 판정, 문제 문단 자동 제외) |
-| `scripts/style_profile.py` | 문서 유형 프로필: `analyze`·`register`(실제 문서들의 서식 다수결 → `~/.hwp-master/profiles/`) · `list [--search 낱말] [--json]`(기본·내 프로필과 핵심 서식) · `show` · `lock`(spec_lock.json 에 적용). 기본 프로필 37종은 `profiles/` |
+| `scripts/style_profile.py` | 문서 유형 프로필: `analyze`·`register`(실제 문서들의 서식 다수결 → `~/.hwp-master/profiles/`) · `list [--search 낱말] [--json]`(기본·내 프로필과 핵심 서식) · `show` · `lock`(spec_lock.json 에 적용). 기본 프로필 69종은 `profiles/` |
 | `scripts/template_fill.py` | Template Fill: `inspect`(서식 칸 조사·자료 틀) · `fill`(목록 반복 → 칸 채움 → 캡슐 사슬 → 판정) · `register`(기관 서식 등록) |
 | `scripts/docmodel.py` | Extract 가 쓰는 통합 문서 모델(`document.json`): 읽기 순서 블록과 고정 ID, 표·값·누름틀을 `blockId` 로 연결 |
 | `scripts/install_mcp.py` | (선택) 배포 rhwp `mcp-serve` 를 Claude Code·Desktop MCP 서버로 등록·제거, 연결 확인. 기존 다른 서버는 덮어쓰지 않음 |

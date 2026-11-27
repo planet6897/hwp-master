@@ -1,0 +1,85 @@
+{
+ "version": "1",
+ "documents": 62,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "heading_pt": 15.0,
+   "table_pt": 11.5,
+   "table_font": "맑은 고딕",
+   "title_space_before": 10.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 10.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 4.5,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.29,
+  "font": 0.61,
+  "body_pt": 0.63,
+  "title_pt": 0.97,
+  "heading_pt": 0.89,
+  "table_pt": 0.73,
+  "line_spacing": 0.23,
+  "title_font": 0.94,
+  "heading_font": 0.95,
+  "table_font": 0.56,
+  "title_space_before": 0.79,
+  "title_space_after": 0.89,
+  "heading_space_before": 0.84,
+  "heading_space_after": 0.93,
+  "body_space_before": 0.77,
+  "body_space_after": 0.74,
+  "marker_system": 0.35,
+  "pagenum": 0.65,
+  "ending": 0.51
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6.0,
+  "table_text_share_median": 0.37,
+  "header_pct": 0.03,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.06,
+  "endings": {
+   "narrative": 476,
+   "noun": 472,
+   "nominal": 32
+  },
+  "marker_docs": {
+   "□": 57,
+   "○": 56,
+   "①": 13,
+   "-": 18,
+   "▶": 7,
+   "1)": 9,
+   "Ⅰ.": 2,
+   "제N조": 1
+  }
+ },
+ "name": "보도자료-인사혁신처",
+ "corpus": {
+  "by": "agency",
+  "documents": 62,
+  "candidates": 62,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 62건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

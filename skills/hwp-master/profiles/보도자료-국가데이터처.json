@@ -1,0 +1,99 @@
+{
+ "version": "1",
+ "documents": 267,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "휴먼명조",
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 15.0,
+   "line_spacing": 160,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 3.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "1.",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.51,
+  "font": 0.64,
+  "body_pt": 0.27,
+  "title_pt": 0.86,
+  "heading_pt": 0.64,
+  "table_pt": 0.33,
+  "line_spacing": 0.51,
+  "title_font": 0.75,
+  "heading_font": 0.77,
+  "table_font": 0.33,
+  "title_space_before": 0.91,
+  "title_space_after": 0.62,
+  "heading_space_before": 0.22,
+  "heading_space_after": 0.63,
+  "body_space_before": 0.7,
+  "body_space_after": 0.69,
+  "marker_system": 0.16,
+  "pagenum": 0.78,
+  "ending": 0.94
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 27,
+  "table_text_share_median": 0.41,
+  "header_pct": 0.06,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.1,
+  "endings": {
+   "narrative": 1292,
+   "noun": 15011,
+   "nominal": 4558
+  },
+  "marker_docs": {
+   "Ⅰ.": 48,
+   "□": 190,
+   "○": 197,
+   "1.": 180,
+   "-": 141,
+   "▶": 38,
+   "①": 44,
+   "◇": 30,
+   "가.": 88,
+   "1)": 75,
+   "가)": 21,
+   "제N조": 5,
+   "ㆍ": 15,
+   "(1)": 4,
+   "(가)": 3
+  }
+ },
+ "name": "보도자료-국가데이터처",
+ "corpus": {
+  "by": "agency",
+  "documents": 267,
+  "candidates": 302,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 267건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

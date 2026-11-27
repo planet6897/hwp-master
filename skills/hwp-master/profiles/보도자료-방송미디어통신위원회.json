@@ -1,0 +1,95 @@
+{
+ "version": "1",
+ "documents": 298,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "title_font": "휴먼명조",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 4.5,
+   "body_space_before": 5.5,
+   "body_space_after": 5.5
+  },
+  "marker_system": [
+   "□"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.98,
+  "font": 0.68,
+  "body_pt": 0.71,
+  "title_pt": 0.99,
+  "heading_pt": 0.38,
+  "table_pt": 0.48,
+  "line_spacing": 0.43,
+  "title_font": 0.99,
+  "heading_font": 0.31,
+  "table_font": 0.39,
+  "title_space_before": 0.99,
+  "title_space_after": 1.0,
+  "heading_space_before": 0.33,
+  "heading_space_after": 0.59,
+  "body_space_before": 0.67,
+  "body_space_after": 0.64,
+  "marker_system": 0.08,
+  "pagenum": 0.83,
+  "ending": 0.58
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6.0,
+  "table_text_share_median": 0.2,
+  "header_pct": 0.01,
+  "title_align": "RIGHT",
+  "title_bold_pct": 0.0,
+  "endings": {
+   "noun": 2118,
+   "narrative": 3456,
+   "nominal": 336
+  },
+  "marker_docs": {
+   "□": 65,
+   "○": 40,
+   "-": 36,
+   "1.": 37,
+   "Ⅰ.": 4,
+   "가.": 6,
+   "1)": 7,
+   "ㆍ": 5,
+   "①": 21,
+   "◇": 3,
+   "▶": 2,
+   "제N조": 2,
+   "(1)": 2
+  }
+ },
+ "name": "보도자료-방송미디어통신위원회",
+ "corpus": {
+  "by": "agency",
+  "documents": 298,
+  "candidates": 356,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 298건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

@@ -1,0 +1,95 @@
+{
+ "version": "1",
+ "documents": 299,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "table_pt": 10.0,
+   "table_font": "돋움체",
+   "title_space_before": 0.0,
+   "title_space_after": 3.0,
+   "heading_space_before": 13.5,
+   "heading_space_after": 12.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.88,
+  "font": 0.5,
+  "body_pt": 0.58,
+  "title_pt": 0.59,
+  "heading_pt": 0.14,
+  "table_pt": 0.6,
+  "line_spacing": 0.29,
+  "title_font": 0.44,
+  "heading_font": 0.36,
+  "table_font": 0.57,
+  "title_space_before": 0.83,
+  "title_space_after": 0.72,
+  "heading_space_before": 0.55,
+  "heading_space_after": 0.55,
+  "body_space_before": 0.38,
+  "body_space_after": 0.29,
+  "marker_system": 0.06,
+  "pagenum": 0.53,
+  "ending": 0.53
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5,
+  "table_text_share_median": 0.22,
+  "header_pct": 0.01,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.4,
+  "endings": {
+   "noun": 1982,
+   "narrative": 2270,
+   "nominal": 46
+  },
+  "marker_docs": {
+   "□": 62,
+   "○": 65,
+   "1.": 35,
+   "-": 21,
+   "◇": 9,
+   "▶": 1,
+   "①": 18,
+   "1)": 3,
+   "(1)": 2,
+   "I.": 1,
+   "제N조": 3,
+   "Ⅰ.": 1,
+   "가.": 1
+  }
+ },
+ "name": "보도자료-재정경제부",
+ "corpus": {
+  "by": "agency",
+  "documents": 299,
+  "candidates": 441,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 299건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

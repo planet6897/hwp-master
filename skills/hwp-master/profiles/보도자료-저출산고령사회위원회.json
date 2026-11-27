@@ -1,0 +1,84 @@
+{
+ "version": "1",
+ "documents": 129,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "heading_pt": 15.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 13.5
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.48,
+  "font": 0.72,
+  "body_pt": 0.65,
+  "title_pt": 0.6,
+  "heading_pt": 0.88,
+  "table_pt": 0.28,
+  "line_spacing": 0.47,
+  "title_font": 0.64,
+  "heading_font": 0.64,
+  "table_font": 0.3,
+  "title_space_before": 0.67,
+  "title_space_after": 0.83,
+  "heading_space_before": 0.48,
+  "heading_space_after": 0.56,
+  "body_space_before": 0.45,
+  "body_space_after": 0.15,
+  "marker_system": 0.27,
+  "pagenum": 0.69,
+  "ending": 0.54
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4,
+  "table_text_share_median": 0.2,
+  "header_pct": 0.35,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.17,
+  "endings": {
+   "narrative": 1329,
+   "noun": 1375,
+   "nominal": 198
+  },
+  "marker_docs": {
+   "□": 125,
+   "○": 123,
+   "-": 69,
+   "1.": 26,
+   "①": 10,
+   "1)": 2,
+   "◇": 9,
+   "(1)": 1,
+   "ㆍ": 3,
+   "Ⅰ.": 1,
+   "▶": 4,
+   "제N조": 1
+  }
+ },
+ "name": "보도자료-저출산고령사회위원회",
+ "corpus": {
+  "by": "agency",
+  "documents": 129,
+  "candidates": 129,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 129건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

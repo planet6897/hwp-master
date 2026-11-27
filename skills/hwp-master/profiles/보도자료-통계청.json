@@ -1,0 +1,89 @@
+{
+ "version": "1",
+ "documents": 280,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 15.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 3.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "1.",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.34,
+  "font": 0.59,
+  "body_pt": 0.25,
+  "title_pt": 0.67,
+  "heading_pt": 0.66,
+  "table_pt": 0.31,
+  "line_spacing": 0.47,
+  "title_font": 0.65,
+  "heading_font": 0.82,
+  "table_font": 0.35,
+  "title_space_before": 0.89,
+  "title_space_after": 0.56,
+  "heading_space_before": 0.37,
+  "heading_space_after": 0.63,
+  "body_space_before": 0.8,
+  "body_space_after": 0.7,
+  "marker_system": 0.16,
+  "pagenum": 0.68,
+  "ending": 0.94
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 21.0,
+  "table_text_share_median": 0.43,
+  "header_pct": 0.02,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.11,
+  "endings": {
+   "noun": 13387,
+   "nominal": 3762,
+   "narrative": 1190
+  },
+  "marker_docs": {
+   "□": 222,
+   "1.": 181,
+   "가.": 87,
+   "○": 219,
+   "Ⅰ.": 33,
+   "1)": 51,
+   "-": 146,
+   "가)": 21,
+   "(1)": 5,
+   "◇": 24,
+   "ㆍ": 27,
+   "①": 46,
+   "제N조": 4,
+   "▶": 18
+  }
+ },
+ "name": "보도자료-통계청",
+ "corpus": {
+  "by": "agency",
+  "documents": 280,
+  "candidates": 1806,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 280건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

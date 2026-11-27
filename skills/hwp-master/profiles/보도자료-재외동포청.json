@@ -1,0 +1,86 @@
+{
+ "version": "1",
+ "documents": 167,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 20.5,
+   "heading_space_after": 20.0,
+   "body_space_after": 19.5
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "convention": "gaejosik",
+  "list_markers": [
+   "□",
+   "○"
+  ],
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.45,
+  "font": 0.67,
+  "body_pt": 0.5,
+  "title_pt": 0.97,
+  "heading_pt": 0.56,
+  "table_pt": 0.21,
+  "line_spacing": 0.39,
+  "title_font": 0.98,
+  "heading_font": 0.76,
+  "table_font": 0.29,
+  "title_space_before": 0.89,
+  "title_space_after": 0.96,
+  "heading_space_before": 0.74,
+  "heading_space_after": 0.63,
+  "body_space_before": 0.31,
+  "body_space_after": 0.59,
+  "marker_system": 0.64,
+  "pagenum": 0.63,
+  "ending": 0.68
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4,
+  "table_text_share_median": 0.16,
+  "header_pct": 0.26,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.01,
+  "endings": {
+   "noun": 745,
+   "narrative": 1700,
+   "nominal": 41
+  },
+  "marker_docs": {
+   "□": 148,
+   "○": 157,
+   "-": 39,
+   "1.": 25,
+   "◇": 1,
+   "Ⅰ.": 5,
+   "①": 3,
+   "ㆍ": 4,
+   "가)": 1
+  }
+ },
+ "name": "보도자료-재외동포청",
+ "corpus": {
+  "by": "agency",
+  "documents": 167,
+  "candidates": 178,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 167건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

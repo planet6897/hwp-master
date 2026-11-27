@@ -1,0 +1,83 @@
+{
+ "version": "1",
+ "documents": 299,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 13.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.4,
+  "font": 0.72,
+  "body_pt": 0.48,
+  "title_pt": 0.84,
+  "heading_pt": 0.45,
+  "table_pt": 0.33,
+  "line_spacing": 0.41,
+  "title_font": 0.82,
+  "heading_font": 0.76,
+  "table_font": 0.41,
+  "title_space_before": 0.88,
+  "title_space_after": 0.83,
+  "heading_space_before": 0.47,
+  "heading_space_after": 0.62,
+  "body_space_before": 0.35,
+  "body_space_after": 0.29,
+  "marker_system": 0.22,
+  "pagenum": 0.7,
+  "ending": 0.59
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4,
+  "table_text_share_median": 0.2,
+  "header_pct": 0.05,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.08,
+  "endings": {
+   "noun": 1415,
+   "narrative": 2110,
+   "nominal": 53
+  },
+  "marker_docs": {
+   "□": 138,
+   "1.": 51,
+   "○": 133,
+   "-": 37,
+   "①": 15,
+   "◇": 2,
+   "▶": 1,
+   "(가)": 3,
+   "Ⅰ.": 2,
+   "가.": 2,
+   "1)": 2,
+   "제N조": 2,
+   "ㆍ": 1
+  }
+ },
+ "name": "보도자료-조달청",
+ "corpus": {
+  "by": "agency",
+  "documents": 299,
+  "candidates": 2372,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 299건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

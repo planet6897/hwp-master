@@ -1,0 +1,92 @@
+{
+ "version": "1",
+ "documents": 118,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 10,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 10
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "heading_pt": 15.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 20.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "convention": "gaejosik",
+  "list_markers": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.81,
+  "font": 0.83,
+  "body_pt": 0.7,
+  "title_pt": 0.71,
+  "heading_pt": 0.95,
+  "table_pt": 0.29,
+  "line_spacing": 0.48,
+  "title_font": 0.68,
+  "heading_font": 0.78,
+  "table_font": 0.28,
+  "title_space_before": 0.62,
+  "title_space_after": 0.59,
+  "heading_space_before": 0.55,
+  "heading_space_after": 0.36,
+  "body_space_before": 0.35,
+  "body_space_after": 0.26,
+  "marker_system": 0.55,
+  "pagenum": 0.5,
+  "ending": 0.58
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4.0,
+  "table_text_share_median": 0.24,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.25,
+  "endings": {
+   "noun": 583,
+   "narrative": 978,
+   "nominal": 139
+  },
+  "marker_docs": {
+   "□": 118,
+   "○": 109,
+   "-": 37,
+   "◇": 4,
+   "1.": 8,
+   "1)": 1,
+   "①": 6
+  }
+ },
+ "name": "보도자료-새만금개발청",
+ "corpus": {
+  "by": "agency",
+  "documents": 118,
+  "candidates": 118,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 118건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

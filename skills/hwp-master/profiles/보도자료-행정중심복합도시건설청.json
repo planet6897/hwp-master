@@ -1,0 +1,85 @@
+{
+ "version": "1",
+ "documents": 300,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "line_spacing": 160,
+   "title_font": "휴먼명조",
+   "heading_font": "HY헤드라인M",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 0.0,
+   "heading_space_after": 22.5,
+   "body_space_before": 22.5,
+   "body_space_after": 22.5
+  },
+  "marker_system": [
+   "▶",
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.39,
+  "font": 0.44,
+  "body_pt": 0.57,
+  "title_pt": 0.71,
+  "heading_pt": 0.41,
+  "table_pt": 0.42,
+  "line_spacing": 0.86,
+  "title_font": 0.68,
+  "heading_font": 0.59,
+  "table_font": 0.36,
+  "title_space_before": 0.94,
+  "title_space_after": 0.92,
+  "heading_space_before": 0.63,
+  "heading_space_after": 0.64,
+  "body_space_before": 0.66,
+  "body_space_after": 0.68,
+  "marker_system": 0.3,
+  "pagenum": 0.58,
+  "ending": 0.72
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5.0,
+  "table_text_share_median": 0.19,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.21,
+  "endings": {
+   "narrative": 2134,
+   "noun": 817,
+   "nominal": 9
+  },
+  "marker_docs": {
+   "▶": 97,
+   "□": 159,
+   "○": 151,
+   "1.": 15,
+   "①": 8,
+   "-": 23,
+   "◇": 4
+  }
+ },
+ "name": "보도자료-행정중심복합도시건설청",
+ "corpus": {
+  "by": "agency",
+  "documents": 300,
+  "candidates": 1732,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 300건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

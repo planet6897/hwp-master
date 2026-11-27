@@ -1,0 +1,88 @@
+{
+ "version": "1",
+ "documents": 291,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "line_spacing": 160,
+   "title_font": "휴먼명조",
+   "table_font": "맑은 고딕",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "body_space_after": 19.0
+  },
+  "marker_system": [
+   "1.",
+   "□",
+   "○"
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.41,
+  "font": 0.63,
+  "body_pt": 0.64,
+  "title_pt": 0.94,
+  "heading_pt": 0.75,
+  "table_pt": 0.43,
+  "line_spacing": 0.51,
+  "title_font": 0.93,
+  "heading_font": 0.43,
+  "table_font": 0.55,
+  "title_space_before": 0.93,
+  "title_space_after": 0.91,
+  "heading_space_before": 0.13,
+  "heading_space_after": 0.39,
+  "body_space_before": 0.18,
+  "body_space_after": 0.53,
+  "marker_system": 0.26,
+  "pagenum": 0.82,
+  "ending": 0.56
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 8,
+  "table_text_share_median": 0.23,
+  "header_pct": 0.02,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.02,
+  "endings": {
+   "nominal": 133,
+   "narrative": 3079,
+   "noun": 3836
+  },
+  "marker_docs": {
+   "1.": 133,
+   "□": 203,
+   "○": 191,
+   "-": 87,
+   "ㆍ": 3,
+   "①": 23,
+   "1)": 3,
+   "Ⅰ.": 4,
+   "◇": 8,
+   "(1)": 1,
+   "▶": 3,
+   "제N조": 2,
+   "제N장": 1,
+   "가.": 2
+  }
+ },
+ "name": "보도자료-기후에너지환경부",
+ "corpus": {
+  "by": "agency",
+  "documents": 291,
+  "candidates": 843,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 291건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

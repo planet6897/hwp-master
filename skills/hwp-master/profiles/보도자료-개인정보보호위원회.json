@@ -1,0 +1,95 @@
+{
+ "version": "1",
+ "documents": 269,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "table_pt": 10.0,
+   "title_font": "휴먼명조",
+   "table_font": "돋움체",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 15.0
+  },
+  "marker_system": [
+   "□"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.82,
+  "font": 0.52,
+  "body_pt": 0.55,
+  "title_pt": 0.98,
+  "heading_pt": 0.27,
+  "table_pt": 0.54,
+  "line_spacing": 0.45,
+  "title_font": 0.96,
+  "heading_font": 0.5,
+  "table_font": 0.51,
+  "title_space_before": 0.96,
+  "title_space_after": 0.95,
+  "heading_space_before": 0.5,
+  "heading_space_after": 0.36,
+  "body_space_before": 0.4,
+  "body_space_after": 0.28,
+  "marker_system": 0.14,
+  "pagenum": 0.61,
+  "ending": 0.57
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5,
+  "table_text_share_median": 0.22,
+  "header_pct": 0.04,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.0,
+  "endings": {
+   "noun": 1419,
+   "nominal": 103,
+   "narrative": 1995
+  },
+  "marker_docs": {
+   "□": 99,
+   "○": 75,
+   "◇": 7,
+   "1.": 18,
+   "-": 38,
+   "제N조": 2,
+   "ㆍ": 2,
+   "①": 10,
+   "Ⅰ.": 1,
+   "가.": 1,
+   "▶": 6,
+   "(가)": 1,
+   "1)": 1
+  }
+ },
+ "name": "보도자료-개인정보보호위원회",
+ "corpus": {
+  "by": "agency",
+  "documents": 269,
+  "candidates": 271,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 269건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

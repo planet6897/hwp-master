@@ -1,0 +1,88 @@
+{
+ "version": "1",
+ "documents": 211,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "함초롬바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 14.0,
+   "heading_space_after": 10.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.9,
+  "font": 0.72,
+  "body_pt": 0.7,
+  "title_pt": 0.57,
+  "heading_pt": 0.13,
+  "table_pt": 0.39,
+  "line_spacing": 0.36,
+  "title_font": 0.49,
+  "heading_font": 0.59,
+  "table_font": 0.38,
+  "title_space_before": 0.91,
+  "title_space_after": 0.6,
+  "heading_space_before": 0.53,
+  "heading_space_after": 0.53,
+  "body_space_before": 0.36,
+  "body_space_after": 0.35,
+  "marker_system": 0.12,
+  "pagenum": 0.53,
+  "ending": 0.53
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 6,
+  "table_text_share_median": 0.23,
+  "header_pct": 0.01,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.18,
+  "endings": {
+   "noun": 1648,
+   "narrative": 1877,
+   "nominal": 26
+  },
+  "marker_docs": {
+   "□": 54,
+   "○": 45,
+   "1.": 9,
+   "-": 15,
+   "①": 14,
+   "Ⅰ.": 6,
+   "(1)": 1,
+   "◇": 8,
+   "1)": 1,
+   "▶": 1,
+   "ㆍ": 1
+  }
+ },
+ "name": "보도자료-기획예산처",
+ "corpus": {
+  "by": "agency",
+  "documents": 211,
+  "candidates": 212,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 211건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

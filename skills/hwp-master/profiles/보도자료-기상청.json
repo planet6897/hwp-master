@@ -1,0 +1,89 @@
+{
+ "version": "1",
+ "documents": 299,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "title_font": "휴먼명조",
+   "table_font": "맑은 고딕",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "body_space_before": 5.0
+  },
+  "marker_system": [
+   "-",
+   "□",
+   "○"
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.71,
+  "font": 0.45,
+  "body_pt": 0.4,
+  "title_pt": 0.72,
+  "heading_pt": 0.72,
+  "table_pt": 0.33,
+  "line_spacing": 0.41,
+  "title_font": 0.72,
+  "heading_font": 0.46,
+  "table_font": 0.54,
+  "title_space_before": 0.99,
+  "title_space_after": 0.96,
+  "heading_space_before": 0.18,
+  "heading_space_after": 0.16,
+  "body_space_before": 0.56,
+  "body_space_after": 0.1,
+  "marker_system": 0.18,
+  "pagenum": 0.69,
+  "ending": 0.58
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 7,
+  "table_text_share_median": 0.24,
+  "header_pct": 0.06,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.27,
+  "endings": {
+   "narrative": 2247,
+   "noun": 2779,
+   "nominal": 381
+  },
+  "marker_docs": {
+   "□": 214,
+   "○": 178,
+   "-": 112,
+   "1.": 93,
+   "Ⅰ.": 4,
+   "ㆍ": 4,
+   "(가)": 3,
+   "제N장": 2,
+   "①": 8,
+   "제N조": 3
+  }
+ },
+ "name": "보도자료-기상청",
+ "corpus": {
+  "by": "agency",
+  "documents": 299,
+  "candidates": 1424,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 299건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

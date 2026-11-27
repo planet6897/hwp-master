@@ -1,0 +1,81 @@
+{
+ "version": "1",
+ "documents": 62,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "heading_pt": 15.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 16.0,
+   "heading_space_after": 8.0,
+   "body_space_before": 0.0
+  },
+  "marker_system": [
+   "□"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.34,
+  "font": 0.5,
+  "body_pt": 0.77,
+  "title_pt": 0.68,
+  "heading_pt": 0.94,
+  "table_pt": 0.42,
+  "line_spacing": 0.42,
+  "title_font": 0.65,
+  "heading_font": 0.69,
+  "table_font": 0.32,
+  "title_space_before": 0.73,
+  "title_space_after": 0.69,
+  "heading_space_before": 0.57,
+  "heading_space_after": 0.52,
+  "body_space_before": 0.61,
+  "body_space_after": 0.32,
+  "marker_system": 0.35,
+  "pagenum": 0.81,
+  "ending": 0.52
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4.0,
+  "table_text_share_median": 0.23,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.5,
+  "endings": {
+   "noun": 557,
+   "nominal": 89,
+   "narrative": 587
+  },
+  "marker_docs": {
+   "□": 61,
+   "○": 33,
+   "①": 5,
+   "1.": 9,
+   "Ⅰ.": 4,
+   "-": 16,
+   "제N조": 6,
+   "◇": 3
+  }
+ },
+ "name": "보도자료-국민권익위원회",
+ "corpus": {
+  "by": "agency",
+  "documents": 62,
+  "candidates": 62,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 62건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
