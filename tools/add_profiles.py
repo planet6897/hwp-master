@@ -3,7 +3,7 @@
     python3 tools/add_profiles.py --full <hwpdocs> [--files <목록.txt>] [--only 이름...] [--jobs 10] [--write]
 
 그룹 규칙은 아래 groups() 에 있다. 그룹마다 경로(코퍼스 기준 상대 경로) SHA-1 순으로 최대 --sample 건을
-결정적으로 뽑아 style_profile.read_features 로 읽고 summarize 한다. 기존 기본 프로필과 같은 기준
+결정적으로 뽑되 내용(SHA-256)이 같은 파일은 하나로 세고, style_profile.read_features 로 읽어 summarize 한다. 기존 기본 프로필과 같은 기준
 (읽은 문서 30건 이상, 원래 서식 항목 중 일치율 0.6 이상 2개 이상)을 통과한 그룹만 --write 때
 skills/hwp-master/profiles/<이름>.json 으로 쓴다. 이미 있는 프로필은 덮어쓰지 않는다.
 집계값만 담고 개별 문서 목록·경로는 넣지 않는다. 읽은 특징은 --cache 에 남겨 다시 돌릴 때 재사용한다.
@@ -40,6 +40,7 @@ PRISM_KINDS = {
 }
 
 FORMS = ("신청서", "양식", "서식")
+SCHOOLS = ("sch_daegue_downloads", "sch_daeguh_downloads")
 EDU = ("jbe_downloads", "dge_downloads", "use_downloads", "gne_downloads", "goe_downloads", "sen_downloads")
 # 2026-11 하순에 더해진 출처 폴더: (폴더들, 프로필 이름, 구분, 이름에 든 낱말 중 하나, 들면 빼는 낱말). 위에서부터 처음 맞는 규칙 하나만 쓴다.
 SOURCE_RULES = [
@@ -62,6 +63,15 @@ SOURCE_RULES = [
     (EDU, "공문-교육청", "type", ("공문",), ()),
     (EDU, "계획-교육청", "type", ("계획",), FORMS),
     (EDU, "안내-교육청", "type", ("안내",), FORMS),
+    # 2026-11 말에 더해진 출처 폴더
+    (("nia_downloads",), "제안요청서-한국지능정보사회진흥원", "agency", ("제안요청서",), ()),
+    (("kiat_downloads",), "제안요청서-한국산업기술진흥원", "agency", ("제안요청서",), ()),
+    (("nipa_downloads",), "공고-정보통신산업진흥원", "agency", ("공고",), FORMS),
+    (("nia_downloads",), "공고-한국지능정보사회진흥원", "agency", ("공고",), FORMS),
+    (("kiat_downloads",), "입찰양식-한국산업기술진흥원", "agency", ("양식",), ()),
+    (("index_downloads", "laborstat_downloads"), "보도자료-통계", "type", ("보도",), ()),
+    (SCHOOLS, "가정통신문", "type", ("가정통신문", "통신문"), ()),
+    (SCHOOLS, "안내-학교", "type", ("안내",), FORMS),
 ]
 
 
@@ -105,8 +115,21 @@ def groups(rel):
     return g
 
 
-def pick(rel, n: int):
-    return sorted(rel, key=lambda r: hashlib.sha1(r.encode("utf-8")).hexdigest())[:n]
+def pick(rel, n: int, full: Path | None = None):
+    """경로 SHA-1 순으로 n 건. full 을 주면 내용(SHA-256)이 같은 파일은 처음 하나만 센다
+    (같은 양식을 여러 번 내려받은 묶음이 일치율을 부풀리지 않게)."""
+    order = sorted(rel, key=lambda r: hashlib.sha1(r.encode("utf-8")).hexdigest())
+    if full is None:
+        return order[:n]
+    seen, out = set(), []
+    for r in order:
+        h = hashlib.sha256((full / r).read_bytes()).hexdigest()
+        if h not in seen:
+            seen.add(h)
+            out.append(r)
+            if len(out) == n:
+                break
+    return out
 
 
 def features_for(full: Path, rel, rhwp: str, cache: dict, jobs: int):
@@ -158,7 +181,7 @@ def main(argv=None) -> int:
         if len(cands) < MIN_DOCS:
             report.append({"profile": name, "skipped": f"후보 {len(cands)}건 < {MIN_DOCS}"})
             continue
-        sample = pick(cands, a.sample)
+        sample = pick(cands, a.sample, a.full)
         feats = features_for(a.full, sample, rhwp, cache, a.jobs)
         a.cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
         if not feats:
