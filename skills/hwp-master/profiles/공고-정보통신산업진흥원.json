@@ -1,0 +1,91 @@
+{
+ "version": "1",
+ "documents": 299,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "body_pt": 10.0,
+   "line_spacing": 160,
+   "title_space_after": 0.0,
+   "heading_space_before": 18.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1.",
+   "1)",
+   "①"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.26,
+  "font": 0.36,
+  "body_pt": 0.62,
+  "title_pt": 0.26,
+  "heading_pt": 0.31,
+  "table_pt": 0.35,
+  "line_spacing": 0.62,
+  "title_font": 0.47,
+  "heading_font": 0.46,
+  "table_font": 0.36,
+  "title_space_before": 0.34,
+  "title_space_after": 0.76,
+  "heading_space_before": 0.53,
+  "heading_space_after": 0.96,
+  "body_space_before": 1.0,
+  "body_space_after": 0.99,
+  "marker_system": 0.19,
+  "pagenum": 0.79,
+  "ending": 0.57
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 10,
+  "table_text_share_median": 0.27,
+  "header_pct": 0.64,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.68,
+  "endings": {
+   "noun": 8516,
+   "narrative": 12427,
+   "nominal": 897
+  },
+  "marker_docs": {
+   "1.": 225,
+   "○": 115,
+   "◇": 8,
+   "①": 209,
+   "㉮": 13,
+   "-": 221,
+   "□": 12,
+   "가.": 144,
+   "1)": 205,
+   "ㆍ": 91,
+   "(1)": 60,
+   "▶": 87,
+   "제N조": 32,
+   "Ⅰ.": 9,
+   "가)": 18,
+   "I.": 4,
+   "(가)": 2
+  }
+ },
+ "name": "공고-정보통신산업진흥원",
+ "corpus": {
+  "by": "agency",
+  "documents": 299,
+  "candidates": 2057,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 299건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

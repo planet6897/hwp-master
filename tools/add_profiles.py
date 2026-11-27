@@ -40,7 +40,8 @@ PRISM_KINDS = {
 }
 
 FORMS = ("신청서", "양식", "서식")
-SCHOOLS = ("sch_daegue_downloads", "sch_daeguh_downloads")
+SCHOOLS = ("sch_daegue_downloads", "sch_daeguh_downloads", "sch_gyeongsinm_downloads", "sch_gyeongbukh_downloads",
+           "sch_daeryunm_downloads", "sch_younghwas_downloads", "sch_kwangmyungs_downloads")
 EDU = ("jbe_downloads", "dge_downloads", "use_downloads", "gne_downloads", "goe_downloads", "sen_downloads")
 # 2026-11 하순에 더해진 출처 폴더: (폴더들, 프로필 이름, 구분, 이름에 든 낱말 중 하나, 들면 빼는 낱말). 위에서부터 처음 맞는 규칙 하나만 쓴다.
 SOURCE_RULES = [
@@ -68,9 +69,13 @@ SOURCE_RULES = [
     (("kiat_downloads",), "제안요청서-한국산업기술진흥원", "agency", ("제안요청서",), ()),
     (("nipa_downloads",), "공고-정보통신산업진흥원", "agency", ("공고",), FORMS),
     (("nia_downloads",), "공고-한국지능정보사회진흥원", "agency", ("공고",), FORMS),
-    (("kiat_downloads",), "입찰양식-한국산업기술진흥원", "agency", ("양식",), ()),
+    # 입찰양식-한국산업기술진흥원(kiat 양식)은 고유 파일이 늘어 통과선을 넘지만 서식 □ 칸이 표시 체계로 읽히는
+    # 문제가 그대로라 다른 서식 묶음처럼 넣지 않는다.
     (("index_downloads", "laborstat_downloads"), "보도자료-통계", "type", ("보도",), ()),
+    (("index_downloads",), "동향-통계", "type", ("동향",), ()),
+    (("index_downloads",), "현황-통계", "type", ("현황",), ()),
     (SCHOOLS, "가정통신문", "type", ("가정통신문", "통신문"), ()),
+    (SCHOOLS, "회의록-학교운영위원회", "type", ("회의록",), ()),
     (SCHOOLS, "안내-학교", "type", ("안내",), FORMS),
 ]
 

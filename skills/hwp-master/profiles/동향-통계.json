@@ -1,0 +1,87 @@
+{
+ "version": "1",
+ "documents": 298,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 14.0,
+   "table_pt": 11.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○",
+   "-"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.17,
+  "font": 0.61,
+  "body_pt": 0.36,
+  "title_pt": 0.37,
+  "heading_pt": 0.77,
+  "table_pt": 0.7,
+  "line_spacing": 0.31,
+  "title_font": 0.53,
+  "heading_font": 0.74,
+  "table_font": 0.36,
+  "title_space_before": 0.39,
+  "title_space_after": 0.33,
+  "heading_space_before": 0.29,
+  "heading_space_after": 0.48,
+  "body_space_before": 0.91,
+  "body_space_after": 0.94,
+  "marker_system": 0.21,
+  "pagenum": 0.98,
+  "ending": 0.91
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 25.0,
+  "table_text_share_median": 0.39,
+  "header_pct": 0.03,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.47,
+  "endings": {
+   "narrative": 1516,
+   "noun": 11851,
+   "nominal": 3079
+  },
+  "marker_docs": {
+   "□": 285,
+   "○": 180,
+   "-": 158,
+   "1.": 171,
+   "가.": 78,
+   "1)": 162,
+   "ㆍ": 15,
+   "◇": 38,
+   "①": 20,
+   "Ⅰ.": 33,
+   "I.": 10,
+   "가)": 14,
+   "(가)": 11,
+   "(1)": 2,
+   "▶": 2
+  }
+ },
+ "name": "동향-통계",
+ "corpus": {
+  "by": "type",
+  "documents": 298,
+  "candidates": 975,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 298건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
