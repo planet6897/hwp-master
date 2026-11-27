@@ -1,0 +1,93 @@
+{
+ "version": "1",
+ "documents": 294,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "한양신명조",
+  "style": {
+   "body_pt": 11.0,
+   "title_pt": 13.0,
+   "heading_pt": 11.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 5.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1.",
+   "○",
+   "-"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.44,
+  "font": 0.56,
+  "body_pt": 0.62,
+  "title_pt": 0.58,
+  "heading_pt": 0.61,
+  "table_pt": 0.26,
+  "line_spacing": 0.35,
+  "title_font": 0.32,
+  "heading_font": 0.55,
+  "table_font": 0.4,
+  "title_space_before": 0.72,
+  "title_space_after": 0.65,
+  "heading_space_before": 0.63,
+  "heading_space_after": 0.84,
+  "body_space_before": 0.87,
+  "body_space_after": 0.66,
+  "marker_system": 0.2,
+  "pagenum": 0.71,
+  "ending": 0.91
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 3.0,
+  "table_text_share_median": 0.38,
+  "header_pct": 0.34,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.25,
+  "endings": {
+   "noun": 7369,
+   "narrative": 814,
+   "nominal": 781
+  },
+  "marker_docs": {
+   "□": 44,
+   "○": 177,
+   "1.": 238,
+   "가.": 120,
+   "1)": 56,
+   "가)": 42,
+   "-": 140,
+   "①": 23,
+   "(1)": 21,
+   "Ⅰ.": 13,
+   "ㆍ": 15,
+   "제N장": 1,
+   "제N조": 3,
+   "▶": 1,
+   "I.": 1,
+   "(가)": 1
+  }
+ },
+ "name": "고시-국토교통부",
+ "corpus": {
+  "by": "agency",
+  "documents": 294,
+  "candidates": 970,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 294건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

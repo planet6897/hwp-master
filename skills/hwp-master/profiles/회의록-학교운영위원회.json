@@ -1,0 +1,83 @@
+{
+ "version": "1",
+ "documents": 117,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "body_pt": 10.0,
+   "table_pt": 11.0,
+   "heading_font": "휴먼명조",
+   "table_font": "굴림체",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 2.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1.",
+   "1)",
+   "-"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.29,
+  "font": 0.47,
+  "body_pt": 0.6,
+  "title_pt": 0.59,
+  "heading_pt": 0.29,
+  "table_pt": 0.74,
+  "line_spacing": 0.4,
+  "title_font": 0.46,
+  "heading_font": 0.94,
+  "table_font": 0.58,
+  "title_space_before": 0.68,
+  "title_space_after": 0.81,
+  "heading_space_before": 0.94,
+  "heading_space_after": 1.0,
+  "body_space_before": 0.97,
+  "body_space_after": 0.85,
+  "marker_system": 0.28,
+  "pagenum": 0.61,
+  "ending": 0.75
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 3,
+  "table_text_share_median": 0.49,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.02,
+  "endings": {
+   "noun": 540,
+   "narrative": 1689,
+   "nominal": 36
+  },
+  "marker_docs": {
+   "1.": 36,
+   "1)": 34,
+   "-": 34,
+   "○": 14,
+   "(가)": 20,
+   "가.": 1
+  }
+ },
+ "name": "회의록-학교운영위원회",
+ "corpus": {
+  "by": "type",
+  "documents": 117,
+  "candidates": 117,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 117건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
