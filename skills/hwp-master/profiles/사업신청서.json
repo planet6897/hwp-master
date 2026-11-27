@@ -1,0 +1,91 @@
+{
+ "version": "1",
+ "documents": 297,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "table_pt": 10.0,
+   "line_spacing": 160,
+   "heading_font": "휴먼명조",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1."
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.27,
+  "font": 0.44,
+  "body_pt": 0.27,
+  "title_pt": 0.17,
+  "heading_pt": 0.32,
+  "table_pt": 0.63,
+  "line_spacing": 0.61,
+  "title_font": 0.38,
+  "heading_font": 0.51,
+  "table_font": 0.38,
+  "title_space_before": 0.56,
+  "title_space_after": 0.53,
+  "heading_space_before": 0.14,
+  "heading_space_after": 0.7,
+  "body_space_before": 0.92,
+  "body_space_after": 0.85,
+  "marker_system": 0.05,
+  "pagenum": 0.59,
+  "ending": 0.83
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 20,
+  "table_text_share_median": 0.46,
+  "header_pct": 0.1,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.53,
+  "endings": {
+   "noun": 11757,
+   "nominal": 834,
+   "narrative": 2559
+  },
+  "marker_docs": {
+   "□": 161,
+   "-": 129,
+   "1.": 192,
+   "(1)": 51,
+   "○": 142,
+   "㉮": 3,
+   "가.": 82,
+   "제N조": 26,
+   "①": 72,
+   "Ⅰ.": 73,
+   "◇": 9,
+   "제N장": 7,
+   "1)": 68,
+   "가)": 33,
+   "(가)": 27,
+   "I.": 7,
+   "ㆍ": 12,
+   "▶": 3
+  }
+ },
+ "name": "사업신청서",
+ "corpus": {
+  "by": "type",
+  "documents": 297,
+  "candidates": 1884,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 297건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

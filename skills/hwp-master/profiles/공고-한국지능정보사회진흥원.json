@@ -1,0 +1,99 @@
+{
+ "version": "1",
+ "documents": 281,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 0,
+   "header": 0,
+   "left": 15,
+   "right": 15,
+   "top": 15
+  },
+  "font": "굴림",
+  "style": {
+   "body_pt": 10.0,
+   "table_pt": 10.0,
+   "line_spacing": 100,
+   "heading_font": "맑은 고딕",
+   "table_font": "나눔고딕",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 5.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "▶",
+   "1.",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.51,
+  "font": 0.62,
+  "body_pt": 0.53,
+  "title_pt": 0.51,
+  "heading_pt": 0.4,
+  "table_pt": 0.63,
+  "line_spacing": 0.51,
+  "title_font": 0.53,
+  "heading_font": 0.76,
+  "table_font": 0.51,
+  "title_space_before": 0.55,
+  "title_space_after": 0.85,
+  "heading_space_before": 0.84,
+  "heading_space_after": 0.91,
+  "body_space_before": 0.99,
+  "body_space_after": 0.99,
+  "marker_system": 0.31,
+  "pagenum": 0.65,
+  "ending": 0.55
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 3,
+  "table_text_share_median": 0.5,
+  "header_pct": 0.01,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.45,
+  "endings": {
+   "noun": 5975,
+   "narrative": 5734,
+   "nominal": 962
+  },
+  "marker_docs": {
+   "▶": 118,
+   "1.": 135,
+   "○": 112,
+   "①": 102,
+   "-": 132,
+   "□": 85,
+   "ㆍ": 12,
+   "가.": 34,
+   "1)": 10,
+   "(1)": 3,
+   "Ⅰ.": 2,
+   "◇": 2
+  }
+ },
+ "name": "공고-한국지능정보사회진흥원",
+ "corpus": {
+  "by": "agency",
+  "documents": 281,
+  "candidates": 393,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 281건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

@@ -1,0 +1,90 @@
+{
+ "version": "1",
+ "documents": 295,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "table_pt": 12.0,
+   "line_spacing": 160,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "Ⅰ.",
+   "1.",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.21,
+  "font": 0.75,
+  "body_pt": 0.44,
+  "title_pt": 0.21,
+  "heading_pt": 0.47,
+  "table_pt": 0.6,
+  "line_spacing": 0.57,
+  "title_font": 0.41,
+  "heading_font": 0.62,
+  "table_font": 0.44,
+  "title_space_before": 0.09,
+  "title_space_after": 0.09,
+  "heading_space_before": 0.25,
+  "heading_space_after": 0.65,
+  "body_space_before": 0.78,
+  "body_space_after": 0.89,
+  "marker_system": 0.24,
+  "pagenum": 0.87,
+  "ending": 0.79
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 19,
+  "table_text_share_median": 0.21,
+  "header_pct": 0.06,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.58,
+  "endings": {
+   "noun": 22122,
+   "nominal": 6276,
+   "narrative": 7419
+  },
+  "marker_docs": {
+   "Ⅰ.": 225,
+   "1.": 267,
+   "□": 166,
+   "○": 267,
+   "-": 277,
+   "가.": 192,
+   "1)": 120,
+   "제N조": 63,
+   "①": 120,
+   "(1)": 69,
+   "(가)": 39,
+   "ㆍ": 43,
+   "가)": 80,
+   "I.": 24,
+   "제N장": 9,
+   "◇": 13,
+   "▶": 9
+  }
+ },
+ "name": "제안요청서",
+ "corpus": {
+  "by": "type",
+  "documents": 295,
+  "candidates": 1502,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 295건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
