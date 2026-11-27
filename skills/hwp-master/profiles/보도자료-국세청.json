@@ -1,0 +1,103 @@
+{
+ "version": "1",
+ "documents": 160,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "table_pt": 12.0,
+   "line_spacing": 160,
+   "title_font": "휴먼명조",
+   "heading_font": "바탕",
+   "title_space_before": 1.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 13.5,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.84,
+  "font": 0.34,
+  "body_pt": 0.28,
+  "title_pt": 0.63,
+  "heading_pt": 0.69,
+  "table_pt": 0.53,
+  "line_spacing": 0.56,
+  "title_font": 0.67,
+  "heading_font": 0.56,
+  "table_font": 0.38,
+  "title_space_before": 0.74,
+  "title_space_after": 0.84,
+  "heading_space_before": 0.76,
+  "heading_space_after": 0.68,
+  "body_space_before": 0.61,
+  "body_space_after": 0.86,
+  "marker_system": 0.24,
+  "pagenum": 0.97,
+  "ending": 0.54
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 22.0,
+  "table_text_share_median": 0.34,
+  "header_pct": 0.02,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.01,
+  "endings": {
+   "narrative": 3810,
+   "noun": 3937,
+   "nominal": 542
+  },
+  "marker_docs": {
+   "□": 156,
+   "○": 147,
+   "-": 52,
+   "Ⅰ.": 13,
+   "①": 52,
+   "1.": 58,
+   "제N조": 4,
+   "1)": 25,
+   "◇": 9,
+   "가.": 8,
+   "㉮": 4,
+   "▶": 11,
+   "I.": 2,
+   "ㆍ": 9,
+   "가)": 2,
+   "(1)": 3,
+   "(가)": 2
+  }
+ },
+ "name": "보도자료-국세청",
+ "corpus": {
+  "by": "agency",
+  "documents": 160,
+  "candidates": 160,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 160건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

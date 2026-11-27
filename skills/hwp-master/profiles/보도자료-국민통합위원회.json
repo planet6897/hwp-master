@@ -1,0 +1,89 @@
+{
+ "version": "1",
+ "documents": 192,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "style": {
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "table_pt": 12.0,
+   "title_font": "휴먼명조",
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 11.0,
+   "heading_space_after": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "convention": "gaejosik",
+  "list_markers": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.31,
+  "font": 0.32,
+  "body_pt": 0.47,
+  "title_pt": 0.97,
+  "heading_pt": 0.93,
+  "table_pt": 0.52,
+  "line_spacing": 0.31,
+  "title_font": 0.99,
+  "heading_font": 0.4,
+  "table_font": 0.4,
+  "title_space_before": 0.94,
+  "title_space_after": 0.62,
+  "heading_space_before": 0.57,
+  "heading_space_after": 0.54,
+  "body_space_before": 0.41,
+  "body_space_after": 0.61,
+  "marker_system": 0.6,
+  "pagenum": 0.61,
+  "ending": 0.65
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5.0,
+  "table_text_share_median": 0.22,
+  "header_pct": 0.19,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.02,
+  "endings": {
+   "noun": 1136,
+   "narrative": 2079,
+   "nominal": 8
+  },
+  "marker_docs": {
+   "□": 192,
+   "○": 189,
+   "1.": 9,
+   "-": 51,
+   "Ⅰ.": 10,
+   "①": 17,
+   "◇": 9,
+   "▶": 2,
+   "ㆍ": 2
+  }
+ },
+ "name": "보도자료-국민통합위원회",
+ "corpus": {
+  "by": "agency",
+  "documents": 192,
+  "candidates": 192,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 192건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

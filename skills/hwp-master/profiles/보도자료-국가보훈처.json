@@ -1,0 +1,86 @@
+{
+ "version": "1",
+ "documents": 298,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "heading_pt": 15.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 10.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 7.5,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.29,
+  "font": 0.67,
+  "body_pt": 0.55,
+  "title_pt": 0.55,
+  "heading_pt": 0.89,
+  "table_pt": 0.32,
+  "line_spacing": 0.43,
+  "title_font": 0.71,
+  "heading_font": 0.67,
+  "table_font": 0.33,
+  "title_space_before": 0.63,
+  "title_space_after": 0.82,
+  "heading_space_before": 0.76,
+  "heading_space_after": 0.83,
+  "body_space_before": 0.62,
+  "body_space_after": 0.83,
+  "marker_system": 0.44,
+  "pagenum": 0.71,
+  "ending": 0.6
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5.0,
+  "table_text_share_median": 0.24,
+  "header_pct": 0.45,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.4,
+  "endings": {
+   "noun": 1925,
+   "narrative": 3263,
+   "nominal": 220
+  },
+  "marker_docs": {
+   "□": 286,
+   "○": 270,
+   "-": 112,
+   "제N조": 4,
+   "1.": 58,
+   "①": 12,
+   "▶": 10,
+   "Ⅰ.": 1,
+   "1)": 1,
+   "가.": 1,
+   "ㆍ": 1
+  }
+ },
+ "name": "보도자료-국가보훈처",
+ "corpus": {
+  "by": "agency",
+  "documents": 298,
+  "candidates": 977,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 298건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

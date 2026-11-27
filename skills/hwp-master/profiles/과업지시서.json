@@ -1,0 +1,89 @@
+{
+ "version": "1",
+ "documents": 294,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 15.5,
+   "heading_space_after": 5.0,
+   "body_space_before": 5.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1.",
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.1,
+  "font": 0.73,
+  "body_pt": 0.48,
+  "title_pt": 0.22,
+  "heading_pt": 0.61,
+  "table_pt": 0.26,
+  "line_spacing": 0.49,
+  "title_font": 0.34,
+  "heading_font": 0.57,
+  "table_font": 0.35,
+  "title_space_before": 0.1,
+  "title_space_after": 0.2,
+  "heading_space_before": 0.34,
+  "heading_space_after": 0.58,
+  "body_space_before": 0.76,
+  "body_space_after": 0.66,
+  "marker_system": 0.13,
+  "pagenum": 0.69,
+  "ending": 0.71
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 2.0,
+  "table_text_share_median": 0.06,
+  "header_pct": 0.02,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.65,
+  "endings": {
+   "noun": 9796,
+   "nominal": 1559,
+   "narrative": 4639
+  },
+  "marker_docs": {
+   "1.": 242,
+   "□": 138,
+   "○": 249,
+   "1)": 70,
+   "-": 254,
+   "가.": 143,
+   "①": 34,
+   "(1)": 33,
+   "Ⅰ.": 114,
+   "제N조": 13,
+   "가)": 10,
+   "ㆍ": 12,
+   "I.": 12,
+   "▶": 2,
+   "㉮": 1,
+   "(가)": 6,
+   "◇": 2
+  }
+ },
+ "name": "과업지시서",
+ "corpus": {
+  "by": "type",
+  "documents": 294,
+  "candidates": 6999,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 294건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

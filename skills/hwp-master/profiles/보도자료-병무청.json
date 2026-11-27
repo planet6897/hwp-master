@@ -1,0 +1,82 @@
+{
+ "version": "1",
+ "documents": 117,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 15.0,
+   "table_pt": 11.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "convention": "gaejosik",
+  "list_markers": [
+   "□",
+   "○"
+  ],
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.21,
+  "font": 0.84,
+  "body_pt": 0.4,
+  "title_pt": 0.48,
+  "heading_pt": 0.94,
+  "table_pt": 0.54,
+  "line_spacing": 0.21,
+  "title_font": 0.8,
+  "heading_font": 0.96,
+  "table_font": 0.78,
+  "title_space_before": 0.73,
+  "title_space_after": 0.67,
+  "heading_space_before": 0.43,
+  "heading_space_after": 0.42,
+  "body_space_before": 0.83,
+  "body_space_after": 0.7,
+  "marker_system": 0.64,
+  "pagenum": 0.7,
+  "ending": 0.72
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 2,
+  "table_text_share_median": 0.16,
+  "header_pct": 0.21,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.34,
+  "endings": {
+   "narrative": 717,
+   "noun": 261,
+   "nominal": 21
+  },
+  "marker_docs": {
+   "□": 115,
+   "○": 87,
+   "①": 3,
+   "-": 8,
+   "1.": 8,
+   "▶": 1,
+   "(1)": 1
+  }
+ },
+ "name": "보도자료-병무청",
+ "corpus": {
+  "by": "agency",
+  "documents": 117,
+  "candidates": 117,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 117건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

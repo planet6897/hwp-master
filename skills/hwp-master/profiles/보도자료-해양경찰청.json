@@ -1,0 +1,91 @@
+{
+ "version": "1",
+ "documents": 300,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "바탕",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "title_font": "휴먼명조",
+   "title_space_before": 0.0,
+   "title_space_after": 4.0,
+   "heading_space_before": 10.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 5.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○"
+  ],
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.62,
+  "font": 0.53,
+  "body_pt": 0.7,
+  "title_pt": 0.78,
+  "heading_pt": 0.11,
+  "table_pt": 0.31,
+  "line_spacing": 0.23,
+  "title_font": 0.91,
+  "heading_font": 0.39,
+  "table_font": 0.3,
+  "title_space_before": 0.92,
+  "title_space_after": 0.96,
+  "heading_space_before": 0.52,
+  "heading_space_after": 0.82,
+  "body_space_before": 0.73,
+  "body_space_after": 0.86,
+  "marker_system": 0.06,
+  "pagenum": 0.89,
+  "ending": 0.69
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 4.0,
+  "table_text_share_median": 0.2,
+  "header_pct": 0.01,
+  "title_align": "RIGHT",
+  "title_bold_pct": 0.03,
+  "endings": {
+   "noun": 850,
+   "narrative": 1931,
+   "nominal": 16
+  },
+  "marker_docs": {
+   "□": 57,
+   "○": 50,
+   "-": 21,
+   "▶": 4,
+   "①": 3,
+   "ㆍ": 6,
+   "1.": 7,
+   "Ⅰ.": 2,
+   "1)": 1,
+   "(가)": 1
+  }
+ },
+ "name": "보도자료-해양경찰청",
+ "corpus": {
+  "by": "agency",
+  "documents": 300,
+  "candidates": 852,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 300건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

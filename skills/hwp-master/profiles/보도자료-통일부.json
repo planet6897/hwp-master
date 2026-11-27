@@ -1,0 +1,82 @@
+{
+ "version": "1",
+ "documents": 300,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 15.0,
+   "heading_pt": 14.0,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 19.0,
+   "heading_space_after": 14.5
+  },
+  "marker_system": [
+   "□"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.47,
+  "font": 0.59,
+  "body_pt": 0.6,
+  "title_pt": 0.72,
+  "heading_pt": 0.87,
+  "table_pt": 0.41,
+  "line_spacing": 0.3,
+  "title_font": 0.97,
+  "heading_font": 0.65,
+  "table_font": 0.38,
+  "title_space_before": 0.8,
+  "title_space_after": 0.71,
+  "heading_space_before": 0.74,
+  "heading_space_after": 0.52,
+  "body_space_before": 0.35,
+  "body_space_after": 0.28,
+  "marker_system": 0.48,
+  "pagenum": 0.58,
+  "ending": 0.61
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5.0,
+  "table_text_share_median": 0.2,
+  "header_pct": 0.25,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.1,
+  "endings": {
+   "noun": 1256,
+   "narrative": 2157,
+   "nominal": 99
+  },
+  "marker_docs": {
+   "□": 254,
+   "1.": 29,
+   "-": 98,
+   "제N조": 7,
+   "①": 14,
+   "○": 8,
+   "ㆍ": 2,
+   "1)": 3,
+   "Ⅰ.": 3
+  }
+ },
+ "name": "보도자료-통일부",
+ "corpus": {
+  "by": "agency",
+  "documents": 300,
+  "candidates": 1594,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 300건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

@@ -1,0 +1,82 @@
+{
+ "version": "1",
+ "documents": 298,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 15,
+   "header": 15,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "휴먼명조",
+  "style": {
+   "body_pt": 15.0,
+   "line_spacing": 150,
+   "title_space_before": 10.0,
+   "title_space_after": 0.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 10.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□"
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.54,
+  "font": 0.69,
+  "body_pt": 0.61,
+  "title_pt": 0.55,
+  "heading_pt": 0.02,
+  "table_pt": 0.41,
+  "line_spacing": 0.58,
+  "title_font": 0.64,
+  "heading_font": 0.25,
+  "table_font": 0.63,
+  "title_space_before": 0.61,
+  "title_space_after": 0.91,
+  "heading_space_before": 0.33,
+  "heading_space_after": 0.75,
+  "body_space_before": 0.65,
+  "body_space_after": 0.91,
+  "marker_system": 0.02,
+  "pagenum": 0.98,
+  "ending": 0.99
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 1.0,
+  "table_text_share_median": 0.49,
+  "header_pct": 0.0,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.16,
+  "endings": {
+   "noun": 448,
+   "nominal": 50,
+   "narrative": 7
+  },
+  "marker_docs": {
+   "□": 9,
+   "○": 4,
+   "-": 6,
+   "1.": 1
+  }
+ },
+ "name": "연구용역-평가결과서",
+ "corpus": {
+  "by": "type",
+  "documents": 298,
+  "candidates": 12884,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 298건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
