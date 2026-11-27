@@ -1,0 +1,92 @@
+{
+ "version": "1",
+ "documents": 171,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 0,
+   "header": 0,
+   "left": 20,
+   "right": 20,
+   "top": 20
+  },
+  "font": "굴림체",
+  "style": {
+   "body_pt": 12.0,
+   "heading_pt": 12.0,
+   "table_pt": 10.0,
+   "line_spacing": 160,
+   "title_space_before": 0.0,
+   "title_space_after": 0.0,
+   "heading_space_before": 0.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1."
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.77,
+  "font": 0.73,
+  "body_pt": 0.8,
+  "title_pt": 0.74,
+  "heading_pt": 0.91,
+  "table_pt": 0.9,
+  "line_spacing": 0.92,
+  "title_font": 0.77,
+  "heading_font": 0.62,
+  "table_font": 0.74,
+  "title_space_before": 0.89,
+  "title_space_after": 0.9,
+  "heading_space_before": 0.74,
+  "heading_space_after": 0.84,
+  "body_space_before": 0.88,
+  "body_space_after": 0.92,
+  "marker_system": 0.29,
+  "pagenum": 0.95,
+  "ending": 0.86
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 3,
+  "table_text_share_median": 0.33,
+  "header_pct": 0.01,
+  "title_align": "JUSTIFY",
+  "title_bold_pct": 0.22,
+  "endings": {
+   "narrative": 228,
+   "noun": 1265,
+   "nominal": 100
+  },
+  "marker_docs": {
+   "1.": 152,
+   "가.": 84,
+   "-": 61,
+   "1)": 17,
+   "○": 11,
+   "▶": 1,
+   "①": 6,
+   "□": 11,
+   "ㆍ": 2,
+   "Ⅰ.": 2,
+   "(1)": 1
+  }
+ },
+ "name": "공문-교육청",
+ "corpus": {
+  "by": "type",
+  "documents": 171,
+  "candidates": 171,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 171건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

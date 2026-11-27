@@ -1,0 +1,83 @@
+{
+ "version": "1",
+ "documents": 280,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 16.0,
+   "heading_space_before": 22.5,
+   "body_space_after": 5.0
+  },
+  "marker_system": [
+   "1."
+  ],
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.41,
+  "font": 0.65,
+  "body_pt": 0.39,
+  "title_pt": 0.39,
+  "heading_pt": 0.66,
+  "table_pt": 0.23,
+  "line_spacing": 0.49,
+  "title_font": 0.65,
+  "heading_font": 0.73,
+  "table_font": 0.46,
+  "title_space_before": 0.19,
+  "title_space_after": 0.26,
+  "heading_space_before": 0.53,
+  "heading_space_after": 0.18,
+  "body_space_before": 0.17,
+  "body_space_after": 0.54,
+  "marker_system": 0.31,
+  "pagenum": 0.73,
+  "ending": 0.88
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 1.0,
+  "table_text_share_median": 0.22,
+  "header_pct": 0.01,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.69,
+  "endings": {
+   "noun": 4858,
+   "narrative": 922,
+   "nominal": 1809
+  },
+  "marker_docs": {
+   "1.": 187,
+   "-": 92,
+   "○": 111,
+   "□": 90,
+   "가.": 53,
+   "1)": 26,
+   "Ⅰ.": 18,
+   "▶": 4,
+   "ㆍ": 4,
+   "①": 30,
+   "가)": 13,
+   "제N장": 4,
+   "제N조": 6,
+   "(1)": 7,
+   "㉮": 1,
+   "(가)": 3,
+   "◇": 1
+  }
+ },
+ "name": "공고-국토교통부",
+ "corpus": {
+  "by": "agency",
+  "documents": 280,
+  "candidates": 283,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 280건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

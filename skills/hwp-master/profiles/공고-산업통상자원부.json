@@ -1,0 +1,97 @@
+{
+ "version": "1",
+ "documents": 288,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 15,
+   "footer": 10,
+   "header": 10,
+   "left": 20,
+   "right": 20,
+   "top": 15
+  },
+  "font": "휴먼명조",
+  "style": {
+   "line_spacing": 160,
+   "table_font": "맑은 고딕",
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1.",
+   "○",
+   "-"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.5,
+  "font": 0.73,
+  "body_pt": 0.33,
+  "title_pt": 0.3,
+  "heading_pt": 0.47,
+  "table_pt": 0.47,
+  "line_spacing": 0.68,
+  "title_font": 0.52,
+  "heading_font": 0.73,
+  "table_font": 0.67,
+  "title_space_before": 0.24,
+  "title_space_after": 0.32,
+  "heading_space_before": 0.26,
+  "heading_space_after": 0.45,
+  "body_space_before": 0.84,
+  "body_space_after": 0.79,
+  "marker_system": 0.24,
+  "pagenum": 0.84,
+  "ending": 0.96
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 20.0,
+  "table_text_share_median": 0.34,
+  "header_pct": 0.05,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.43,
+  "endings": {
+   "noun": 19806,
+   "narrative": 1182,
+   "nominal": 7213
+  },
+  "marker_docs": {
+   "□": 207,
+   "○": 275,
+   "-": 250,
+   "(1)": 8,
+   "1.": 229,
+   "가.": 94,
+   "Ⅰ.": 47,
+   "①": 147,
+   "1)": 107,
+   "◇": 56,
+   "ㆍ": 20,
+   "제N조": 13,
+   "▶": 6,
+   "가)": 8,
+   "㉮": 3,
+   "(가)": 8,
+   "제N장": 1
+  }
+ },
+ "name": "공고-산업통상자원부",
+ "corpus": {
+  "by": "agency",
+  "documents": 288,
+  "candidates": 709,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 288건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

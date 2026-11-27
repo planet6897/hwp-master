@@ -1,0 +1,94 @@
+{
+ "version": "1",
+ "documents": 300,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "heading_pt": 15.0,
+   "line_spacing": 160,
+   "title_font": "HY헤드라인M",
+   "table_font": "맑은 고딕",
+   "title_space_before": 16.0,
+   "heading_space_before": 16.0,
+   "heading_space_after": 12.5,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "1.",
+   "□",
+   "○"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.31,
+  "font": 0.71,
+  "body_pt": 0.48,
+  "title_pt": 0.48,
+  "heading_pt": 0.65,
+  "table_pt": 0.38,
+  "line_spacing": 0.63,
+  "title_font": 0.61,
+  "heading_font": 0.69,
+  "table_font": 0.84,
+  "title_space_before": 0.51,
+  "title_space_after": 0.44,
+  "heading_space_before": 0.53,
+  "heading_space_after": 0.56,
+  "body_space_before": 0.86,
+  "body_space_after": 0.8,
+  "marker_system": 0.33,
+  "pagenum": 0.94,
+  "ending": 0.94
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 39.0,
+  "table_text_share_median": 0.41,
+  "header_pct": 0.05,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.47,
+  "endings": {
+   "noun": 22471,
+   "narrative": 1779,
+   "nominal": 3336
+  },
+  "marker_docs": {
+   "1.": 215,
+   "□": 289,
+   "○": 299,
+   "-": 279,
+   "①": 197,
+   "Ⅰ.": 40,
+   "가.": 66,
+   "(1)": 19,
+   "▶": 53,
+   "I.": 4,
+   "1)": 52,
+   "◇": 41,
+   "ㆍ": 54,
+   "(가)": 6,
+   "㉮": 8,
+   "제N조": 6,
+   "가)": 15
+  }
+ },
+ "name": "공고-중소벤처기업부",
+ "corpus": {
+  "by": "agency",
+  "documents": 300,
+  "candidates": 647,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 300건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}
