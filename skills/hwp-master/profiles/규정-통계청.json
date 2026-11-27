@@ -1,0 +1,96 @@
+{
+ "version": "1",
+ "documents": 298,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "margins_mm": {
+   "bottom": 16,
+   "footer": 13,
+   "header": 13,
+   "left": 25,
+   "right": 25,
+   "top": 16
+  },
+  "font": "한양신명조",
+  "style": {
+   "body_pt": 14.0,
+   "title_pt": 16.0,
+   "heading_pt": 14.0,
+   "table_pt": 12.0,
+   "line_spacing": 230,
+   "title_space_before": 0.0,
+   "title_space_after": 32.0,
+   "heading_space_before": 32.0,
+   "heading_space_after": 30.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "제N장",
+   "제N조",
+   "1."
+  ],
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.57,
+  "font": 0.81,
+  "body_pt": 0.84,
+  "title_pt": 0.89,
+  "heading_pt": 0.85,
+  "table_pt": 0.58,
+  "line_spacing": 0.74,
+  "title_font": 0.82,
+  "heading_font": 0.84,
+  "table_font": 0.32,
+  "title_space_before": 0.72,
+  "title_space_after": 0.68,
+  "heading_space_before": 0.68,
+  "heading_space_after": 0.61,
+  "body_space_before": 0.94,
+  "body_space_after": 0.93,
+  "marker_system": 0.44,
+  "pagenum": 0.68,
+  "ending": 0.66
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 5.0,
+  "table_text_share_median": 0.13,
+  "header_pct": 0.07,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.95,
+  "endings": {
+   "noun": 6754,
+   "narrative": 13070,
+   "nominal": 107
+  },
+  "marker_docs": {
+   "제N조": 286,
+   "1.": 282,
+   "①": 280,
+   "제N장": 154,
+   "가)": 12,
+   "□": 79,
+   "○": 34,
+   "-": 24,
+   "가.": 61,
+   "Ⅰ.": 9,
+   "1)": 5,
+   "(1)": 1
+  }
+ },
+ "name": "규정-통계청",
+ "corpus": {
+  "by": "agency",
+  "documents": 298,
+  "candidates": 364,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 298건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

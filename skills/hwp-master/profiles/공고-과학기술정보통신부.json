@@ -1,0 +1,91 @@
+{
+ "version": "1",
+ "documents": 298,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "table_pt": 10.0,
+   "line_spacing": 160,
+   "table_font": "맑은 고딕",
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "□",
+   "○",
+   "-"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "nominal"
+ },
+ "agreement": {
+  "page": 1.0,
+  "margins_mm": 0.34,
+  "font": 0.66,
+  "body_pt": 0.41,
+  "title_pt": 0.35,
+  "heading_pt": 0.43,
+  "table_pt": 0.54,
+  "line_spacing": 0.73,
+  "title_font": 0.53,
+  "heading_font": 0.55,
+  "table_font": 0.61,
+  "title_space_before": 0.33,
+  "title_space_after": 0.18,
+  "heading_space_before": 0.27,
+  "heading_space_after": 0.68,
+  "body_space_before": 0.83,
+  "body_space_after": 0.77,
+  "marker_system": 0.31,
+  "pagenum": 0.88,
+  "ending": 0.94
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 12.0,
+  "table_text_share_median": 0.34,
+  "header_pct": 0.12,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.45,
+  "endings": {
+   "noun": 17564,
+   "narrative": 1303,
+   "nominal": 3914
+  },
+  "marker_docs": {
+   "□": 250,
+   "○": 276,
+   "-": 264,
+   "1.": 230,
+   "제N조": 57,
+   "①": 97,
+   "▶": 89,
+   "ㆍ": 58,
+   "◇": 47,
+   "Ⅰ.": 20,
+   "가.": 37,
+   "1)": 23,
+   "I.": 4,
+   "(가)": 7,
+   "(1)": 10,
+   "㉮": 4,
+   "제N장": 2
+  }
+ },
+ "name": "공고-과학기술정보통신부",
+ "corpus": {
+  "by": "agency",
+  "documents": 298,
+  "candidates": 633,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 298건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

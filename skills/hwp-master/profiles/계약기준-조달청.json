@@ -1,0 +1,89 @@
+{
+ "version": "1",
+ "documents": 293,
+ "recommend": {
+  "page_size": {
+   "width_mm": 210,
+   "height_mm": 297
+  },
+  "font": "휴먼명조",
+  "style": {
+   "line_spacing": 160,
+   "title_space_before": 0.0,
+   "heading_space_after": 0.0,
+   "body_space_before": 0.0,
+   "body_space_after": 0.0
+  },
+  "marker_system": [
+   "제N조",
+   "1.",
+   "①"
+  ],
+  "footer": {
+   "text": "- {page} -"
+  },
+  "ending": "narrative"
+ },
+ "agreement": {
+  "page": 0.95,
+  "margins_mm": 0.22,
+  "font": 0.66,
+  "body_pt": 0.38,
+  "title_pt": 0.27,
+  "heading_pt": 0.27,
+  "table_pt": 0.35,
+  "line_spacing": 0.66,
+  "title_font": 0.52,
+  "heading_font": 0.66,
+  "table_font": 0.45,
+  "title_space_before": 0.88,
+  "title_space_after": 0.16,
+  "heading_space_before": 0.46,
+  "heading_space_after": 0.82,
+  "body_space_before": 0.85,
+  "body_space_after": 0.83,
+  "marker_system": 0.37,
+  "pagenum": 0.64,
+  "ending": 0.69
+ },
+ "unsupported": [],
+ "stats": {
+  "tables_median": 9,
+  "table_text_share_median": 0.25,
+  "header_pct": 0.09,
+  "title_align": "CENTER",
+  "title_bold_pct": 0.77,
+  "endings": {
+   "noun": 16367,
+   "narrative": 38269,
+   "nominal": 673
+  },
+  "marker_docs": {
+   "제N조": 191,
+   "1.": 218,
+   "①": 208,
+   "가.": 172,
+   "Ⅰ.": 66,
+   "-": 143,
+   "○": 127,
+   "1)": 113,
+   "(가)": 50,
+   "(1)": 63,
+   "제N장": 42,
+   "ㆍ": 22,
+   "가)": 80,
+   "□": 27,
+   "㉮": 11,
+   "▶": 3
+  }
+ },
+ "name": "계약기준-조달청",
+ "corpus": {
+  "by": "agency",
+  "documents": 293,
+  "candidates": 480,
+  "collected": "2026-11",
+  "rhwp": "0.9.1",
+  "note": "공공기관 공개 문서 293건의 관측 통계(2026-11 수집) — 공식 서식 기준이 아님"
+ }
+}

@@ -39,6 +39,31 @@ PRISM_KINDS = {
     "연구용역-활용결과": ["활용결과", "활용 결과"],
 }
 
+FORMS = ("신청서", "양식", "서식")
+EDU = ("jbe_downloads", "dge_downloads", "use_downloads", "gne_downloads", "goe_downloads", "sen_downloads")
+# 2026-11 하순에 더해진 출처 폴더: (폴더들, 프로필 이름, 구분, 이름에 든 낱말 중 하나, 들면 빼는 낱말). 위에서부터 처음 맞는 규칙 하나만 쓴다.
+SOURCE_RULES = [
+    (("bizinfo_downloads", "msit_downloads", "motie_downloads", "mss_downloads"), "사업신청서", "type",
+     FORMS + ("계획서",), ()),
+    (("msit_downloads",), "공고-과학기술정보통신부", "agency", ("공고",), FORMS),
+    (("motie_downloads",), "공고-산업통상자원부", "agency", ("공고",), FORMS),
+    (("mss_downloads",), "공고-중소벤처기업부", "agency", ("공고",), FORMS),
+    (("molit_downloads",), "고시-국토교통부", "agency", ("고시",), FORMS),
+    (("molit_downloads",), "공고-국토교통부", "agency", ("공고",), FORMS),
+    (("ftc_downloads",), "표준약관", "type", ("약관",), ()),
+    (("ftc_downloads", "mss_downloads"), "표준계약서", "type", ("계약서", "약정서"), ()),
+    (("ftc_downloads",), "심사지침-공정거래위원회", "agency", ("지침", "예규", "가이드라인"), ()),
+    (("ftc_downloads",), "공고-공정거래위원회", "agency", ("공고",), FORMS),
+    (("pps_downloads",), "계약기준-조달청", "agency", ("기준", "특수조건", "규정"), ()),
+    (("pps_downloads",), "공고-조달청", "agency", ("공고",), FORMS),
+    (("alio_downloads",), "규정-공공기관", "type", ("규정", "규칙", "지침"), ()),
+    (("kostat_downloads",), "규정-통계청", "agency", ("규정", "훈령"), ()),
+    (("moel_downloads",), "현황-고용노동부", "agency", ("현황",), ()),
+    (EDU, "공문-교육청", "type", ("공문",), ()),
+    (EDU, "계획-교육청", "type", ("계획",), FORMS),
+    (EDU, "안내-교육청", "type", ("안내",), FORMS),
+]
+
 
 def listing(full: Path, files: Path | None):
     """코퍼스 기준 상대 경로 목록 ('폴더/…/이름.hwp')."""
@@ -72,6 +97,11 @@ def groups(rel):
                     break
         elif top == "nts_downloads" and "공고" in name:
             add("공고-국세청", "agency", r)
+        else:
+            for folders, pname, by, has, not_has in SOURCE_RULES:
+                if top in folders and any(k in name for k in has) and not any(k in name for k in not_has):
+                    add(pname, by, r)
+                    break
     return g
 
 
