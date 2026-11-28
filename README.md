@@ -317,7 +317,10 @@ AI: 문서 기획을 확인해 주세요.
 나: 신청서의 "개인정보 수집 동의" 체크박스에 표시하고 신청인 칸에 홍길동을 넣어 줘                    (Edit Native)
 나: 손으로 친 1. 가. 1) 번호를 한글 자동 개요 번호로 정리해 줘                                     (Beautify)
 나: 우리 기관 보도자료 5건(~/보도자료/*.hwp)으로 서식 프로필을 등록해 줘                             (프로필 등록)
+나: examples/template_fill/form.hwpx 서식에 examples/template_fill/data.json 을 채워 줘              (Template Fill 예제)
 ```
+
+서식 채우기는 예제 파일로 바로 해 볼 수 있습니다 — [3. 서식(템플릿) 쓰기](#3-서식템플릿-쓰기), [examples/template_fill/](examples/template_fill/).
 
 **스크립트·다른 에이전트에서 직접 쓰기**
 
@@ -366,6 +369,26 @@ $RHWP export-hwpx 옛문서.hwp 새문서.hwpx --verify  # HWP → HWPX 변환 (
 나: ~/서식/사업계획서.hwpx 에 ~/자료/계획안.docx 내용을 채워 줘. 참여 인력 표는 사람 수만큼 행을 늘려서
 나: 수료증 서식.hwpx 에 명단.csv 의 사람마다 한 부씩 만들어 줘
 나: 이 서식을 "기관보고서"로 등록해 줘          ← 다음부터는 "기관보고서 서식으로 채워 줘"
+```
+
+예제는 [examples/template_fill/](examples/template_fill/) 에 있습니다. 서식 `form.hwpx` 에 자료 `data.json`
+(과제 3건, 예산 2행)을 채우면, 과제 문단은 3번 반복되고 예산 표는 2행으로 늘어납니다.
+
+| 서식 (`form.hwpx`) | 채운 결과 (`filled.hwpx`) |
+|---|---|
+| ![서식](examples/template_fill/png/form.png) | ![채운 결과](examples/template_fill/png/filled.png) |
+
+```json
+{"title": "2027년 추진 계획", "date": "2027. 1. 5.", "author": "홍길동",
+ "tasks":  [{"name": "첫째 과제", "detail": "첫째 내용"}, {"name": "둘째 과제", "detail": "둘째 내용"}, {"name": "셋째 과제", "detail": "셋째 내용"}],
+ "budget": [{"item": "인건비", "amount": "1,000"}, {"item": "운영비", "amount": "500"}], "total": "1,500"}
+```
+
+```bash
+# 직접 해 보기 — 결과는 projects/tf-demo_<날짜>/exports/ 에 생깁니다
+P=$(python3 skills/hwp-master/scripts/project_manager.py init tf-demo | tail -1)
+cp examples/template_fill/form.hwpx examples/template_fill/data.json $P/sources/
+python3 skills/hwp-master/scripts/template_fill.py fill $P sources/form.hwpx --data sources/data.json
 ```
 
 **② 문서 유형 프로필.** 기본 프로필 88종(보도자료·공고·공문·규제영향분석서·과업지시서·표준계약서·가정통신문 등과
